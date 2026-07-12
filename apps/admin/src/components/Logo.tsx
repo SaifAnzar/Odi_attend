@@ -7,42 +7,25 @@ interface LogoProps {
 
 export function Logo({ className = '', size = 'md' }: LogoProps) {
   const dimensions = {
-    sm: { width: 90, height: 30, fontSize: 20 },
-    md: { width: 130, height: 40, fontSize: 26 },
-    lg: { width: 180, height: 50, fontSize: 34 },
+    sm: { width: 100, height: 30 },
+    md: { width: 150, height: 45 },
+    lg: { width: 220, height: 66 },
   };
 
-  const { width, height, fontSize } = dimensions[size];
+  const { width, height } = dimensions[size];
 
   return (
-    <div className={`flex items-center gap-2 select-none ${className}`}>
-      <svg
-        width={width}
-        height={height}
-        viewBox={`0 0 ${width} ${height}`}
-        fill="none"
-        xmlns="http://www.w3.org/2000/svg"
-      >
-        {/* Render "Odizo" text with red dot */}
-        <text
-          x="5"
-          y={height - (height * 0.3)}
-          fill="#FFFFFF"
-          fontWeight="bold"
-          fontSize={fontSize}
-          fontFamily="system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
-          letterSpacing="0.05em"
-        >
-          ODIZO
-        </text>
-        {/* Odizo red dot accent */}
-        <circle
-          cx={width - (width * 0.18)}
-          cy={height - (height * 0.45)}
-          r={fontSize * 0.16}
-          fill="#E16167"
-        />
-      </svg>
+    <div className={`flex items-center justify-center select-none ${className}`}>
+      <img
+        src="/logo.png"
+        alt="ODIZO Logo"
+        style={{
+          width,
+          height,
+          objectFit: 'contain',
+        }}
+        className="drop-shadow-[0_0_10px_rgba(225,97,103,0.15)] transition-transform duration-300 hover:scale-105"
+      />
     </div>
   );
 }

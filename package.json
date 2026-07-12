@@ -9,5 +9,9 @@
   "scripts": {
     "dev:admin": "npm run dev --workspace=apps/admin",
     "dev:mobile": "npm run start --workspace=apps/mobile"
+  },
+  "dependencies": {
+    "react": "19.1.0",
+    "react-dom": "19.1.0"
   }
 }

@@ -12,7 +12,8 @@ import {
   KeyboardAvoidingView,
   Platform,
   Dimensions,
-  StatusBar as RNStatusBar
+  StatusBar as RNStatusBar,
+  Image
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -313,12 +314,11 @@ export default function App() {
             {/* Top Logo / Accent */}
             <View style={styles.logoContainer}>
               <View style={styles.redDotGlow}></View>
-              {/* Vector representation of Logo */}
-              <View style={styles.vectorLogo}>
-                <Text style={styles.brandTitle}>ODIZO</Text>
-                <View style={styles.brandDot}></View>
-              </View>
-              <Text style={styles.subtext}>Attendance Portal</Text>
+              <Image 
+                source={require('./assets/logo.png')} 
+                style={styles.logoImage} 
+                resizeMode="contain" 
+              />
             </View>
 
             {/* Glass Form Panel */}
@@ -406,8 +406,12 @@ export default function App() {
       
       {/* Header Panel */}
       <View style={styles.portalHeader}>
-        <View>
-          <Text style={styles.portalLogo}>ODIZO</Text>
+        <View style={{ flexDirection: 'column', gap: 2, justifyContent: 'center' }}>
+          <Image 
+            source={require('./assets/logo.png')} 
+            style={styles.portalLogoImage} 
+            resizeMode="contain" 
+          />
           <Text style={styles.portalHeaderSub}>{user?.name} ({user?.role})</Text>
         </View>
         <TouchableOpacity onPress={handleLogout} style={styles.logoutBtn}>
@@ -641,43 +645,21 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 40,
     position: 'relative',
+    width: '100%',
   },
   redDotGlow: {
     position: 'absolute',
-    top: -20,
-    right: -20,
-    width: 80,
-    height: 80,
+    top: -10,
+    width: 140,
+    height: 60,
     backgroundColor: '#E16167',
-    opacity: 0.15,
-    borderRadius: 40,
-    blurRadius: 20,
+    opacity: 0.1,
+    borderRadius: 30,
+    blurRadius: 15,
   } as any,
-  vectorLogo: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-  },
-  brandTitle: {
-    fontSize: 32,
-    fontWeight: '900',
-    color: '#FFFFFF',
-    letterSpacing: 2,
-  },
-  brandDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: '#E16167',
-    marginLeft: 3,
-    marginBottom: 6,
-  },
-  subtext: {
-    color: '#9E9E9F',
-    fontSize: 12,
-    letterSpacing: 4,
-    textTransform: 'uppercase',
-    marginTop: 8,
-    fontWeight: '600',
+  logoImage: {
+    width: 180,
+    height: 54,
   },
   formPanel: {
     width: '100%',
@@ -796,11 +778,9 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: 'rgba(255, 255, 255, 0.05)',
   },
-  portalLogo: {
-    fontSize: 22,
-    fontWeight: '900',
-    color: '#FFFFFF',
-    letterSpacing: 1.5,
+  portalLogoImage: {
+    width: 90,
+    height: 27,
   },
   portalHeaderSub: {
     color: '#9E9E9F',

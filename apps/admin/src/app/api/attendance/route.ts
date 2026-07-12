@@ -101,15 +101,17 @@ export async function POST(request: NextRequest) {
           notes
         });
 
-        // Determine if they are late
-        // Parse shift start time (e.g. "09:00")
-        const [shiftHour, shiftMin] = user.shift.startTime.split(':').map(Number);
-        const shiftStartToday = new Date(now);
-        shiftStartToday.setHours(shiftHour, shiftMin, 0, 0);
+        // Determine if they are late in local IST time (offset +5.5 hours)
+        const utcOffset = 5.5;
+        const localTime = new Date(now.getTime() + utcOffset * 3600000);
+        const checkInHour = localTime.getUTCHours();
+        const checkInMin = localTime.getUTCMinutes();
+        const checkInTotalMinutes = checkInHour * 60 + checkInMin;
 
-        // Add 15 minutes grace period
-        const graceTime = new Date(shiftStartToday.getTime() + 15 * 60 * 1000);
-        if (now > graceTime) {
+        const [shiftHour, shiftMin] = user.shift.startTime.split(':').map(Number);
+        const shiftStartTotalMinutes = shiftHour * 60 + shiftMin + 15; // 15 min grace period
+
+        if (checkInTotalMinutes > shiftStartTotalMinutes) {
           record.status = 'Late';
         }
       } else {
