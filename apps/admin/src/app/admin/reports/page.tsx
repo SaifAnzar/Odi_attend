@@ -1,0 +1,256 @@
+'use client';
+
+import React, { useState, useEffect } from 'react';
+import { FileText, Calendar, User as UserIcon, Search, MapPin, Download } from 'lucide-react';
+
+interface User {
+  _id: string;
+  name: string;
+  email: string;
+  role: 'Admin' | 'Employee' | 'Intern';
+  status: 'Active' | 'Inactive';
+}
+
+interface PunchSession {
+  checkIn: string;
+  checkOut?: string;
+  checkInLocation: { latitude: number; longitude: number; address?: string };
+  checkOutLocation?: { latitude: number; longitude: number; address?: string };
+}
+
+interface AttendanceRecord {
+  _id: string;
+  userId: User;
+  date: string;
+  shiftSnapshot: {
+    name: string;
+    startTime: string;
+    endTime: string;
+  };
+  sessions: PunchSession[];
+  status: 'Present' | 'Absent' | 'Late' | 'Half-Day' | 'Off-Day';
+  totalMinutesWorked: number;
+}
+
+export default function Reports() {
+  const [records, setRecords] = useState<AttendanceRecord[]>([]);
+  const [users, setUsers] = useState<User[]>([]);
+  const [loading, setLoading] = useState(true);
+  
+  // Filters
+  const [selectedUserId, setSelectedUserId] = useState('');
+  const [selectedDate, setSelectedDate] = useState('');
+
+  const fetchData = async () => {
+    try {
+      setLoading(true);
+      
+      // Fetch users for the dropdown
+      const usersRes = await fetch('/api/users');
+      const usersData = await usersRes.json();
+      if (usersData.users) {
+        setUsers(usersData.users.filter((u: User) => u.role !== 'Admin'));
+      }
+
+      // Fetch logs based on filters
+      let url = '/api/attendance?';
+      if (selectedUserId) url += `userId=${selectedUserId}&`;
+      if (selectedDate) url += `date=${selectedDate}&`;
+      
+      const res = await fetch(url);
+      const data = await res.json();
+      if (data.records) {
+        setRecords(data.records);
+      }
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchData();
+  }, [selectedUserId, selectedDate]);
+
+  const handleExportCSV = () => {
+    if (records.length === 0) return;
+    
+    // Construct CSV content
+    const headers = ['Date', 'Staff Name', 'Email', 'Role', 'Shift Name', 'Shift Start', 'Shift End', 'Minutes Worked', 'Status'];
+    const rows = records.map(r => [
+      r.date,
+      r.userId?.name || 'Unknown',
+      r.userId?.email || '',
+      r.userId?.role || '',
+      r.shiftSnapshot?.name || '',
+      r.shiftSnapshot?.startTime || '',
+      r.shiftSnapshot?.endTime || '',
+      r.totalMinutesWorked,
+      r.status
+    ]);
+    
+    const csvContent = "data:text/csv;charset=utf-8," 
+      + [headers.join(','), ...rows.map(e => e.join(','))].join('\n');
+    
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", `Attendance_Report_${selectedDate || 'All'}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-extrabold tracking-tight bg-gradient-to-r from-white via-odizo-grey to-white bg-clip-text text-transparent">
+            Attendance Reports
+          </h1>
+          <p className="text-sm text-odizo-grey mt-1">Audit shift logs, verify geolocations, and export CSV timesheets</p>
+        </div>
+        <button
+          onClick={handleExportCSV}
+          disabled={records.length === 0}
+          className="flex items-center gap-2 px-5 py-2.5 bg-white/5 border border-white/10 hover:border-odizo-red/30 text-white rounded-full text-sm font-semibold transition-all duration-300 shadow-md hover:shadow-red-900/10 hover:-translate-y-0.5 active:translate-y-0 disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"
+        >
+          <Download size={14} />
+          <span>Export Timesheet</span>
+        </button>
+      </div>
+
+      {/* Filters Box */}
+      <div className="glass-card p-6 floating-shadow border-white/5 grid grid-cols-1 sm:grid-cols-2 gap-6">
+        {/* User filter */}
+        <div>
+          <label className="block text-xs font-semibold uppercase tracking-wider text-odizo-grey mb-1.5 flex items-center gap-1">
+            <UserIcon size={12} className="text-odizo-red" />
+            <span>Filter by Staff</span>
+          </label>
+          <select
+            value={selectedUserId}
+            onChange={(e) => setSelectedUserId(e.target.value)}
+            className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:border-odizo-red focus:outline-none"
+          >
+            <option value="" className="bg-black text-white">All Staff Members</option>
+            {users.map(u => (
+              <option key={u._id} value={u._id} className="bg-black text-white">{u.name} ({u.role})</option>
+            ))}
+          </select>
+        </div>
+
+        {/* Date filter */}
+        <div>
+          <label className="block text-xs font-semibold uppercase tracking-wider text-odizo-grey mb-1.5 flex items-center gap-1">
+            <Calendar size={12} className="text-odizo-red" />
+            <span>Filter by Date</span>
+          </label>
+          <input
+            type="date"
+            value={selectedDate}
+            onChange={(e) => setSelectedDate(e.target.value)}
+            className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:border-odizo-red focus:outline-none"
+          />
+        </div>
+      </div>
+
+      {/* Logs Table */}
+      <div className="glass-card p-6 floating-shadow border-white/5">
+        <h2 className="text-xl font-bold mb-4">Audit Trail</h2>
+
+        {loading ? (
+          <div className="flex flex-col items-center justify-center py-20">
+            <div className="h-10 w-10 animate-spin rounded-full border-2 border-odizo-red border-t-transparent"></div>
+            <p className="mt-4 text-sm text-odizo-grey">Compiling records...</p>
+          </div>
+        ) : records.length === 0 ? (
+          <div className="text-center py-16 border border-dashed border-white/10 rounded-2xl">
+            <FileText size={40} className="mx-auto text-odizo-grey/50 mb-3" />
+            <p className="text-sm font-semibold text-white">No matching records found</p>
+            <p className="text-xs text-odizo-grey mt-1">Try adjusting your filters above.</p>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse text-sm">
+              <thead>
+                <tr className="border-b border-white/5 text-odizo-grey font-medium text-xs uppercase">
+                  <th className="py-3 px-4">Date</th>
+                  <th className="py-3 px-4">Staff</th>
+                  <th className="py-3 px-4">Role</th>
+                  <th className="py-3 px-4">Punch In / Out Times</th>
+                  <th className="py-3 px-4">Hours Logged</th>
+                  <th className="py-3 px-4">Status</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-white/5">
+                {records.map((record) => (
+                  <tr key={record._id} className="hover:bg-white/3 transition-colors">
+                    <td className="py-4 px-4 font-mono font-semibold text-white">
+                      {record.date}
+                    </td>
+                    <td className="py-4 px-4 font-semibold text-white">
+                      <div className="flex flex-col">
+                        <span>{record.userId?.name || 'Unknown User'}</span>
+                        <span className="text-xs text-odizo-grey font-normal">{record.userId?.email}</span>
+                      </div>
+                    </td>
+                    <td className="py-4 px-4">
+                      <span className={`inline-flex px-2.5 py-0.5 rounded-full text-xs font-semibold ${
+                        record.userId?.role === 'Employee' 
+                          ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20' 
+                          : 'bg-purple-500/10 text-purple-400 border border-purple-500/20'
+                      }`}>
+                        {record.userId?.role || 'User'}
+                      </span>
+                    </td>
+                    <td className="py-4 px-4 text-xs text-white">
+                      <div className="space-y-1.5">
+                        {record.sessions.map((s, idx) => (
+                          <div key={idx} className="flex items-center gap-2">
+                            <span className="bg-white/5 border border-white/10 px-2 py-0.5 rounded text-[10px]">
+                              Session {idx + 1}
+                            </span>
+                            <span>
+                              {new Date(s.checkIn).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                              {s.checkOut ? ` - ${new Date(s.checkOut).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}` : ' (Active)'}
+                            </span>
+                            <a
+                              href={`https://www.google.com/maps/search/?api=1&query=${s.checkInLocation.latitude},${s.checkInLocation.longitude}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-odizo-red hover:underline flex items-center gap-0.5"
+                              title={s.checkInLocation.address || 'Show Map'}
+                            >
+                              <MapPin size={10} />
+                            </a>
+                          </div>
+                        ))}
+                      </div>
+                    </td>
+                    <td className="py-4 px-4 font-mono font-medium text-white">
+                      {Math.floor(record.totalMinutesWorked / 60)}h {record.totalMinutesWorked % 60}m
+                    </td>
+                    <td className="py-4 px-4">
+                      <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-bold ${
+                        record.status === 'Present' 
+                          ? 'bg-green-500/15 text-green-400' 
+                          : record.status === 'Late'
+                            ? 'bg-amber-500/15 text-amber-400'
+                            : 'bg-red-500/15 text-red-400'
+                      }`}>
+                        {record.status}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
