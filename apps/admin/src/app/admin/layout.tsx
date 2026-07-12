@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { 
@@ -44,19 +44,37 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const pathname = usePathname();
   const router = useRouter();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [user, setUser] = useState<{ name: string; role: string; email: string } | null>(null);
+
+  useEffect(() => {
+    const storedUser = localStorage.getItem('user');
+    if (storedUser) {
+      setUser(JSON.parse(storedUser));
+    }
+  }, []);
 
   const handleLogout = async () => {
     // Delete token cookie
     document.cookie = 'token=; Max-Age=0; path=/;';
+    localStorage.removeItem('user');
     router.push('/login');
   };
 
   const navItems = [
     { href: '/admin/dashboard', icon: <LayoutDashboard size={20} />, label: 'Dashboard' },
-    { href: '/admin/users', icon: <Users size={20} />, label: 'User Management' },
-    { href: '/admin/shifts', icon: <Clock size={20} />, label: 'Working Hours' },
-    { href: '/admin/reports', icon: <FileText size={20} />, label: 'Reports' },
   ];
+
+  if (user?.role === 'Admin') {
+    navItems.push(
+      { href: '/admin/users', icon: <Users size={20} />, label: 'User Management' },
+      { href: '/admin/shifts', icon: <Clock size={20} />, label: 'Working Hours' },
+      { href: '/admin/reports', icon: <FileText size={20} />, label: 'Reports' }
+    );
+  } else if (user?.role === 'Employee' || user?.role === 'Intern') {
+    navItems.push(
+      { href: '/admin/reports', icon: <FileText size={20} />, label: 'History' }
+    );
+  }
 
   return (
     <div className="flex h-screen bg-black text-white overflow-hidden">
@@ -143,8 +161,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
           <div className="flex items-center gap-3">
             <div className="flex flex-col text-right">
-              <span className="text-sm font-semibold">Admin Panel</span>
-              <span className="text-xs text-odizo-grey">Bhubaneswar, IN</span>
+              <span className="text-sm font-semibold">{user ? user.name : 'Loading User...'}</span>
+              <span className="text-xs text-odizo-grey">{user ? `${user.role} Portal` : 'Portal'}</span>
             </div>
             <div className="h-10 w-10 rounded-full border border-odizo-red/20 bg-odizo-red/5 flex items-center justify-center text-odizo-red shadow-[0_0_10px_rgba(225,97,103,0.15)]">
               <UserIcon size={18} />

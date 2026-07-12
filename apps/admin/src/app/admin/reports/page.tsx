@@ -33,6 +33,7 @@ interface AttendanceRecord {
 }
 
 export default function Reports() {
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [records, setRecords] = useState<AttendanceRecord[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
@@ -41,20 +42,41 @@ export default function Reports() {
   const [selectedUserId, setSelectedUserId] = useState('');
   const [selectedDate, setSelectedDate] = useState('');
 
+  useEffect(() => {
+    const storedUser = localStorage.getItem('user');
+    if (storedUser) {
+      setCurrentUser(JSON.parse(storedUser));
+    }
+  }, []);
+
   const fetchData = async () => {
     try {
       setLoading(true);
       
-      // Fetch users for the dropdown
-      const usersRes = await fetch('/api/users');
-      const usersData = await usersRes.json();
-      if (usersData.users) {
-        setUsers(usersData.users.filter((u: User) => u.role !== 'Admin'));
+      const storedUser = localStorage.getItem('user');
+      let userIdToQuery = selectedUserId;
+      let isEmployee = false;
+      
+      if (storedUser) {
+        const u = JSON.parse(storedUser) as User;
+        if (u.role !== 'Admin') {
+          userIdToQuery = u._id;
+          isEmployee = true;
+        }
+      }
+
+      if (!isEmployee) {
+        // Fetch users for the dropdown (Admin only)
+        const usersRes = await fetch('/api/users');
+        const usersData = await usersRes.json();
+        if (usersData.users) {
+          setUsers(usersData.users.filter((u: User) => u.role !== 'Admin'));
+        }
       }
 
       // Fetch logs based on filters
       let url = '/api/attendance?';
-      if (selectedUserId) url += `userId=${selectedUserId}&`;
+      if (userIdToQuery) url += `userId=${userIdToQuery}&`;
       if (selectedDate) url += `date=${selectedDate}&`;
       
       const res = await fetch(url);
@@ -71,7 +93,7 @@ export default function Reports() {
 
   useEffect(() => {
     fetchData();
-  }, [selectedUserId, selectedDate]);
+  }, [selectedUserId, selectedDate, currentUser]);
 
   const handleExportCSV = () => {
     if (records.length === 0) return;
@@ -102,15 +124,21 @@ export default function Reports() {
     document.body.removeChild(link);
   };
 
+  const isAdmin = currentUser?.role === 'Admin';
+
   return (
     <div className="space-y-6">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-3xl font-extrabold tracking-tight bg-gradient-to-r from-white via-odizo-grey to-white bg-clip-text text-transparent">
-            Attendance Reports
+            {isAdmin ? 'Attendance Reports' : 'Personal History'}
           </h1>
-          <p className="text-sm text-odizo-grey mt-1">Audit shift logs, verify geolocations, and export CSV timesheets</p>
+          <p className="text-sm text-odizo-grey mt-1">
+            {isAdmin 
+              ? 'Audit shift logs, verify geolocations, and export CSV timesheets' 
+              : 'Browse, verify, and export your historical attendance logs'}
+          </p>
         </div>
         <button
           onClick={handleExportCSV}
@@ -123,24 +151,26 @@ export default function Reports() {
       </div>
 
       {/* Filters Box */}
-      <div className="glass-card p-6 floating-shadow border-white/5 grid grid-cols-1 sm:grid-cols-2 gap-6">
-        {/* User filter */}
-        <div>
-          <label className="block text-xs font-semibold uppercase tracking-wider text-odizo-grey mb-1.5 flex items-center gap-1">
-            <UserIcon size={12} className="text-odizo-red" />
-            <span>Filter by Staff</span>
-          </label>
-          <select
-            value={selectedUserId}
-            onChange={(e) => setSelectedUserId(e.target.value)}
-            className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:border-odizo-red focus:outline-none"
-          >
-            <option value="" className="bg-black text-white">All Staff Members</option>
-            {users.map(u => (
-              <option key={u._id} value={u._id} className="bg-black text-white">{u.name} ({u.role})</option>
-            ))}
-          </select>
-        </div>
+      <div className={`glass-card p-6 floating-shadow border-white/5 grid grid-cols-1 ${isAdmin ? 'sm:grid-cols-2' : ''} gap-6`}>
+        {/* User filter (Admin only) */}
+        {isAdmin && (
+          <div>
+            <label className="block text-xs font-semibold uppercase tracking-wider text-odizo-grey mb-1.5 flex items-center gap-1">
+              <UserIcon size={12} className="text-odizo-red" />
+              <span>Filter by Staff</span>
+            </label>
+            <select
+              value={selectedUserId}
+              onChange={(e) => setSelectedUserId(e.target.value)}
+              className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:border-odizo-red focus:outline-none animate-float-in"
+            >
+              <option value="" className="bg-black text-white">All Staff Members</option>
+              {users.map(u => (
+                <option key={u._id} value={u._id} className="bg-black text-white">{u.name} ({u.role})</option>
+              ))}
+            </select>
+          </div>
+        )}
 
         {/* Date filter */}
         <div>

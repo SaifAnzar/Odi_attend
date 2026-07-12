@@ -27,11 +27,8 @@ export default function Login() {
       const data = await res.json();
 
       if (res.ok) {
-        if (data.user.role === 'Admin') {
-          router.push('/admin/dashboard');
-        } else {
-          setError('Access denied. Non-admin accounts must use the mobile application.');
-        }
+        localStorage.setItem('user', JSON.stringify(data.user));
+        router.push('/admin/dashboard');
       } else {
         setError(data.error || 'Invalid credentials');
       }

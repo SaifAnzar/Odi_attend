@@ -78,8 +78,11 @@ export async function POST(request: NextRequest) {
     const now = new Date();
     const todayStr = getLocalDateString(now);
 
+    console.log(`[API POST /api/attendance] userPayload.id="${userPayload.id}" | user._id="${user?._id}" | todayStr="${todayStr}" | type="${type}"`);
+
     // Find or create daily attendance record
     let record = await AttendanceRecord.findOne({ userId: user._id, date: todayStr });
+    console.log(`[API POST /api/attendance] Record found:`, record ? `YES (ID: ${record._id})` : 'NO (null)');
 
     if (type === 'Check-In') {
       if (!record) {
