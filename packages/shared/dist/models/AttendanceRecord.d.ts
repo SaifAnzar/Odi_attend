@@ -21,8 +21,11 @@ export interface IAttendanceRecord extends Document {
         endTime: string;
     };
     sessions: IPunchSession[];
-    status: 'Present' | 'Absent' | 'Late' | 'Half-Day' | 'Off-Day';
+    attendanceStatus: 'Present' | 'Absent' | 'Late' | 'Half-Day' | 'Off-Day';
     totalMinutesWorked: number;
+    isFlagged: boolean;
+    flagReason?: string;
+    status: 'Approved' | 'Pending Approval' | 'Rejected';
     notes?: string;
     createdAt: Date;
     updatedAt: Date;

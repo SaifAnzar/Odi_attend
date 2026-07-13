@@ -69,14 +69,18 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Valid location coordinates are required.' }, { status: 400 });
     }
 
-    // Validate Wi-Fi SSID if lock is enabled
+    // Determine flag state from client and server-side Wi-Fi check
+    let isFlagged = body.isFlagged || false;
+    let flagReason = body.flagReason || '';
+    let approvalStatus: 'Approved' | 'Pending Approval' | 'Rejected' = isFlagged ? 'Pending Approval' : 'Approved';
+
+    // Server-side validation as double-check
     const config = await AppConfig.findOne({});
     if (config?.isWifiLockEnabled) {
       if (!ssid || ssid !== config.allowedWifiSSID) {
-        return NextResponse.json(
-          { error: `Forbidden. Attendance must be recorded while connected to the office Wi-Fi: "${config.allowedWifiSSID}".` },
-          { status: 403 }
-        );
+        isFlagged = true;
+        flagReason = flagReason ? `${flagReason} (Server verified)` : 'Wi-Fi Mismatch';
+        approvalStatus = 'Pending Approval';
       }
     }
 
@@ -107,8 +111,11 @@ export async function POST(request: NextRequest) {
             endTime: user.shift.endTime
           },
           sessions: [],
-          status: 'Present',
+          attendanceStatus: 'Present',
           totalMinutesWorked: 0,
+          isFlagged,
+          flagReason,
+          status: approvalStatus,
           notes
         });
 
@@ -123,13 +130,20 @@ export async function POST(request: NextRequest) {
         const shiftStartTotalMinutes = shiftHour * 60 + shiftMin + 15; // 15 min grace period
 
         if (checkInTotalMinutes > shiftStartTotalMinutes) {
-          record.status = 'Late';
+          record.attendanceStatus = 'Late';
         }
       } else {
         // Record exists, verify there isn't an active check-in session already open
         const activeSession = record.sessions.find((s: any) => !s.checkOut);
         if (activeSession) {
           return NextResponse.json({ error: 'You are already checked in. Check out first.' }, { status: 400 });
+        }
+
+        // If this check-in is flagged, propagate it to the daily record
+        if (isFlagged) {
+          record.isFlagged = true;
+          record.flagReason = flagReason;
+          record.status = 'Pending Approval';
         }
       }
 
@@ -172,6 +186,13 @@ export async function POST(request: NextRequest) {
       // Update total working minutes
       const sessionDurationMinutes = Math.round((now.getTime() - activeSession.checkIn.getTime()) / 60000);
       record.totalMinutesWorked += sessionDurationMinutes;
+
+      // If this check-out is flagged, propagate it to the daily record
+      if (isFlagged) {
+        record.isFlagged = true;
+        record.flagReason = flagReason;
+        record.status = 'Pending Approval';
+      }
 
       // Mark check-out session updated in mongoose
       record.markModified('sessions');

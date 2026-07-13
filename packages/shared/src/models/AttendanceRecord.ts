@@ -24,8 +24,11 @@ export interface IAttendanceRecord extends Document {
     endTime: string;
   };
   sessions: IPunchSession[];
-  status: 'Present' | 'Absent' | 'Late' | 'Half-Day' | 'Off-Day';
+  attendanceStatus: 'Present' | 'Absent' | 'Late' | 'Half-Day' | 'Off-Day';
   totalMinutesWorked: number; // calculated sum of all completed sessions (in minutes)
+  isFlagged: boolean;
+  flagReason?: string;
+  status: 'Approved' | 'Pending Approval' | 'Rejected';
   notes?: string;
   createdAt: Date;
   updatedAt: Date;
@@ -55,13 +58,21 @@ const AttendanceRecordSchema = new Schema<IAttendanceRecord>({
     endTime: { type: String, required: true }
   },
   sessions: [PunchSessionSchema],
-  status: { 
+  attendanceStatus: { 
     type: String, 
     required: true, 
     enum: ['Present', 'Absent', 'Late', 'Half-Day', 'Off-Day'], 
     default: 'Present' 
   },
   totalMinutesWorked: { type: Number, required: true, default: 0 },
+  isFlagged: { type: Boolean, default: false },
+  flagReason: { type: String, default: "" },
+  status: {
+    type: String,
+    required: true,
+    enum: ['Approved', 'Pending Approval', 'Rejected'],
+    default: 'Approved'
+  },
   notes: { type: String }
 }, {
   timestamps: true

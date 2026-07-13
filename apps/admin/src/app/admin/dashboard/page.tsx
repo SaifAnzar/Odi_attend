@@ -48,7 +48,7 @@ interface AttendanceRecord {
     endTime: string;
   };
   sessions: PunchSession[];
-  status: 'Present' | 'Absent' | 'Late' | 'Half-Day' | 'Off-Day';
+  attendanceStatus: 'Present' | 'Absent' | 'Late' | 'Half-Day' | 'Off-Day';
   totalMinutesWorked: number;
 }
 
@@ -235,8 +235,8 @@ export default function Dashboard() {
   const totalStaff = users.length;
   const totalEmployees = users.filter(u => u.role === 'Employee').length;
   const totalInterns = users.filter(u => u.role === 'Intern').length;
-  const todayPresent = records.filter(r => ['Present', 'Late', 'Half-Day'].includes(r.status)).length;
-  const todayLate = records.filter(r => r.status === 'Late').length;
+  const todayPresent = records.filter(r => ['Present', 'Late', 'Half-Day'].includes(r.attendanceStatus)).length;
+  const todayLate = records.filter(r => r.attendanceStatus === 'Late').length;
   const todayActiveSchedules = records.filter(r => r.sessions.some(s => !s.checkOut)).length;
   const attendanceRate = totalStaff > 0 ? Math.round((todayPresent / totalStaff) * 100) : 0;
 
@@ -390,8 +390,8 @@ export default function Dashboard() {
                   <span className="text-[10px] text-odizo-grey uppercase tracking-wider font-semibold">Shift Status</span>
                   <p className="text-lg font-bold text-white mt-1">
                     {todayRecord ? (
-                      <span className={todayRecord.status === 'Present' ? 'text-green-400' : 'text-amber-400'}>
-                        {todayRecord.status}
+                      <span className={todayRecord.attendanceStatus === 'Present' ? 'text-green-400' : 'text-amber-400'}>
+                        {todayRecord.attendanceStatus}
                       </span>
                     ) : (
                       <span className="text-odizo-grey">Not Started</span>
@@ -453,13 +453,13 @@ export default function Dashboard() {
                       </td>
                       <td className="py-4 px-4">
                         <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-bold ${
-                          record.status === 'Present' 
+                          record.attendanceStatus === 'Present' 
                             ? 'bg-green-500/15 text-green-400' 
-                            : record.status === 'Late'
+                            : record.attendanceStatus === 'Late'
                               ? 'bg-amber-500/15 text-amber-400'
                               : 'bg-red-500/15 text-red-400'
                         }`}>
-                          {record.status}
+                          {record.attendanceStatus}
                         </span>
                       </td>
                     </tr>
@@ -672,13 +672,13 @@ export default function Dashboard() {
                         </td>
                         <td className="py-4 px-4">
                           <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-bold ${
-                            record.status === 'Present' 
+                            record.attendanceStatus === 'Present' 
                               ? 'bg-green-500/15 text-green-400' 
-                              : record.status === 'Late'
+                              : record.attendanceStatus === 'Late'
                                 ? 'bg-amber-500/15 text-amber-400'
                                 : 'bg-red-500/15 text-red-400'
                           }`}>
-                            {record.status}
+                            {record.attendanceStatus}
                           </span>
                         </td>
                       </tr>

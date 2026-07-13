@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { FileText, Calendar, User as UserIcon, Search, MapPin, Download } from 'lucide-react';
+import { FileText, Calendar, User as UserIcon, Search, MapPin, Download, Check, X, ShieldAlert } from 'lucide-react';
 
 interface User {
   _id: string;
@@ -28,8 +28,11 @@ interface AttendanceRecord {
     endTime: string;
   };
   sessions: PunchSession[];
-  status: 'Present' | 'Absent' | 'Late' | 'Half-Day' | 'Off-Day';
+  attendanceStatus: 'Present' | 'Absent' | 'Late' | 'Half-Day' | 'Off-Day';
   totalMinutesWorked: number;
+  isFlagged: boolean;
+  flagReason?: string;
+  status: 'Approved' | 'Pending Approval' | 'Rejected';
 }
 
 export default function Reports() {
@@ -41,6 +44,25 @@ export default function Reports() {
   // Filters
   const [selectedUserId, setSelectedUserId] = useState('');
   const [selectedDate, setSelectedDate] = useState('');
+
+  const handleReview = async (recordId: string, approvalStatus: 'Approved' | 'Rejected') => {
+    try {
+      const res = await fetch(`/api/attendance/${recordId}/review`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: approvalStatus })
+      });
+      if (res.ok) {
+        fetchData();
+      } else {
+        const err = await res.json();
+        alert(err.error || 'Failed to submit review.');
+      }
+    } catch (e) {
+      console.error(e);
+      alert('Network error. Failed to review record.');
+    }
+  };
 
   useEffect(() => {
     const storedUser = localStorage.getItem('user');
@@ -99,7 +121,7 @@ export default function Reports() {
     if (records.length === 0) return;
     
     // Construct CSV content
-    const headers = ['Date', 'Staff Name', 'Email', 'Role', 'Shift Name', 'Shift Start', 'Shift End', 'Minutes Worked', 'Status'];
+    const headers = ['Date', 'Staff Name', 'Email', 'Role', 'Shift Name', 'Shift Start', 'Shift End', 'Minutes Worked', 'Attendance Status', 'Verification Status', 'Flagged', 'Flag Reason'];
     const rows = records.map(r => [
       r.date,
       r.userId?.name || 'Unknown',
@@ -109,7 +131,10 @@ export default function Reports() {
       r.shiftSnapshot?.startTime || '',
       r.shiftSnapshot?.endTime || '',
       r.totalMinutesWorked,
-      r.status
+      r.attendanceStatus,
+      r.status,
+      r.isFlagged ? 'Yes' : 'No',
+      r.flagReason || ''
     ]);
     
     const csvContent = "data:text/csv;charset=utf-8," 
@@ -212,12 +237,21 @@ export default function Reports() {
                   <th className="py-3 px-4">Role</th>
                   <th className="py-3 px-4">Punch In / Out Times</th>
                   <th className="py-3 px-4">Hours Logged</th>
-                  <th className="py-3 px-4">Status</th>
+                  <th className="py-3 px-4">Attendance</th>
+                  <th className="py-3 px-4">Verification</th>
+                  {isAdmin && <th className="py-3 px-4 text-right">Actions</th>}
                 </tr>
               </thead>
               <tbody className="divide-y divide-white/5">
                 {records.map((record) => (
-                  <tr key={record._id} className="hover:bg-white/3 transition-colors">
+                  <tr 
+                    key={record._id} 
+                    className={`transition-colors ${
+                      record.isFlagged 
+                        ? 'bg-red-500/5 hover:bg-red-500/10 border-l-2 border-l-odizo-red/60 animate-pulse-slow' 
+                        : 'hover:bg-white/3'
+                    }`}
+                  >
                     <td className="py-4 px-4 font-mono font-semibold text-white">
                       {record.date}
                     </td>
@@ -225,6 +259,12 @@ export default function Reports() {
                       <div className="flex flex-col">
                         <span>{record.userId?.name || 'Unknown User'}</span>
                         <span className="text-xs text-odizo-grey font-normal">{record.userId?.email}</span>
+                        {record.isFlagged && (
+                          <span className="text-[10px] text-odizo-red mt-1 flex items-center gap-1 font-semibold">
+                            <ShieldAlert size={12} />
+                            Flagged: {record.flagReason}
+                          </span>
+                        )}
                       </div>
                     </td>
                     <td className="py-4 px-4">
@@ -265,15 +305,50 @@ export default function Reports() {
                     </td>
                     <td className="py-4 px-4">
                       <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-bold ${
-                        record.status === 'Present' 
+                        record.attendanceStatus === 'Present' 
                           ? 'bg-green-500/15 text-green-400' 
-                          : record.status === 'Late'
+                          : record.attendanceStatus === 'Late'
                             ? 'bg-amber-500/15 text-amber-400'
                             : 'bg-red-500/15 text-red-400'
+                      }`}>
+                        {record.attendanceStatus}
+                      </span>
+                    </td>
+                    <td className="py-4 px-4">
+                      <span className={`inline-flex px-2.5 py-0.5 rounded-full text-xs font-bold ${
+                        record.status === 'Approved'
+                          ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+                          : record.status === 'Rejected'
+                            ? 'bg-odizo-red/10 text-odizo-red border border-odizo-red/20'
+                            : 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
                       }`}>
                         {record.status}
                       </span>
                     </td>
+                    {isAdmin && (
+                      <td className="py-4 px-4 text-right">
+                        {record.status === 'Pending Approval' ? (
+                          <div className="flex justify-end gap-2">
+                            <button
+                              onClick={() => handleReview(record._id, 'Approved')}
+                              className="p-1.5 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/20 hover:border-emerald-500/40 text-emerald-400 rounded-lg transition-all cursor-pointer"
+                              title="Approve"
+                            >
+                              <Check size={14} />
+                            </button>
+                            <button
+                              onClick={() => handleReview(record._id, 'Rejected')}
+                              className="p-1.5 bg-odizo-red/10 hover:bg-odizo-red/20 border border-odizo-red/20 hover:border-odizo-red/40 text-odizo-red rounded-lg transition-all cursor-pointer"
+                              title="Reject"
+                            >
+                              <X size={14} />
+                            </button>
+                          </div>
+                        ) : (
+                          <span className="text-xs text-odizo-grey">-</span>
+                        )}
+                      </td>
+                    )}
                   </tr>
                 ))}
               </tbody>

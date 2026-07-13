@@ -60,8 +60,11 @@ interface AttendanceRecord {
     endTime: string;
   };
   sessions: PunchSession[];
-  status: 'Present' | 'Absent' | 'Late' | 'Half-Day' | 'Off-Day';
+  attendanceStatus: 'Present' | 'Absent' | 'Late' | 'Half-Day' | 'Off-Day';
   totalMinutesWorked: number;
+  isFlagged?: boolean;
+  flagReason?: string;
+  status?: 'Approved' | 'Pending Approval' | 'Rejected';
 }
 
 export default function App() {
@@ -259,21 +262,27 @@ export default function App() {
       const settingsData = await settingsRes.json();
       
       let clientSsid: string | null = null;
+      let clientIsFlagged = false;
+      let clientFlagReason = '';
 
       if (settingsRes.ok && settingsData.config?.isWifiLockEnabled) {
         const allowedSSID = settingsData.config.allowedWifiSSID;
         
-        // 2. Fetch current connected Wi-Fi SSID
-        const netState = await NetInfo.fetch();
-        clientSsid = netState.type === 'wifi' ? (netState.details as any).ssid : null;
+        try {
+          // 2. Fetch current connected Wi-Fi SSID
+          const netState = await NetInfo.fetch();
+          clientSsid = netState.type === 'wifi' ? (netState.details as any).ssid : null;
+        } catch (err) {
+          console.warn('Failed to fetch Wi-Fi SSID:', err);
+        }
         
         if (!clientSsid || clientSsid !== allowedSSID) {
+          clientIsFlagged = true;
+          clientFlagReason = 'Wi-Fi mismatch or network unavailable';
           Alert.alert(
-            'Wi-Fi Lock Active',
-            `Please connect to the Office Wi-Fi. Allowed network: "${allowedSSID}". Currently connected to: ${clientSsid || 'None'}`
+            'Office Wi-Fi Not Detected',
+            'Office Wi-Fi not detected. Your attendance is marked but flagged for Admin approval.'
           );
-          setPunchLoading(false);
-          return;
         }
       }
 
@@ -297,7 +306,9 @@ export default function App() {
           },
           deviceInfo: deviceLabel,
           notes: punchNotes || undefined,
-          ssid: clientSsid || undefined
+          ssid: clientSsid || undefined,
+          isFlagged: clientIsFlagged,
+          flagReason: clientFlagReason || undefined
         })
       });
 
@@ -553,9 +564,9 @@ export default function App() {
                 <Text style={styles.statLabel}>Session status</Text>
                 <Text style={[
                   styles.statValue, 
-                  { color: todayRecord?.status === 'Present' ? '#4ADE80' : '#FBBF24' }
+                  { color: todayRecord?.attendanceStatus === 'Present' ? '#4ADE80' : '#FBBF24' }
                 ]}>
-                  {todayRecord ? todayRecord.status : 'None'}
+                  {todayRecord ? todayRecord.attendanceStatus : 'None'}
                 </Text>
               </View>
             </View>
@@ -585,13 +596,13 @@ export default function App() {
                       <Text style={styles.recordDate}>{r.date}</Text>
                       <View style={[
                         styles.recordStatusBadge,
-                        { backgroundColor: r.status === 'Present' ? 'rgba(74,222,128,0.15)' : 'rgba(251,191,36,0.15)' }
+                        { backgroundColor: r.attendanceStatus === 'Present' ? 'rgba(74,222,128,0.15)' : 'rgba(251,191,36,0.15)' }
                       ]}>
                         <Text style={[
                           styles.recordStatusText,
-                          { color: r.status === 'Present' ? '#4ADE80' : '#FBBF24' }
+                          { color: r.attendanceStatus === 'Present' ? '#4ADE80' : '#FBBF24' }
                         ]}>
-                          {r.status}
+                          {r.attendanceStatus}
                         </Text>
                       </View>
                     </View>
