@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { connectToDatabase } from '@/lib/db';
 import { verifyAuth } from '@/lib/auth';
-import { User, AttendanceRecord } from '@odi_attend/shared';
+import { User, AttendanceRecord, AppConfig } from '@odi_attend/shared';
 
 // Helper to get local date string YYYY-MM-DD (defaults to IST timezone UTC+5:30)
 function getLocalDateString(date: Date = new Date()): string {
@@ -59,7 +59,7 @@ export async function POST(request: NextRequest) {
 
     await connectToDatabase();
     const body = await request.json();
-    const { type, location, deviceInfo, notes } = body; // type is 'Check-In' or 'Check-Out'
+    const { type, location, deviceInfo, notes, ssid } = body; // type is 'Check-In' or 'Check-Out'
 
     if (!type || !['Check-In', 'Check-Out'].includes(type)) {
       return NextResponse.json({ error: 'Invalid punch type. Must be Check-In or Check-Out.' }, { status: 400 });
@@ -67,6 +67,17 @@ export async function POST(request: NextRequest) {
 
     if (!location || typeof location.latitude !== 'number' || typeof location.longitude !== 'number') {
       return NextResponse.json({ error: 'Valid location coordinates are required.' }, { status: 400 });
+    }
+
+    // Validate Wi-Fi SSID if lock is enabled
+    const config = await AppConfig.findOne({});
+    if (config?.isWifiLockEnabled) {
+      if (!ssid || ssid !== config.allowedWifiSSID) {
+        return NextResponse.json(
+          { error: `Forbidden. Attendance must be recorded while connected to the office Wi-Fi: "${config.allowedWifiSSID}".` },
+          { status: 403 }
+        );
+      }
     }
 
     // Fetch the user to get their shift details

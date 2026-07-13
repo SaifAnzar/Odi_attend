@@ -22,3 +22,4 @@ var mongoose_1 = require("mongoose");
 Object.defineProperty(exports, "mongoose", { enumerable: true, get: function () { return __importDefault(mongoose_1).default; } });
 __exportStar(require("./models/User"), exports);
 __exportStar(require("./models/AttendanceRecord"), exports);
+__exportStar(require("./models/AppConfig"), exports);

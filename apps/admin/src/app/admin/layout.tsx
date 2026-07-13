@@ -11,7 +11,8 @@ import {
   LogOut, 
   Menu, 
   X,
-  User as UserIcon
+  User as UserIcon,
+  Settings
 } from 'lucide-react';
 import Logo from '@/components/Logo';
 
@@ -68,7 +69,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     navItems.push(
       { href: '/admin/users', icon: <Users size={20} />, label: 'User Management' },
       { href: '/admin/shifts', icon: <Clock size={20} />, label: 'Working Hours' },
-      { href: '/admin/reports', icon: <FileText size={20} />, label: 'Reports' }
+      { href: '/admin/reports', icon: <FileText size={20} />, label: 'Reports' },
+      { href: '/admin/settings', icon: <Settings size={20} />, label: 'Settings' }
     );
   } else if (user?.role === 'Employee' || user?.role === 'Intern') {
     navItems.push(

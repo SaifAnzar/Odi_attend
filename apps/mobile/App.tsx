@@ -20,6 +20,11 @@ import { LinearGradient } from 'expo-linear-gradient';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Location from 'expo-location';
 import { Ionicons } from '@expo/vector-icons';
+import NetInfo from '@react-native-community/netinfo';
+
+NetInfo.configure({
+  shouldFetchWiFiSSID: true,
+});
 
 const { width } = Dimensions.get('window');
 
@@ -244,6 +249,34 @@ export default function App() {
 
     setPunchLoading(true);
     try {
+      // 1. Fetch Wi-Fi settings from backend
+      const settingsRes = await fetch(`${apiUrl}/api/settings/wifi`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      const settingsData = await settingsRes.json();
+      
+      let clientSsid: string | null = null;
+
+      if (settingsRes.ok && settingsData.config?.isWifiLockEnabled) {
+        const allowedSSID = settingsData.config.allowedWifiSSID;
+        
+        // 2. Fetch current connected Wi-Fi SSID
+        const netState = await NetInfo.fetch();
+        clientSsid = netState.type === 'wifi' ? (netState.details as any).ssid : null;
+        
+        if (!clientSsid || clientSsid !== allowedSSID) {
+          Alert.alert(
+            'Wi-Fi Lock Active',
+            `Please connect to the Office Wi-Fi. Allowed network: "${allowedSSID}". Currently connected to: ${clientSsid || 'None'}`
+          );
+          setPunchLoading(false);
+          return;
+        }
+      }
+
       const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
       setGpsCoords({ lat: loc.coords.latitude, lng: loc.coords.longitude });
 
@@ -263,7 +296,8 @@ export default function App() {
             address: 'Mobile App Checkpoint'
           },
           deviceInfo: deviceLabel,
-          notes: punchNotes || undefined
+          notes: punchNotes || undefined,
+          ssid: clientSsid || undefined
         })
       });
 
