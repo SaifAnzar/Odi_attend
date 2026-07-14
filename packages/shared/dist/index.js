@@ -23,3 +23,4 @@ Object.defineProperty(exports, "mongoose", { enumerable: true, get: function () 
 __exportStar(require("./models/User"), exports);
 __exportStar(require("./models/AttendanceRecord"), exports);
 __exportStar(require("./models/AppConfig"), exports);
+__exportStar(require("./models/LeaveRequest"), exports);

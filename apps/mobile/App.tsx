@@ -13,7 +13,8 @@ import {
   Platform,
   Dimensions,
   StatusBar as RNStatusBar,
-  Image
+  Image,
+  Modal
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -67,15 +68,158 @@ interface AttendanceRecord {
   status?: 'Approved' | 'Pending Approval' | 'Rejected';
 }
 
+const formatDateToYYYYMMDD = (date: Date) => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
+const parseYYYYMMDD = (str: string) => {
+  const [y, m, d] = str.split('-').map(Number);
+  return new Date(y, m - 1, d);
+};
+
+interface CalendarModalProps {
+  visible: boolean;
+  onClose: () => void;
+  selectedDate: string;
+  onSelectDate: (date: string) => void;
+  title: string;
+}
+
+function CalendarModal({ visible, onClose, selectedDate, onSelectDate, title }: CalendarModalProps) {
+  const parsedDate = parseYYYYMMDD(selectedDate);
+  const [currentMonth, setCurrentMonth] = useState(new Date(parsedDate.getFullYear(), parsedDate.getMonth(), 1));
+
+  useEffect(() => {
+    if (visible) {
+      const d = parseYYYYMMDD(selectedDate);
+      setCurrentMonth(new Date(d.getFullYear(), d.getMonth(), 1));
+    }
+  }, [visible, selectedDate]);
+
+  if (!visible) return null;
+
+  const year = currentMonth.getFullYear();
+  const month = currentMonth.getMonth();
+
+  const monthNames = [
+    'January', 'February', 'March', 'April', 'May', 'June',
+    'July', 'August', 'September', 'October', 'November', 'December'
+  ];
+
+  const getDaysInMonth = (y: number, m: number) => new Date(y, m + 1, 0).getDate();
+  const getFirstDayOfMonth = (y: number, m: number) => new Date(y, m, 1).getDay();
+
+  const daysInMonth = getDaysInMonth(year, month);
+  const firstDayIndex = getFirstDayOfMonth(year, month);
+
+  // Generate days array (including padding for empty cells at the start)
+  const days: (number | null)[] = [];
+  for (let i = 0; i < firstDayIndex; i++) {
+    days.push(null);
+  }
+  for (let d = 1; d <= daysInMonth; d++) {
+    days.push(d);
+  }
+
+  const handlePrevMonth = () => {
+    setCurrentMonth(new Date(year, month - 1, 1));
+  };
+
+  const handleNextMonth = () => {
+    setCurrentMonth(new Date(year, month + 1, 1));
+  };
+
+  const handleSelectDay = (day: number) => {
+    onSelectDate(formatDateToYYYYMMDD(new Date(year, month, day)));
+    onClose();
+  };
+
+  return (
+    <Modal transparent={true} visible={visible} animationType="slide" onRequestClose={onClose}>
+      <View style={styles.calendarModalOverlay}>
+        <View style={styles.calendarModalCard}>
+          <View style={styles.calendarModalHeader}>
+            <Text style={styles.calendarModalTitle}>{title}</Text>
+            <TouchableOpacity onPress={onClose} style={styles.calendarCloseBtn}>
+              <Ionicons name="close" size={20} color="#FFFFFF" />
+            </TouchableOpacity>
+          </View>
+
+          {/* Month selector */}
+          <View style={styles.calendarMonthHeader}>
+            <TouchableOpacity onPress={handlePrevMonth} style={styles.calendarNavBtn}>
+              <Ionicons name="chevron-back" size={20} color="#FFFFFF" />
+            </TouchableOpacity>
+            <Text style={styles.calendarMonthText}>{monthNames[month]} {year}</Text>
+            <TouchableOpacity onPress={handleNextMonth} style={styles.calendarNavBtn}>
+              <Ionicons name="chevron-forward" size={20} color="#FFFFFF" />
+            </TouchableOpacity>
+          </View>
+
+          {/* Week Days Headers */}
+          <View style={styles.calendarWeekdaysRow}>
+            {['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'].map((wd, i) => (
+              <Text key={i} style={styles.calendarWeekdayLabel}>{wd}</Text>
+            ))}
+          </View>
+
+          {/* Days Grid */}
+          <View style={styles.calendarDaysGrid}>
+            {days.map((day, index) => {
+              const isSelected = day !== null && 
+                parsedDate.getDate() === day && 
+                parsedDate.getMonth() === month && 
+                parsedDate.getFullYear() === year;
+
+              return (
+                <TouchableOpacity
+                  key={index}
+                  disabled={day === null}
+                  onPress={() => day && handleSelectDay(day)}
+                  style={[
+                    styles.calendarDayCell,
+                    isSelected && styles.calendarDayCellSelected
+                  ]}
+                >
+                  <Text style={[
+                    styles.calendarDayText,
+                    day === null && { color: 'transparent' },
+                    isSelected && styles.calendarDayTextSelected
+                  ]}>
+                    {day || ''}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        </View>
+      </View>
+    </Modal>
+  );
+}
+
 export default function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
   
   // Navigation & Data
-  const [currentTab, setCurrentTab] = useState<'dashboard' | 'history'>('dashboard');
+  const [currentTab, setCurrentTab] = useState<'dashboard' | 'history' | 'leaves'>('dashboard');
   const [records, setRecords] = useState<AttendanceRecord[]>([]);
   const [loading, setLoading] = useState(false);
+
+  // Leave System States
+  const [leaves, setLeaves] = useState<any[]>([]);
+  const [leaveStartDate, setLeaveStartDate] = useState<string>(formatDateToYYYYMMDD(new Date()));
+  const [leaveEndDate, setLeaveEndDate] = useState<string>(formatDateToYYYYMMDD(new Date()));
+  const [leaveReason, setLeaveReason] = useState('');
+  const [submittingLeave, setSubmittingLeave] = useState(false);
+  const [fetchingLeaves, setFetchingLeaves] = useState(false);
+  const [showStartPicker, setShowStartPicker] = useState(false);
+  const [showEndPicker, setShowEndPicker] = useState(false);
   
   // Auth Form
   const [email, setEmail] = useState('');
@@ -155,11 +299,86 @@ export default function App() {
     }
   };
 
+  // Fetch personal leaves
+  const [fetchingLeavesError, setFetchingLeavesError] = useState(''); // tracking error
+  const fetchMyLeaves = async () => {
+    if (!token) return;
+    try {
+      setFetchingLeaves(true);
+      const res = await fetch(`${apiUrl}/api/leaves/my`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      const data = await res.json();
+      if (res.ok && data.leaves) {
+        setLeaves(data.leaves);
+      }
+    } catch (e) {
+      console.error('Fetch leaves failed:', e);
+    } finally {
+      setFetchingLeaves(false);
+    }
+  };
+
+  const handleApplyLeave = async () => {
+    if (!leaveReason.trim()) {
+      Alert.alert('Error', 'Please provide a reason for the leave request.');
+      return;
+    }
+
+    if (parseYYYYMMDD(leaveStartDate) > parseYYYYMMDD(leaveEndDate)) {
+      Alert.alert('Error', 'Start Date cannot be after End Date.');
+      return;
+    }
+
+    try {
+      setSubmittingLeave(true);
+      const res = await fetch(`${apiUrl}/api/leaves`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          userId: user?._id,
+          startDate: leaveStartDate,
+          endDate: leaveEndDate,
+          reason: leaveReason
+        })
+      });
+
+      const data = await res.json();
+      if (res.ok) {
+        Alert.alert('Success', 'Leave request submitted successfully.');
+        setLeaveReason('');
+        setLeaveStartDate(formatDateToYYYYMMDD(new Date()));
+        setLeaveEndDate(formatDateToYYYYMMDD(new Date()));
+        fetchMyLeaves();
+      } else {
+        Alert.alert('Error', data.error || 'Failed to submit leave request.');
+      }
+    } catch (e) {
+      console.error('Submit leave failed:', e);
+      Alert.alert('Error', 'Something went wrong. Please try again.');
+    } finally {
+      setSubmittingLeave(false);
+    }
+  };
+
   useEffect(() => {
     if (isAuthenticated) {
       fetchLogs();
+      fetchMyLeaves();
     }
   }, [isAuthenticated]);
+
+  useEffect(() => {
+    if (currentTab === 'leaves') {
+      fetchMyLeaves();
+    }
+  }, [currentTab]);
 
   // Today's attendance session state
   const todayRecord = records.find(r => r.date === todayStr);
@@ -571,7 +790,7 @@ export default function App() {
               </View>
             </View>
           </ScrollView>
-        ) : (
+        ) : currentTab === 'history' ? (
           /* ================= HISTORY TAB ================= */
           <View style={styles.historyWrapper}>
             <View style={styles.historyHeader}>
@@ -633,6 +852,142 @@ export default function App() {
               </ScrollView>
             )}
           </View>
+        ) : (
+          /* ================= LEAVES TAB ================= */
+          <View style={styles.historyWrapper}>
+            <View style={styles.historyHeader}>
+              <Text style={styles.historyTitle}>Leave Management</Text>
+              <TouchableOpacity onPress={fetchMyLeaves} style={styles.refreshLogsBtn} disabled={fetchingLeaves}>
+                <Ionicons name="refresh" size={16} color="#FFFFFF" />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView bounces={true} style={styles.historyScroll} contentContainerStyle={{ paddingBottom: 24 }}>
+              {/* UI Component 1: Apply Leave Form */}
+              <View style={styles.applyLeaveCard}>
+                <Text style={styles.applyLeaveTitle}>Apply For Leave</Text>
+                
+                <View style={styles.datePickerRow}>
+                  <View style={styles.datePickerField}>
+                    <Text style={styles.datePickerLabel}>Start Date</Text>
+                    <TouchableOpacity 
+                      style={styles.datePickerBtn}
+                      onPress={() => setShowStartPicker(true)}
+                    >
+                      <Ionicons name="calendar-outline" size={16} color="#E16167" style={{ marginRight: 6 }} />
+                      <Text style={styles.datePickerBtnText}>
+                        {leaveStartDate}
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+
+                  <View style={styles.datePickerField}>
+                    <Text style={styles.datePickerLabel}>End Date</Text>
+                    <TouchableOpacity 
+                      style={styles.datePickerBtn}
+                      onPress={() => setShowEndPicker(true)}
+                    >
+                      <Ionicons name="calendar-outline" size={16} color="#E16167" style={{ marginRight: 6 }} />
+                      <Text style={styles.datePickerBtnText}>
+                        {leaveEndDate}
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+
+                <View style={{ marginTop: 12 }}>
+                  <Text style={styles.datePickerLabel}>Reason for Leave</Text>
+                  <TextInput
+                    placeholder="Describe the reason for your leave request..."
+                    placeholderTextColor="#9E9E9F"
+                    multiline={true}
+                    numberOfLines={3}
+                    value={leaveReason}
+                    onChangeText={setLeaveReason}
+                    style={styles.leaveReasonInput}
+                  />
+                </View>
+
+                <TouchableOpacity
+                  onPress={handleApplyLeave}
+                  disabled={submittingLeave}
+                  style={styles.submitLeaveBtn}
+                >
+                  {submittingLeave ? (
+                    <ActivityIndicator color="#FFFFFF" size="small" />
+                  ) : (
+                    <>
+                      <Ionicons name="paper-plane-outline" size={16} color="#FFFFFF" style={{ marginRight: 6 }} />
+                      <Text style={styles.submitLeaveBtnText}>Submit Request</Text>
+                    </>
+                  )}
+                </TouchableOpacity>
+              </View>
+
+              {/* UI Component 2: Leave History */}
+              <Text style={[styles.historyTitle, { marginTop: 24, marginBottom: 12, fontSize: 16 }]}>
+                Leave Application History
+              </Text>
+
+              {fetchingLeaves && leaves.length === 0 ? (
+                <ActivityIndicator color="#E16167" size="large" style={styles.historyLoader} />
+              ) : leaves.length === 0 ? (
+                <View style={styles.emptyLogs}>
+                  <Ionicons name="airplane-outline" size={48} color="#9E9E9F" />
+                  <Text style={styles.emptyLogsText}>No past leave requests found.</Text>
+                </View>
+              ) : (
+                leaves.map((l) => {
+                  const sDate = new Date(l.startDate).toISOString().split('T')[0];
+                  const eDate = new Date(l.endDate).toISOString().split('T')[0];
+                  const diffTime = Math.abs(new Date(l.endDate).getTime() - new Date(l.startDate).getTime());
+                  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+
+                  let badgeBg = 'rgba(251,191,36,0.15)';
+                  let badgeText = '#FBBF24';
+                  if (l.status === 'Approved') {
+                    badgeBg = 'rgba(74,222,128,0.15)';
+                    badgeText = '#4ADE80';
+                  } else if (l.status === 'Rejected') {
+                    badgeBg = 'rgba(225,97,103,0.15)';
+                    badgeText = '#E16167';
+                  }
+
+                  return (
+                    <View key={l._id} style={styles.historyRecordCard}>
+                      <View style={styles.recordCardTop}>
+                        <Text style={styles.recordDate}>
+                          {sDate} to {eDate}
+                        </Text>
+                        <View style={[styles.recordStatusBadge, { backgroundColor: badgeBg }]}>
+                          <Text style={[styles.recordStatusText, { color: badgeText }]}>
+                            {l.status}
+                          </Text>
+                        </View>
+                      </View>
+
+                      <Text style={styles.recordShiftName}>Duration: {diffDays} {diffDays === 1 ? 'day' : 'days'}</Text>
+                      <Text style={[styles.recordShiftName, { marginTop: 4, color: '#FFFFFF' }]}>Reason: {l.reason}</Text>
+
+                      {l.adminRemarks ? (
+                        <View style={styles.adminRemarksBox}>
+                          <Text style={styles.adminRemarksTitle}>Admin Remarks:</Text>
+                          <Text style={styles.adminRemarksText}>{l.adminRemarks}</Text>
+                        </View>
+                      ) : null}
+
+                      <View style={styles.recordCardFooter}>
+                        <Text style={styles.recordHoursLabel}>Applied on:</Text>
+                        <Text style={styles.recordHours}>
+                          {new Date(l.appliedOn).toLocaleDateString([], { year: 'numeric', month: 'short', day: 'numeric' })}
+                        </Text>
+                      </View>
+                    </View>
+                  );
+                })
+              )}
+            </ScrollView>
+          </View>
         )}
       </View>
 
@@ -653,6 +1008,20 @@ export default function App() {
         </TouchableOpacity>
 
         <TouchableOpacity
+          onPress={() => setCurrentTab('leaves')}
+          style={[styles.tabItem, currentTab === 'leaves' && styles.tabActive]}
+        >
+          <Ionicons 
+            name={currentTab === 'leaves' ? 'airplane' : 'airplane-outline'} 
+            size={22} 
+            color={currentTab === 'leaves' ? '#E16167' : '#9E9E9F'} 
+          />
+          <Text style={[styles.tabLabel, { color: currentTab === 'leaves' ? '#E16167' : '#9E9E9F' }]}>
+            Leaves
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
           onPress={() => setCurrentTab('history')}
           style={[styles.tabItem, currentTab === 'history' && styles.tabActive]}
         >
@@ -666,6 +1035,22 @@ export default function App() {
           </Text>
         </TouchableOpacity>
       </View>
+
+      {/* Calendar Date Pickers */}
+      <CalendarModal
+        visible={showStartPicker}
+        onClose={() => setShowStartPicker(false)}
+        selectedDate={leaveStartDate}
+        onSelectDate={setLeaveStartDate}
+        title="Select Start Date"
+      />
+      <CalendarModal
+        visible={showEndPicker}
+        onClose={() => setShowEndPicker(false)}
+        selectedDate={leaveEndDate}
+        onSelectDate={setLeaveEndDate}
+        title="Select End Date"
+      />
     </SafeAreaView>
   );
 }
@@ -1130,5 +1515,204 @@ const styles = StyleSheet.create({
   tabLabel: {
     fontSize: 10,
     fontWeight: '700',
+  },
+  // Calendar Modal Styles
+  calendarModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.75)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  calendarModalCard: {
+    width: '90%',
+    maxWidth: 340,
+    backgroundColor: '#131315',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.08)',
+    borderRadius: 20,
+    padding: 16,
+    alignItems: 'center',
+    shadowColor: '#E16167',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.15,
+    shadowRadius: 20,
+    elevation: 5,
+  },
+  calendarModalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    width: '100%',
+    alignItems: 'center',
+    marginBottom: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#202023',
+    paddingBottom: 10,
+  },
+  calendarModalTitle: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  calendarCloseBtn: {
+    padding: 4,
+    borderRadius: 8,
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+  },
+  calendarMonthHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    width: '100%',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  calendarNavBtn: {
+    padding: 8,
+    borderRadius: 10,
+    backgroundColor: 'rgba(255,255,255,0.03)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.05)',
+  },
+  calendarMonthText: {
+    color: '#FFFFFF',
+    fontSize: 15,
+    fontWeight: '600',
+  },
+  calendarWeekdaysRow: {
+    flexDirection: 'row',
+    width: '100%',
+    justifyContent: 'space-between',
+    marginBottom: 8,
+  },
+  calendarWeekdayLabel: {
+    color: '#9E9E9F',
+    fontSize: 12,
+    fontWeight: '500',
+    width: 36,
+    textAlign: 'center',
+  },
+  calendarDaysGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    width: '100%',
+    justifyContent: 'space-between',
+  },
+  calendarDayCell: {
+    width: 36,
+    height: 36,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginVertical: 4,
+    borderRadius: 18,
+  },
+  calendarDayCellSelected: {
+    backgroundColor: '#E16167',
+    shadowColor: '#E16167',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.4,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  calendarDayText: {
+    color: '#FFFFFF',
+    fontSize: 13,
+  },
+  calendarDayTextSelected: {
+    color: '#FFFFFF',
+    fontWeight: 'bold',
+  },
+  applyLeaveCard: {
+    backgroundColor: 'rgba(255, 255, 255, 0.03)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.08)',
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 8,
+  },
+  applyLeaveTitle: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginBottom: 14,
+  },
+  datePickerRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  datePickerField: {
+    flex: 1,
+  },
+  datePickerLabel: {
+    color: '#9E9E9F',
+    fontSize: 11,
+    fontWeight: '600',
+    marginBottom: 6,
+    textTransform: 'uppercase',
+  },
+  datePickerBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  datePickerBtnText: {
+    color: '#FFFFFF',
+    fontSize: 13,
+  },
+  leaveReasonInput: {
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+    borderRadius: 12,
+    color: '#FFFFFF',
+    fontSize: 13,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    minHeight: 70,
+    textAlignVertical: 'top',
+  },
+  submitLeaveBtn: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#E16167',
+    borderRadius: 12,
+    paddingVertical: 12,
+    marginTop: 16,
+    shadowColor: '#E16167',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.3,
+    shadowRadius: 10,
+    elevation: 3,
+  },
+  submitLeaveBtnText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: 'bold',
+  },
+  adminRemarksBox: {
+    marginTop: 10,
+    padding: 10,
+    backgroundColor: 'rgba(225, 97, 103, 0.05)',
+    borderWidth: 1,
+    borderColor: 'rgba(225, 97, 103, 0.15)',
+    borderRadius: 10,
+  },
+  adminRemarksTitle: {
+    color: '#E16167',
+    fontSize: 11,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    marginBottom: 2,
+  },
+  adminRemarksText: {
+    color: '#E0E0E1',
+    fontSize: 12,
+    lineHeight: 16,
   },
 });
