@@ -14,7 +14,9 @@ import {
   User as UserIcon,
   Settings,
   Calendar,
-  Home
+  Home,
+  Megaphone,
+  RefreshCw
 } from 'lucide-react';
 import Logo from '@/components/Logo';
 
@@ -58,6 +60,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const [user, setUser] = useState<{ name: string; role: string; email: string } | null>(null);
   const [pendingLeaveCount, setPendingLeaveCount] = useState(0);
   const [pendingWfhCount, setPendingWfhCount] = useState(0);
+  const [pendingSwapsCount, setPendingSwapsCount] = useState(0);
 
   useEffect(() => {
     const storedUser = localStorage.getItem('user');
@@ -71,9 +74,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
     const fetchPendingCounts = async () => {
       try {
-        const [resLeave, resWfh] = await Promise.all([
+        const [resLeave, resWfh, resSwaps] = await Promise.all([
           fetch('/api/leaves/pending-count?type=Leave'),
-          fetch('/api/leaves/pending-count?type=WFH')
+          fetch('/api/leaves/pending-count?type=WFH'),
+          fetch('/api/swaps/pending-count')
         ]);
         if (resLeave.ok) {
           const data = await resLeave.json();
@@ -82,6 +86,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         if (resWfh.ok) {
           const data = await resWfh.json();
           setPendingWfhCount(data.count);
+        }
+        if (resSwaps.ok) {
+          const data = await resSwaps.json();
+          setPendingSwapsCount(data.count);
         }
       } catch (err) {
         console.error('Failed to fetch pending counts:', err);
@@ -119,13 +127,16 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       { href: '/admin/reports', icon: <FileText size={20} />, label: 'Reports' },
       { href: '/admin/leaves', icon: <Calendar size={20} />, label: 'Leave Requests', badgeCount: pendingLeaveCount },
       { href: '/admin/wfh', icon: <Home size={20} />, label: 'WFH Requests', badgeCount: pendingWfhCount },
+      { href: '/admin/swaps', icon: <RefreshCw size={20} />, label: 'Shift Swaps', badgeCount: pendingSwapsCount },
+      { href: '/admin/notices', icon: <Megaphone size={20} />, label: 'Notice Board' },
       { href: '/admin/settings', icon: <Settings size={20} />, label: 'Settings' }
     );
   } else if (user?.role === 'Employee' || user?.role === 'Intern') {
     navItems.push(
       { href: '/admin/reports', icon: <FileText size={20} />, label: 'History' },
       { href: '/admin/leaves', icon: <Calendar size={20} />, label: 'Leave Requests', badgeCount: pendingLeaveCount },
-      { href: '/admin/wfh', icon: <Home size={20} />, label: 'WFH Requests', badgeCount: pendingWfhCount }
+      { href: '/admin/wfh', icon: <Home size={20} />, label: 'WFH Requests', badgeCount: pendingWfhCount },
+      { href: '/admin/swaps', icon: <RefreshCw size={20} />, label: 'Shift Swaps', badgeCount: pendingSwapsCount }
     );
   }
 

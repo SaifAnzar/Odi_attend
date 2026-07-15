@@ -28,6 +28,7 @@ export interface IAttendanceRecord extends Document {
     isWFH: boolean;
     status: 'Approved' | 'Pending Approval' | 'Rejected';
     notes?: string;
+    completedTasks: string[];
     createdAt: Date;
     updatedAt: Date;
 }

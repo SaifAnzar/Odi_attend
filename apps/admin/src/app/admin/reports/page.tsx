@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { FileText, Calendar, User as UserIcon, Search, MapPin, Download, Check, X, ShieldAlert, Home } from 'lucide-react';
+import { FileText, Calendar, User as UserIcon, Search, MapPin, Download, Check, X, ShieldAlert, Home, ChevronDown, ChevronUp, ClipboardList } from 'lucide-react';
 import { showError, showSuccess } from '@/lib/swal';
 
 interface User {
@@ -35,6 +35,7 @@ interface AttendanceRecord {
   flagReason?: string;
   isWFH: boolean;
   status: 'Approved' | 'Pending Approval' | 'Rejected';
+  completedTasks?: string[];
 }
 
 export default function Reports() {
@@ -42,6 +43,7 @@ export default function Reports() {
   const [records, setRecords] = useState<AttendanceRecord[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
+  const [expandedRecordId, setExpandedRecordId] = useState<string | null>(null);
   
   // Filters
   const [selectedUserId, setSelectedUserId] = useState('');
@@ -248,119 +250,149 @@ export default function Reports() {
               </thead>
               <tbody className="divide-y divide-white/5">
                 {records.map((record) => (
-                  <tr 
-                    key={record._id} 
-                    className={`transition-colors ${
-                      record.isFlagged 
-                        ? 'bg-red-500/5 hover:bg-red-500/10 border-l-2 border-l-odizo-red/60 animate-pulse-slow' 
-                        : 'hover:bg-white/3'
-                    }`}
-                  >
-                    <td className="py-4 px-4 font-mono font-semibold text-white">
-                      <div className="flex flex-col gap-1">
-                        <span>{record.date}</span>
-                        {record.isWFH && (
-                          <span className="inline-flex items-center gap-1 text-[9px] px-1.5 py-0.5 rounded font-bold border bg-sky-500/10 border-sky-500/25 text-sky-400 w-fit uppercase">
-                            <Home size={10} /> WFH
-                          </span>
-                        )}
-                      </div>
-                    </td>
-                    <td className="py-4 px-4 font-semibold text-white">
-                      <div className="flex flex-col">
-                        <span>{record.userId?.name || 'Unknown User'}</span>
-                        <span className="text-xs text-odizo-grey font-normal">{record.userId?.email}</span>
-                        {record.isFlagged && (
-                          <span className="text-[10px] text-odizo-red mt-1 flex items-center gap-1 font-semibold">
-                            <ShieldAlert size={12} />
-                            Flagged: {record.flagReason}
-                          </span>
-                        )}
-                      </div>
-                    </td>
-                    <td className="py-4 px-4">
-                      <span className={`inline-flex px-2.5 py-0.5 rounded-full text-xs font-semibold ${
-                        record.userId?.role === 'Employee' 
-                          ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20' 
-                          : 'bg-purple-500/10 text-purple-400 border border-purple-500/20'
-                      }`}>
-                        {record.userId?.role || 'User'}
-                      </span>
-                    </td>
-                    <td className="py-4 px-4 text-xs text-white">
-                      <div className="space-y-1.5">
-                        {record.sessions.map((s, idx) => (
-                          <div key={idx} className="flex items-center gap-2">
-                            <span className="bg-white/5 border border-white/10 px-2 py-0.5 rounded text-[10px]">
-                              Session {idx + 1}
+                  <React.Fragment key={record._id}>
+                    <tr 
+                      className={`transition-colors ${
+                        record.isFlagged 
+                          ? 'bg-red-500/5 hover:bg-red-500/10 border-l-2 border-l-odizo-red/60 animate-pulse-slow' 
+                          : 'hover:bg-white/3'
+                      }`}
+                    >
+                      <td className="py-4 px-4 font-mono font-semibold text-white">
+                        <div className="flex flex-col gap-1">
+                          <span>{record.date}</span>
+                          {record.isWFH && (
+                            <span className="inline-flex items-center gap-1 text-[9px] px-1.5 py-0.5 rounded font-bold border bg-sky-500/10 border-sky-500/25 text-sky-400 w-fit uppercase">
+                              <Home size={10} /> WFH
                             </span>
-                            <span>
-                              {new Date(s.checkIn).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                              {s.checkOut ? ` - ${new Date(s.checkOut).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}` : ' (Active)'}
-                            </span>
-                            <a
-                              href={`https://www.google.com/maps/search/?api=1&query=${s.checkInLocation.latitude},${s.checkInLocation.longitude}`}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="text-odizo-red hover:underline flex items-center gap-0.5"
-                              title={s.checkInLocation.address || 'Show Map'}
-                            >
-                              <MapPin size={10} />
-                            </a>
-                          </div>
-                        ))}
-                      </div>
-                    </td>
-                    <td className="py-4 px-4 font-mono font-medium text-white">
-                      {Math.floor(record.totalMinutesWorked / 60)}h {record.totalMinutesWorked % 60}m
-                    </td>
-                    <td className="py-4 px-4">
-                      <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-bold ${
-                        record.attendanceStatus === 'Present' 
-                          ? 'bg-green-500/15 text-green-400' 
-                          : record.attendanceStatus === 'Late'
-                            ? 'bg-amber-500/15 text-amber-400'
-                            : 'bg-red-500/15 text-red-400'
-                      }`}>
-                        {record.attendanceStatus}
-                      </span>
-                    </td>
-                    <td className="py-4 px-4">
-                      <span className={`inline-flex px-2.5 py-0.5 rounded-full text-xs font-bold ${
-                        record.status === 'Approved'
-                          ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
-                          : record.status === 'Rejected'
-                            ? 'bg-odizo-red/10 text-odizo-red border border-odizo-red/20'
-                            : 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
-                      }`}>
-                        {record.status}
-                      </span>
-                    </td>
-                    {isAdmin && (
-                      <td className="py-4 px-4 text-right">
-                        {record.status === 'Pending Approval' ? (
-                          <div className="flex justify-end gap-2">
+                          )}
+                          {record.completedTasks && record.completedTasks.length > 0 && (
                             <button
-                              onClick={() => handleReview(record._id, 'Approved')}
-                              className="p-1.5 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/20 hover:border-emerald-500/40 text-emerald-400 rounded-lg transition-all cursor-pointer"
-                              title="Approve"
+                              onClick={() => setExpandedRecordId(expandedRecordId === record._id ? null : record._id)}
+                              className="inline-flex items-center gap-1 mt-1 text-[10px] px-2 py-0.5 rounded-full border bg-white/5 hover:bg-white/10 border-white/10 text-odizo-grey hover:text-white cursor-pointer transition-colors w-fit"
                             >
-                              <Check size={14} />
+                              <ClipboardList size={10} className="text-odizo-red" />
+                              <span>{record.completedTasks.length} Tasks</span>
+                              {expandedRecordId === record._id ? <ChevronUp size={10} /> : <ChevronDown size={10} />}
                             </button>
-                            <button
-                              onClick={() => handleReview(record._id, 'Rejected')}
-                              className="p-1.5 bg-odizo-red/10 hover:bg-odizo-red/20 border border-odizo-red/20 hover:border-odizo-red/40 text-odizo-red rounded-lg transition-all cursor-pointer"
-                              title="Reject"
-                            >
-                              <X size={14} />
-                            </button>
-                          </div>
-                        ) : (
-                          <span className="text-xs text-odizo-grey">-</span>
-                        )}
+                          )}
+                        </div>
                       </td>
+                      <td className="py-4 px-4 font-semibold text-white">
+                        <div className="flex flex-col">
+                          <span>{record.userId?.name || 'Unknown User'}</span>
+                          <span className="text-xs text-odizo-grey font-normal">{record.userId?.email}</span>
+                          {record.isFlagged && (
+                            <span className="text-[10px] text-odizo-red mt-1 flex items-center gap-1 font-semibold">
+                              <ShieldAlert size={12} />
+                              Flagged: {record.flagReason}
+                            </span>
+                          )}
+                        </div>
+                      </td>
+                      <td className="py-4 px-4">
+                        <span className={`inline-flex px-2.5 py-0.5 rounded-full text-xs font-semibold ${
+                          record.userId?.role === 'Employee' 
+                            ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20' 
+                            : 'bg-purple-500/10 text-purple-400 border border-purple-500/20'
+                        }`}>
+                          {record.userId?.role || 'User'}
+                        </span>
+                      </td>
+                      <td className="py-4 px-4 text-xs text-white">
+                        <div className="space-y-1.5">
+                          {record.sessions.map((s, idx) => (
+                            <div key={idx} className="flex items-center gap-2">
+                              <span className="bg-white/5 border border-white/10 px-2 py-0.5 rounded text-[10px]">
+                                Session {idx + 1}
+                              </span>
+                              <span>
+                                {new Date(s.checkIn).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                {s.checkOut ? ` - ${new Date(s.checkOut).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}` : ' (Active)'}
+                              </span>
+                              <a
+                                href={`https://www.google.com/maps/search/?api=1&query=${s.checkInLocation.latitude},${s.checkInLocation.longitude}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-odizo-red hover:underline flex items-center gap-0.5"
+                                title={s.checkInLocation.address || 'Show Map'}
+                              >
+                                <MapPin size={10} />
+                              </a>
+                            </div>
+                          ))}
+                        </div>
+                      </td>
+                      <td className="py-4 px-4 font-mono font-medium text-white">
+                        {Math.floor(record.totalMinutesWorked / 60)}h {record.totalMinutesWorked % 60}m
+                      </td>
+                      <td className="py-4 px-4">
+                        <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-bold ${
+                          record.attendanceStatus === 'Present' 
+                            ? 'bg-green-500/15 text-green-400' 
+                            : record.attendanceStatus === 'Late'
+                              ? 'bg-amber-500/15 text-amber-400'
+                              : 'bg-red-500/15 text-red-400'
+                        }`}>
+                          {record.attendanceStatus}
+                        </span>
+                      </td>
+                      <td className="py-4 px-4">
+                        <span className={`inline-flex px-2.5 py-0.5 rounded-full text-xs font-bold ${
+                          record.status === 'Approved'
+                            ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+                            : record.status === 'Rejected'
+                              ? 'bg-odizo-red/10 text-odizo-red border border-odizo-red/20'
+                              : 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
+                        }`}>
+                          {record.status}
+                        </span>
+                      </td>
+                      {isAdmin && (
+                        <td className="py-4 px-4 text-right">
+                          {record.status === 'Pending Approval' ? (
+                            <div className="flex justify-end gap-2">
+                              <button
+                                onClick={() => handleReview(record._id, 'Approved')}
+                                className="p-1.5 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/20 hover:border-emerald-500/40 text-emerald-400 rounded-lg transition-all cursor-pointer"
+                                title="Approve"
+                              >
+                                <Check size={14} />
+                              </button>
+                              <button
+                                onClick={() => handleReview(record._id, 'Rejected')}
+                                className="p-1.5 bg-odizo-red/10 hover:bg-odizo-red/20 border border-odizo-red/20 hover:border-odizo-red/40 text-odizo-red rounded-lg transition-all cursor-pointer"
+                                title="Reject"
+                              >
+                                <X size={14} />
+                              </button>
+                            </div>
+                          ) : (
+                            <span className="text-xs text-odizo-grey">-</span>
+                          )}
+                        </td>
+                      )}
+                    </tr>
+                    {expandedRecordId === record._id && record.completedTasks && record.completedTasks.length > 0 && (
+                      <tr className="bg-white/2 border-b border-white/5">
+                        <td colSpan={isAdmin ? 8 : 7} className="py-4 px-6 bg-white/1">
+                          <div className="flex items-start gap-3">
+                            <div className="p-2 bg-odizo-red/10 border border-odizo-red/20 text-odizo-red rounded-lg shrink-0 mt-0.5">
+                              <ClipboardList size={14} />
+                            </div>
+                            <div>
+                              <h4 className="text-xs font-bold uppercase tracking-wider text-odizo-grey mb-2">Completed Tasks</h4>
+                              <ul className="list-disc pl-5 space-y-1.5 text-xs text-white">
+                                {record.completedTasks.map((task, idx) => (
+                                  <li key={idx} className="leading-relaxed">{task}</li>
+                                ))}
+                              </ul>
+                            </div>
+                          </div>
+                        </td>
+                      </tr>
                     )}
-                  </tr>
+                  </React.Fragment>
                 ))}
               </tbody>
             </table>

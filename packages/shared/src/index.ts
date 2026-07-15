@@ -3,3 +3,6 @@ export * from './models/User';
 export * from './models/AttendanceRecord';
 export * from './models/AppConfig';
 export * from './models/LeaveRequest';
+export * from './models/ShiftSwapRequest';
+export * from './models/Notice';
+

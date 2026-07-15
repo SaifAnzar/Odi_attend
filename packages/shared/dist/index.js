@@ -24,3 +24,5 @@ __exportStar(require("./models/User"), exports);
 __exportStar(require("./models/AttendanceRecord"), exports);
 __exportStar(require("./models/AppConfig"), exports);
 __exportStar(require("./models/LeaveRequest"), exports);
+__exportStar(require("./models/ShiftSwapRequest"), exports);
+__exportStar(require("./models/Notice"), exports);

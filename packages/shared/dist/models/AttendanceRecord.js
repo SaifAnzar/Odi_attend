@@ -73,7 +73,8 @@ const AttendanceRecordSchema = new mongoose_1.Schema({
         enum: ['Approved', 'Pending Approval', 'Rejected'],
         default: 'Approved'
     },
-    notes: { type: String }
+    notes: { type: String },
+    completedTasks: { type: [String], default: [] }
 }, {
     timestamps: true
 });

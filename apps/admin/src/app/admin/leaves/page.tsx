@@ -19,6 +19,7 @@ import { showConfirm, showError, showSuccess } from '@/lib/swal';
 
 interface UserDetail {
   _id: string;
+  id?: string;
   name: string;
   role: 'Admin' | 'Employee' | 'Intern';
   email: string;
@@ -97,7 +98,7 @@ export default function LeaveRequestsPage() {
       if (currentUser.role === 'Admin') {
         url = statusFilter === 'All' ? '/api/leaves' : `/api/leaves?status=${statusFilter}`;
       } else {
-        url = `/api/leaves/my?userId=${currentUser._id}`;
+        url = `/api/leaves/my?userId=${currentUser.id}`;
       }
       
       const res = await fetch(url);

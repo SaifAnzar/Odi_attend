@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { connectToDatabase } from '@/lib/db';
 import { verifyAuth } from '@/lib/auth';
-import { User, AttendanceRecord, AppConfig, LeaveRequest } from '@odi_attend/shared';
+import { User, AttendanceRecord, AppConfig, LeaveRequest, ShiftSwapRequest } from '@odi_attend/shared';
 
 // Helper to get local date string YYYY-MM-DD (defaults to IST timezone UTC+5:30)
 function getLocalDateString(date: Date = new Date()): string {
@@ -59,7 +59,7 @@ export async function POST(request: NextRequest) {
 
     await connectToDatabase();
     const body = await request.json();
-    const { type, location, deviceInfo, notes, ssid } = body; // type is 'Check-In' or 'Check-Out'
+    const { type, location, deviceInfo, notes, ssid, completedTasks } = body; // type is 'Check-In' or 'Check-Out'
 
     if (!type || !['Check-In', 'Check-Out'].includes(type)) {
       return NextResponse.json({ error: 'Invalid punch type. Must be Check-In or Check-Out.' }, { status: 400 });
@@ -90,6 +90,39 @@ export async function POST(request: NextRequest) {
 
     const isWfhActive = !!wfhRequest;
 
+    // Check for approved shift swap for this user on todayDate
+    let activeShift = {
+      name: user.shift.name,
+      startTime: user.shift.startTime,
+      endTime: user.shift.endTime
+    };
+
+    const swapRequest = await ShiftSwapRequest.findOne({
+      status: 'Approved',
+      swapDate: todayDate,
+      $or: [{ requesterId: user._id }, { targetUserId: user._id }]
+    }).populate('requesterId targetUserId');
+
+    if (swapRequest) {
+      const requester = swapRequest.requesterId as any;
+      const target = swapRequest.targetUserId as any;
+      if (requester && target) {
+        if (requester._id.toString() === user._id.toString()) {
+          activeShift = {
+            name: `${target.shift.name} (Swapped)`,
+            startTime: target.shift.startTime,
+            endTime: target.shift.endTime
+          };
+        } else {
+          activeShift = {
+            name: `${requester.shift.name} (Swapped)`,
+            startTime: requester.shift.startTime,
+            endTime: requester.shift.endTime
+          };
+        }
+      }
+    }
+
     // Determine flag state from client and server-side Wi-Fi check
     let isFlagged = isWfhActive ? false : (body.isFlagged || false);
     let flagReason = isWfhActive ? '' : (body.flagReason || '');
@@ -119,11 +152,7 @@ export async function POST(request: NextRequest) {
         record = new AttendanceRecord({
           userId: user._id,
           date: todayStr,
-          shiftSnapshot: {
-            name: user.shift.name,
-            startTime: user.shift.startTime,
-            endTime: user.shift.endTime
-          },
+          shiftSnapshot: activeShift,
           sessions: [],
           attendanceStatus: 'Present',
           totalMinutesWorked: 0,
@@ -141,7 +170,7 @@ export async function POST(request: NextRequest) {
         const checkInMin = localTime.getUTCMinutes();
         const checkInTotalMinutes = checkInHour * 60 + checkInMin;
 
-        const [shiftHour, shiftMin] = user.shift.startTime.split(':').map(Number);
+        const [shiftHour, shiftMin] = activeShift.startTime.split(':').map(Number);
         const shiftStartTotalMinutes = shiftHour * 60 + shiftMin + 15; // 15 min grace period
 
         if (checkInTotalMinutes > shiftStartTotalMinutes) {
@@ -211,6 +240,11 @@ export async function POST(request: NextRequest) {
         record.isFlagged = true;
         record.flagReason = flagReason;
         record.status = 'Pending Approval';
+      }
+
+      // Save completed tasks if checking out
+      if (completedTasks && Array.isArray(completedTasks)) {
+        record.completedTasks = completedTasks;
       }
 
       // Mark check-out session updated in mongoose

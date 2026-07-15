@@ -342,10 +342,26 @@ function AppContent() {
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
   
-  // Navigation & Data
-  const [currentTab, setCurrentTab] = useState<'dashboard' | 'history' | 'leaves' | 'wfh'>('dashboard');
+  const [currentTab, setCurrentTab] = useState<'dashboard' | 'history' | 'leaves' | 'wfh' | 'swaps'>('dashboard');
   const [records, setRecords] = useState<AttendanceRecord[]>([]);
   const [loading, setLoading] = useState(false);
+
+  // Task Logger Modal
+  const [showTaskModal, setShowTaskModal] = useState(false);
+  const [completedTasksText, setCompletedTasksText] = useState('');
+
+  // Notice System States
+  const [notices, setNotices] = useState<any[]>([]);
+
+  // Shift Swaps States
+  const [swaps, setSwaps] = useState<any[]>([]);
+  const [colleagues, setColleagues] = useState<any[]>([]);
+  const [swapColleagueId, setSwapColleagueId] = useState('');
+  const [swapDate, setSwapDate] = useState<string>(formatDateToYYYYMMDD(new Date()));
+  const [showSwapDatePicker, setShowSwapDatePicker] = useState(false);
+  const [submittingSwap, setSubmittingSwap] = useState(false);
+  const [fetchingSwaps, setFetchingSwaps] = useState(false);
+  const [swapTab, setSwapTab] = useState<'create' | 'incoming' | 'outgoing'>('create');
 
   // Leave System States
   const [leaves, setLeaves] = useState<any[]>([]);
@@ -412,6 +428,147 @@ function AppContent() {
       if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
     };
   }, [isAuthenticated]);
+
+  const formatDate = (isoStr: string) => {
+    if (!isoStr) return '';
+    const datePart = isoStr.split('T')[0];
+    const [y, m, d] = datePart.split('-');
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    return `${months[parseInt(m) - 1]} ${parseInt(d)}, ${y}`;
+  };
+
+  const fetchNotices = async () => {
+    if (!token) return;
+    try {
+      const res = await fetch(`${apiUrl}/api/notices`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      const data = await res.json();
+      if (res.ok && data.notices) {
+        setNotices(data.notices);
+      }
+    } catch (e) {
+      console.error('Fetch notices failed:', e);
+    }
+  };
+
+  const fetchColleagues = async () => {
+    if (!token) return;
+    try {
+      const res = await fetch(`${apiUrl}/api/users/colleagues`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      const data = await res.json();
+      if (res.ok && data.colleagues) {
+        setColleagues(data.colleagues);
+      }
+    } catch (e) {
+      console.error('Fetch colleagues failed:', e);
+    }
+  };
+
+  const fetchSwaps = async () => {
+    if (!token) return;
+    try {
+      setFetchingSwaps(true);
+      const res = await fetch(`${apiUrl}/api/swaps`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      const data = await res.json();
+      console.log('[DEBUG SWAPS] data.swaps:', JSON.stringify(data.swaps));
+      console.log('[DEBUG SWAPS] current user:', JSON.stringify(user));
+      if (res.ok && data.swaps) {
+        setSwaps(data.swaps);
+      }
+    } catch (e) {
+      console.error('Fetch swaps failed:', e);
+    } finally {
+      setFetchingSwaps(false);
+    }
+  };
+
+  const handleAcknowledgeNotice = async (noticeId: string) => {
+    try {
+      const res = await fetch(`${apiUrl}/api/notices/${noticeId}/acknowledge`, {
+        method: 'PATCH',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      if (res.ok) {
+        fetchNotices();
+      }
+    } catch (err) {
+      console.error('Acknowledge notice failed:', err);
+    }
+  };
+
+  const handleCreateSwap = async () => {
+    if (!swapColleagueId) {
+      showAlert('Error', 'Please select a colleague to swap shifts with.', 'error');
+      return;
+    }
+
+    try {
+      setSubmittingSwap(true);
+      const res = await fetch(`${apiUrl}/api/swaps`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          targetUserId: swapColleagueId,
+          swapDate
+        })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        showAlert('Success', 'Shift swap request submitted successfully.', 'success');
+        setSwapColleagueId('');
+        fetchSwaps();
+      } else {
+        showAlert('Error', data.error || 'Failed to submit shift swap request.', 'error');
+      }
+    } catch (err) {
+      console.error(err);
+      showAlert('Error', 'An unexpected network error occurred.', 'error');
+    } finally {
+      setSubmittingSwap(false);
+    }
+  };
+
+  const handleReviewSwap = async (swapId: string, status: 'Pending Admin' | 'Rejected') => {
+    try {
+      const res = await fetch(`${apiUrl}/api/swaps/${swapId}/review`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ status })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        showAlert('Success', status === 'Pending Admin' ? 'Swap request accepted! Pending Admin approval.' : 'Swap request rejected.', 'success');
+        fetchSwaps();
+      } else {
+        showAlert('Error', data.error || 'Failed to review shift swap.', 'error');
+      }
+    } catch (err) {
+      console.error(err);
+      showAlert('Error', 'An unexpected network error occurred.', 'error');
+    }
+  };
 
   // Fetch personal logs
   const fetchLogs = async () => {
@@ -508,8 +665,18 @@ function AppContent() {
     if (isAuthenticated) {
       fetchLogs();
       fetchMyLeaves();
+      fetchNotices();
+      fetchColleagues();
+      fetchSwaps();
     }
   }, [isAuthenticated]);
+
+  useEffect(() => {
+    if (currentTab === 'swaps') {
+      fetchSwaps();
+      fetchColleagues();
+    }
+  }, [currentTab]);
 
   useEffect(() => {
     if (currentTab === 'leaves') {
@@ -598,8 +765,8 @@ function AppContent() {
     }
   };
 
-  // Handle Punch In / Out Trigger
-  const handlePunch = async () => {
+  // Handle Punch In / Out Trigger Execution
+  const executePunch = async (completedTasksList: string[] = []) => {
     const { status } = await Location.requestForegroundPermissionsAsync();
     if (status !== 'granted') {
       showAlert('Location Blocked', 'GPS Location permission is required to log punches.', 'error');
@@ -660,7 +827,8 @@ function AppContent() {
           notes: punchNotes || undefined,
           ssid: clientSsid || undefined,
           isFlagged: clientIsFlagged,
-          flagReason: clientFlagReason || undefined
+          flagReason: clientFlagReason || undefined,
+          completedTasks: isCheckedIn ? completedTasksList : undefined
         })
       });
 
@@ -681,6 +849,24 @@ function AppContent() {
     } finally {
       setPunchLoading(false);
     }
+  };
+
+  const handlePunch = () => {
+    if (isCheckedIn) {
+      setCompletedTasksText('');
+      setShowTaskModal(true);
+    } else {
+      executePunch();
+    }
+  };
+
+  const handleTaskSubmit = () => {
+    setShowTaskModal(false);
+    const tasks = completedTasksText
+      .split('\n')
+      .map(t => t.replace(/^[-*•\s]+/, '').trim())
+      .filter(t => t.length > 0);
+    executePunch(tasks);
   };
 
   // Log out
@@ -823,6 +1009,49 @@ function AppContent() {
         {currentTab === 'dashboard' ? (
           /* ================= DASHBOARD TAB ================= */
           <ScrollView contentContainerStyle={styles.tabScroll} bounces={true}>
+            {/* active notices board */}
+            {notices.filter(n => !n.acknowledgedBy.some((id: any) => (id?._id || id) === ((user as any)?.id || user?._id))).map((notice) => {
+              let cardBg = 'rgba(56, 189, 248, 0.08)';
+              let cardBorder = 'rgba(56, 189, 248, 0.15)';
+              let textAccent = '#38BDF8';
+              let iconName: any = 'information-circle-outline';
+
+              if (notice.type === 'Warning') {
+                cardBg = 'rgba(225, 97, 103, 0.08)';
+                cardBorder = 'rgba(225, 97, 103, 0.15)';
+                textAccent = '#E16167';
+                iconName = 'alert-circle-outline';
+              } else if (notice.type === 'Holiday') {
+                cardBg = 'rgba(74, 222, 128, 0.08)';
+                cardBorder = 'rgba(74, 222, 128, 0.15)';
+                textAccent = '#4ADE80';
+                iconName = 'calendar-outline';
+              }
+
+              return (
+                <View key={notice._id} style={[styles.noticeCard, { backgroundColor: cardBg, borderColor: cardBorder }]}>
+                  <View style={styles.noticeHeader}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                      <Ionicons name={iconName} size={18} color={textAccent} />
+                      <Text style={[styles.noticeTag, { color: textAccent }]}>{notice.type.toUpperCase()}</Text>
+                    </View>
+                    <Text style={styles.noticeTime}>
+                      {new Date(notice.createdAt).toLocaleDateString([], { month: 'short', day: 'numeric' })}
+                    </Text>
+                  </View>
+                  <Text style={styles.noticeTitleText}>{notice.title}</Text>
+                  <Text style={styles.noticeContentText}>{notice.content}</Text>
+                  <TouchableOpacity
+                    onPress={() => handleAcknowledgeNotice(notice._id)}
+                    style={[styles.noticeAckBtn, { borderColor: cardBorder }]}
+                  >
+                    <Ionicons name="eye-outline" size={14} color="#FFFFFF" style={{ marginRight: 4 }} />
+                    <Text style={styles.noticeAckBtnText}>Acknowledge / Mark as Read</Text>
+                  </TouchableOpacity>
+                </View>
+              );
+            })}
+
             {/* Shift snapshot Header */}
             <View style={styles.shiftCard}>
               <View style={styles.shiftCardHeader}>
@@ -1132,6 +1361,223 @@ function AppContent() {
               )}
             </ScrollView>
           </View>
+        ) : currentTab === 'swaps' ? (
+          /* ================= SHIFT SWAPS TAB ================= */
+          <View style={styles.historyWrapper}>
+            <View style={styles.historyHeader}>
+              <Text style={styles.historyTitle}>Shift Swapping</Text>
+              <TouchableOpacity onPress={fetchSwaps} style={styles.refreshLogsBtn} disabled={fetchingSwaps}>
+                <Ionicons name="refresh" size={16} color="#FFFFFF" />
+              </TouchableOpacity>
+            </View>
+
+            {/* Sub-tab selectors */}
+            <View style={styles.swapTabRow}>
+              <TouchableOpacity 
+                onPress={() => setSwapTab('create')}
+                style={[styles.swapTabItem, swapTab === 'create' && styles.swapTabActive]}
+              >
+                <Text style={[styles.swapTabLabel, { color: swapTab === 'create' ? '#E16167' : '#9E9E9F' }]}>Request</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                onPress={() => setSwapTab('incoming')}
+                style={[styles.swapTabItem, swapTab === 'incoming' && styles.swapTabActive]}
+              >
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                  <Text style={[styles.swapTabLabel, { color: swapTab === 'incoming' ? '#E16167' : '#9E9E9F' }]}>Incoming</Text>
+                  {swaps.filter(s => {
+                    const targetId = s.targetUserId?._id || s.targetUserId?.id || s.targetUserId;
+                    const currentUserId = (user as any)?.id || user?._id;
+                    return targetId === currentUserId && s.status === 'Pending Target';
+                  }).length > 0 && (
+                    <View style={{
+                      backgroundColor: '#E16167',
+                      borderRadius: 10,
+                      paddingHorizontal: 6,
+                      paddingVertical: 1.5,
+                    }}>
+                      <Text style={{ color: '#FFFFFF', fontSize: 9, fontWeight: 'bold' }}>
+                        {swaps.filter(s => {
+                          const targetId = s.targetUserId?._id || s.targetUserId?.id || s.targetUserId;
+                          const currentUserId = (user as any)?.id || user?._id;
+                          return targetId === currentUserId && s.status === 'Pending Target';
+                        }).length}
+                      </Text>
+                    </View>
+                  )}
+                </View>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                onPress={() => setSwapTab('outgoing')}
+                style={[styles.swapTabItem, swapTab === 'outgoing' && styles.swapTabActive]}
+              >
+                <Text style={[styles.swapTabLabel, { color: swapTab === 'outgoing' ? '#E16167' : '#9E9E9F' }]}>My Requests</Text>
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView bounces={true} style={styles.historyScroll} contentContainerStyle={{ paddingBottom: 24 }}>
+              {swapTab === 'create' ? (
+                /* Create Request Form */
+                <View style={styles.applyLeaveCard}>
+                  <Text style={styles.applyLeaveTitle}>Request Shift Swap</Text>
+                  
+                  <Text style={styles.datePickerLabel}>Select Colleague</Text>
+                  <View style={styles.dropdownContainer}>
+                    <ScrollView horizontal={true} showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingVertical: 4 }}>
+                      {colleagues.length === 0 ? (
+                        <Text style={{ color: '#9E9E9F', fontSize: 12 }}>No active colleagues found.</Text>
+                      ) : (
+                        colleagues.map((c) => (
+                          <TouchableOpacity
+                            key={c._id}
+                            onPress={() => setSwapColleagueId(c._id)}
+                            style={[
+                              styles.colleagueChip,
+                              swapColleagueId === c._id && styles.colleagueChipActive
+                            ]}
+                          >
+                            <Text style={[
+                              styles.colleagueChipText,
+                              swapColleagueId === c._id && { color: '#000000', fontWeight: 'bold' }
+                            ]}>
+                              {c.name}
+                            </Text>
+                          </TouchableOpacity>
+                        ))
+                      )}
+                    </ScrollView>
+                  </View>
+
+                  <View style={{ marginTop: 12 }}>
+                    <Text style={styles.datePickerLabel}>Swap Date</Text>
+                    <TouchableOpacity 
+                      style={[styles.datePickerBtn, { width: '100%' }]}
+                      onPress={() => setShowSwapDatePicker(true)}
+                    >
+                      <Ionicons name="calendar-outline" size={16} color="#E16167" style={{ marginRight: 6 }} />
+                      <Text style={styles.datePickerBtnText}>
+                        {swapDate}
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+
+                  <TouchableOpacity
+                    onPress={handleCreateSwap}
+                    disabled={submittingSwap}
+                    style={styles.submitLeaveBtn}
+                  >
+                    {submittingSwap ? (
+                      <ActivityIndicator color="#FFFFFF" size="small" />
+                    ) : (
+                      <>
+                        <Ionicons name="swap-horizontal-outline" size={16} color="#FFFFFF" style={{ marginRight: 6 }} />
+                        <Text style={styles.submitLeaveBtnText}>Submit Swap Request</Text>
+                      </>
+                    )}
+                  </TouchableOpacity>
+                </View>
+              ) : swapTab === 'incoming' ? (
+                /* Incoming Requests Tab */
+                fetchingSwaps && swaps.length === 0 ? (
+                  <ActivityIndicator color="#E16167" size="large" style={styles.historyLoader} />
+                ) : swaps.filter(s => {
+                  const targetId = s.targetUserId?._id || s.targetUserId?.id || s.targetUserId;
+                  const currentUserId = (user as any)?.id || user?._id;
+                  return targetId === currentUserId && s.status === 'Pending Target';
+                }).length === 0 ? (
+                  <View style={styles.emptyLogs}>
+                    <Ionicons name="swap-horizontal-outline" size={48} color="#9E9E9F" />
+                    <Text style={styles.emptyLogsText}>No incoming requests from colleagues.</Text>
+                  </View>
+                ) : (
+                  swaps.filter(s => {
+                    const targetId = s.targetUserId?._id || s.targetUserId?.id || s.targetUserId;
+                    const currentUserId = (user as any)?.id || user?._id;
+                    return targetId === currentUserId && s.status === 'Pending Target';
+                  }).map((s) => (
+                    <View key={s._id} style={styles.historyRecordCard}>
+                      <View style={styles.recordCardTop}>
+                        <View style={{ flexDirection: 'column', gap: 4 }}>
+                          <Text style={styles.recordDate}>{formatDate(s.swapDate)}</Text>
+                          <Text style={styles.recordShiftName}>From: {s.requesterId?.name}</Text>
+                        </View>
+                        <View style={[styles.recordStatusBadge, { backgroundColor: 'rgba(251,191,36,0.15)' }]}>
+                          <Text style={[styles.recordStatusText, { color: '#FBBF24' }]}>{s.status}</Text>
+                        </View>
+                      </View>
+                      <Text style={{ color: '#9E9E9F', fontSize: 11, marginTop: 4 }}>
+                        They want to swap their shift ({s.requesterId?.shift?.startTime} - {s.requesterId?.shift?.endTime}) with yours ({s.targetUserId?.shift?.startTime} - {s.targetUserId?.shift?.endTime}).
+                      </Text>
+                      <View style={styles.swapActionRow}>
+                        <TouchableOpacity
+                          onPress={() => handleReviewSwap(s._id, 'Rejected')}
+                          style={styles.swapDeclineBtn}
+                        >
+                          <Text style={styles.swapDeclineText}>Decline</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                          onPress={() => handleReviewSwap(s._id, 'Pending Admin')}
+                          style={styles.swapAcceptBtn}
+                        >
+                          <Text style={styles.swapAcceptText}>Accept Swap</Text>
+                        </TouchableOpacity>
+                      </View>
+                    </View>
+                  ))
+                )
+              ) : (
+                /* Outgoing Requests Tab */
+                fetchingSwaps && swaps.length === 0 ? (
+                  <ActivityIndicator color="#E16167" size="large" style={styles.historyLoader} />
+                ) : swaps.filter(s => {
+                  const requesterId = s.requesterId?._id || s.requesterId?.id || s.requesterId;
+                  const currentUserId = (user as any)?.id || user?._id;
+                  return requesterId === currentUserId;
+                }).length === 0 ? (
+                  <View style={styles.emptyLogs}>
+                    <Ionicons name="paper-plane-outline" size={48} color="#9E9E9F" />
+                    <Text style={styles.emptyLogsText}>You haven't requested any swaps yet.</Text>
+                  </View>
+                ) : (
+                  swaps.filter(s => {
+                    const requesterId = s.requesterId?._id || s.requesterId?.id || s.requesterId;
+                    const currentUserId = (user as any)?.id || user?._id;
+                    return requesterId === currentUserId;
+                  }).map((s) => {
+                    let badgeBg = 'rgba(251,191,36,0.15)';
+                    let badgeText = '#FBBF24';
+                    if (s.status === 'Approved') {
+                      badgeBg = 'rgba(74,222,128,0.15)';
+                      badgeText = '#4ADE80';
+                    } else if (s.status === 'Rejected') {
+                      badgeBg = 'rgba(225,97,103,0.15)';
+                      badgeText = '#E16167';
+                    }
+
+                    return (
+                      <View key={s._id} style={styles.historyRecordCard}>
+                        <View style={styles.recordCardTop}>
+                          <View style={{ flexDirection: 'column', gap: 4 }}>
+                            <Text style={styles.recordDate}>{formatDate(s.swapDate)}</Text>
+                            <Text style={styles.recordShiftName}>Colleague: {s.targetUserId?.name}</Text>
+                          </View>
+                          <View style={[styles.recordStatusBadge, { backgroundColor: badgeBg }]}>
+                            <Text style={[styles.recordStatusText, { color: badgeText }]}>{s.status}</Text>
+                          </View>
+                        </View>
+                        {s.adminRemarks ? (
+                          <View style={styles.adminRemarksBox}>
+                            <Text style={styles.adminRemarksTitle}>Admin Remarks:</Text>
+                            <Text style={styles.adminRemarksText}>{s.adminRemarks}</Text>
+                          </View>
+                        ) : null}
+                      </View>
+                    );
+                  })
+                )
+              )}
+            </ScrollView>
+          </View>
         ) : (
           /* ================= WFH TAB ================= */
           <View style={styles.historyWrapper}>
@@ -1297,6 +1743,41 @@ function AppContent() {
         </TouchableOpacity>
 
         <TouchableOpacity
+          onPress={() => setCurrentTab('swaps')}
+          style={[styles.tabItem, currentTab === 'swaps' && styles.tabActive]}
+        >
+          <View style={{ position: 'relative' }}>
+            <Ionicons 
+              name={currentTab === 'swaps' ? 'swap-horizontal' : 'swap-horizontal-outline'} 
+              size={22} 
+              color={currentTab === 'swaps' ? '#E16167' : '#9E9E9F'} 
+            />
+            {swaps.filter(s => {
+              const targetId = s.targetUserId?._id || s.targetUserId?.id || s.targetUserId;
+              const currentUserId = (user as any)?.id || user?._id;
+              return targetId === currentUserId && s.status === 'Pending Target';
+            }).length > 0 && (
+              <View 
+                style={{
+                  position: 'absolute',
+                  right: -4,
+                  top: -2,
+                  backgroundColor: '#E16167',
+                  borderRadius: 6,
+                  width: 8,
+                  height: 8,
+                  borderWidth: 1.5,
+                  borderColor: '#0C0C0D',
+                }} 
+              />
+            )}
+          </View>
+          <Text style={[styles.tabLabel, { color: currentTab === 'swaps' ? '#E16167' : '#9E9E9F' }]}>
+            Swaps
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
           onPress={() => setCurrentTab('leaves')}
           style={[styles.tabItem, currentTab === 'leaves' && styles.tabActive]}
         >
@@ -1354,6 +1835,55 @@ function AppContent() {
         onSelectDate={setLeaveEndDate}
         title="Select End Date"
       />
+      <CalendarModal
+        visible={showSwapDatePicker}
+        onClose={() => setShowSwapDatePicker(false)}
+        selectedDate={swapDate}
+        onSelectDate={setSwapDate}
+        title="Select Swap Date"
+      />
+
+      {/* Task Logger Modal */}
+      <Modal transparent={true} visible={showTaskModal} animationType="slide" onRequestClose={() => setShowTaskModal(false)}>
+        <View style={styles.calendarModalOverlay}>
+          <View style={styles.calendarModalCard}>
+            <View style={styles.calendarModalHeader}>
+              <Text style={styles.calendarModalTitle}>End-of-Day Tasks</Text>
+              <TouchableOpacity onPress={() => setShowTaskModal(false)} style={styles.calendarCloseBtn}>
+                <Ionicons name="close" size={20} color="#FFFFFF" />
+              </TouchableOpacity>
+            </View>
+
+            <View style={{ width: '100%', marginTop: 12 }}>
+              <Text style={styles.datePickerLabel}>What tasks did you complete today?</Text>
+              <TextInput
+                placeholder="Type your completed tasks here (use separate lines)..."
+                placeholderTextColor="#9E9E9F"
+                multiline={true}
+                numberOfLines={6}
+                value={completedTasksText}
+                onChangeText={setCompletedTasksText}
+                style={[styles.leaveReasonInput, { height: 120, textAlignVertical: 'top' }]}
+              />
+            </View>
+
+            <TouchableOpacity
+              onPress={handleTaskSubmit}
+              disabled={punchLoading}
+              style={[styles.submitLeaveBtn, { width: '100%', marginTop: 20 }]}
+            >
+              {punchLoading ? (
+                <ActivityIndicator color="#FFFFFF" size="small" />
+              ) : (
+                <>
+                  <Ionicons name="checkmark-done" size={16} color="#FFFFFF" style={{ marginRight: 6 }} />
+                  <Text style={styles.submitLeaveBtnText}>Submit & Check-Out</Text>
+                </>
+              )}
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -2148,5 +2678,136 @@ const styles = StyleSheet.create({
   recordDuration: {
     color: '#9E9E9F',
     fontSize: 11,
+  },
+  // Notice styles
+  noticeCard: {
+    borderWidth: 1,
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 16,
+  },
+  noticeHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  noticeTag: {
+    fontSize: 10,
+    fontWeight: 'bold',
+  },
+  noticeTime: {
+    color: '#9E9E9F',
+    fontSize: 10,
+  },
+  noticeTitleText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: 'bold',
+    marginBottom: 6,
+  },
+  noticeContentText: {
+    color: '#E0E0E1',
+    fontSize: 12,
+    lineHeight: 16,
+    marginBottom: 12,
+  },
+  noticeAckBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    borderWidth: 1,
+    borderRadius: 10,
+    paddingVertical: 8,
+  },
+  noticeAckBtnText: {
+    color: '#FFFFFF',
+    fontSize: 11,
+    fontWeight: 'bold',
+  },
+  // Swaps styles
+  swapTabRow: {
+    flexDirection: 'row',
+    backgroundColor: 'rgba(255, 255, 255, 0.03)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.05)',
+    borderRadius: 12,
+    padding: 3,
+    marginBottom: 16,
+    gap: 4,
+  },
+  swapTabItem: {
+    flex: 1,
+    paddingVertical: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderRadius: 9,
+    borderWidth: 1,
+    borderColor: 'transparent',
+  },
+  swapTabActive: {
+    backgroundColor: 'rgba(225, 97, 103, 0.1)',
+    borderColor: 'rgba(225, 97, 103, 0.25)',
+  },
+  swapTabLabel: {
+    color: '#9E9E9F',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  dropdownContainer: {
+    marginTop: 2,
+    marginBottom: 8,
+  },
+  colleagueChip: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 10,
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  colleagueChipActive: {
+    backgroundColor: '#FFFFFF',
+    borderColor: '#FFFFFF',
+  },
+  colleagueChipText: {
+    color: '#E0E0E1',
+    fontSize: 12,
+  },
+  swapActionRow: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    gap: 12,
+    marginTop: 14,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255, 255, 255, 0.05)',
+    paddingTop: 12,
+  },
+  swapDeclineBtn: {
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    backgroundColor: 'rgba(225, 97, 103, 0.1)',
+    borderWidth: 1,
+    borderColor: 'rgba(225, 97, 103, 0.2)',
+  },
+  swapDeclineText: {
+    color: '#E16167',
+    fontSize: 12,
+    fontWeight: 'bold',
+  },
+  swapAcceptBtn: {
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    backgroundColor: 'rgba(74, 222, 128, 0.15)',
+    borderWidth: 1,
+    borderColor: 'rgba(74, 222, 128, 0.25)',
+  },
+  swapAcceptText: {
+    color: '#4ADE80',
+    fontSize: 12,
+    fontWeight: 'bold',
   },
 });

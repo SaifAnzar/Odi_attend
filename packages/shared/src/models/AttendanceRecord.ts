@@ -31,6 +31,7 @@ export interface IAttendanceRecord extends Document {
   isWFH: boolean;
   status: 'Approved' | 'Pending Approval' | 'Rejected';
   notes?: string;
+  completedTasks: string[];
   createdAt: Date;
   updatedAt: Date;
 }
@@ -75,7 +76,8 @@ const AttendanceRecordSchema = new Schema<IAttendanceRecord>({
     enum: ['Approved', 'Pending Approval', 'Rejected'],
     default: 'Approved'
   },
-  notes: { type: String }
+  notes: { type: String },
+  completedTasks: { type: [String], default: [] }
 }, {
   timestamps: true
 });
