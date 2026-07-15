@@ -13,7 +13,8 @@ import {
   X,
   User as UserIcon,
   Settings,
-  Calendar
+  Calendar,
+  Home
 } from 'lucide-react';
 import Logo from '@/components/Logo';
 
@@ -22,22 +23,30 @@ interface SidebarItemProps {
   icon: React.ReactNode;
   label: string;
   active: boolean;
+  badgeCount?: number;
   onClick?: () => void;
 }
 
-function SidebarItem({ href, icon, label, active, onClick }: SidebarItemProps) {
+function SidebarItem({ href, icon, label, active, badgeCount, onClick }: SidebarItemProps) {
   return (
     <Link
       href={href}
       onClick={onClick}
-      className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-300 ${
+      className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-300 w-full ${
         active 
           ? 'bg-odizo-red/10 border border-odizo-red/20 text-odizo-red font-medium shadow-[0_0_15px_rgba(225,97,103,0.1)]' 
           : 'text-odizo-grey hover:text-white hover:bg-white/5 border border-transparent'
       }`}
     >
-      {icon}
-      <span>{label}</span>
+      <div className="flex items-center gap-3 flex-1">
+        {icon}
+        <span>{label}</span>
+      </div>
+      {badgeCount !== undefined && badgeCount > 0 && (
+        <span className="flex h-5 min-w-[20px] px-1.5 items-center justify-center rounded-full bg-odizo-red text-white text-[10px] font-bold border border-black shadow-[0_0_10px_rgba(225,97,103,0.5)]">
+          {badgeCount}
+        </span>
+      )}
     </Link>
   );
 }
@@ -47,6 +56,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const router = useRouter();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [user, setUser] = useState<{ name: string; role: string; email: string } | null>(null);
+  const [pendingLeaveCount, setPendingLeaveCount] = useState(0);
+  const [pendingWfhCount, setPendingWfhCount] = useState(0);
 
   useEffect(() => {
     const storedUser = localStorage.getItem('user');
@@ -55,6 +66,34 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     }
   }, []);
 
+  useEffect(() => {
+    if (!user) return;
+
+    const fetchPendingCounts = async () => {
+      try {
+        const [resLeave, resWfh] = await Promise.all([
+          fetch('/api/leaves/pending-count?type=Leave'),
+          fetch('/api/leaves/pending-count?type=WFH')
+        ]);
+        if (resLeave.ok) {
+          const data = await resLeave.json();
+          setPendingLeaveCount(data.count);
+        }
+        if (resWfh.ok) {
+          const data = await resWfh.json();
+          setPendingWfhCount(data.count);
+        }
+      } catch (err) {
+        console.error('Failed to fetch pending counts:', err);
+      }
+    };
+
+    fetchPendingCounts();
+    const interval = setInterval(fetchPendingCounts, 45000); // Poll every 45s
+
+    return () => clearInterval(interval);
+  }, [user, pathname]);
+
   const handleLogout = async () => {
     // Delete token cookie
     document.cookie = 'token=; Max-Age=0; path=/;';
@@ -62,7 +101,14 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     router.push('/login');
   };
 
-  const navItems = [
+  interface NavItem {
+    href: string;
+    icon: React.ReactNode;
+    label: string;
+    badgeCount?: number;
+  }
+
+  const navItems: NavItem[] = [
     { href: '/admin/dashboard', icon: <LayoutDashboard size={20} />, label: 'Dashboard' },
   ];
 
@@ -71,13 +117,15 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       { href: '/admin/users', icon: <Users size={20} />, label: 'User Management' },
       { href: '/admin/shifts', icon: <Clock size={20} />, label: 'Working Hours' },
       { href: '/admin/reports', icon: <FileText size={20} />, label: 'Reports' },
-      { href: '/admin/leaves', icon: <Calendar size={20} />, label: 'Leave Requests' },
+      { href: '/admin/leaves', icon: <Calendar size={20} />, label: 'Leave Requests', badgeCount: pendingLeaveCount },
+      { href: '/admin/wfh', icon: <Home size={20} />, label: 'WFH Requests', badgeCount: pendingWfhCount },
       { href: '/admin/settings', icon: <Settings size={20} />, label: 'Settings' }
     );
   } else if (user?.role === 'Employee' || user?.role === 'Intern') {
     navItems.push(
       { href: '/admin/reports', icon: <FileText size={20} />, label: 'History' },
-      { href: '/admin/leaves', icon: <Calendar size={20} />, label: 'Leave Requests' }
+      { href: '/admin/leaves', icon: <Calendar size={20} />, label: 'Leave Requests', badgeCount: pendingLeaveCount },
+      { href: '/admin/wfh', icon: <Home size={20} />, label: 'WFH Requests', badgeCount: pendingWfhCount }
     );
   }
 
@@ -97,6 +145,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
               icon={item.icon}
               label={item.label}
               active={pathname === item.href}
+              badgeCount={item.badgeCount}
             />
           ))}
         </nav>
@@ -134,6 +183,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                   icon={item.icon}
                   label={item.label}
                   active={pathname === item.href}
+                  badgeCount={item.badgeCount}
                   onClick={() => setSidebarOpen(false)}
                 />
               ))}

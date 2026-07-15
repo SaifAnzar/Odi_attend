@@ -41,6 +41,7 @@ const LeaveRequestSchema = new mongoose_1.Schema({
     endDate: { type: Date, required: true },
     reason: { type: String, required: true },
     status: { type: String, enum: ['Pending', 'Approved', 'Rejected'], default: 'Pending' },
+    requestType: { type: String, enum: ['Leave', 'WFH'], default: 'Leave' },
     adminRemarks: { type: String, default: "" },
     appliedOn: { type: Date, default: Date.now }
 }, {

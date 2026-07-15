@@ -1,7 +1,8 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { FileText, Calendar, User as UserIcon, Search, MapPin, Download, Check, X, ShieldAlert } from 'lucide-react';
+import { FileText, Calendar, User as UserIcon, Search, MapPin, Download, Check, X, ShieldAlert, Home } from 'lucide-react';
+import { showError, showSuccess } from '@/lib/swal';
 
 interface User {
   _id: string;
@@ -32,6 +33,7 @@ interface AttendanceRecord {
   totalMinutesWorked: number;
   isFlagged: boolean;
   flagReason?: string;
+  isWFH: boolean;
   status: 'Approved' | 'Pending Approval' | 'Rejected';
 }
 
@@ -53,14 +55,15 @@ export default function Reports() {
         body: JSON.stringify({ status: approvalStatus })
       });
       if (res.ok) {
+        showSuccess('Review Saved', `Attendance record has been ${approvalStatus.toLowerCase()}.`);
         fetchData();
       } else {
         const err = await res.json();
-        alert(err.error || 'Failed to submit review.');
+        showError('Review Failed', err.error || 'Failed to submit review.');
       }
     } catch (e) {
       console.error(e);
-      alert('Network error. Failed to review record.');
+      showError('Network Error', 'Failed to review record.');
     }
   };
 
@@ -121,7 +124,7 @@ export default function Reports() {
     if (records.length === 0) return;
     
     // Construct CSV content
-    const headers = ['Date', 'Staff Name', 'Email', 'Role', 'Shift Name', 'Shift Start', 'Shift End', 'Minutes Worked', 'Attendance Status', 'Verification Status', 'Flagged', 'Flag Reason'];
+    const headers = ['Date', 'Staff Name', 'Email', 'Role', 'Shift Name', 'Shift Start', 'Shift End', 'Minutes Worked', 'Attendance Status', 'Verification Status', 'Flagged', 'Flag Reason', 'Work From Home'];
     const rows = records.map(r => [
       r.date,
       r.userId?.name || 'Unknown',
@@ -134,7 +137,8 @@ export default function Reports() {
       r.attendanceStatus,
       r.status,
       r.isFlagged ? 'Yes' : 'No',
-      r.flagReason || ''
+      r.flagReason || '',
+      r.isWFH ? 'Yes' : 'No'
     ]);
     
     const csvContent = "data:text/csv;charset=utf-8," 
@@ -253,7 +257,14 @@ export default function Reports() {
                     }`}
                   >
                     <td className="py-4 px-4 font-mono font-semibold text-white">
-                      {record.date}
+                      <div className="flex flex-col gap-1">
+                        <span>{record.date}</span>
+                        {record.isWFH && (
+                          <span className="inline-flex items-center gap-1 text-[9px] px-1.5 py-0.5 rounded font-bold border bg-sky-500/10 border-sky-500/25 text-sky-400 w-fit uppercase">
+                            <Home size={10} /> WFH
+                          </span>
+                        )}
+                      </div>
                     </td>
                     <td className="py-4 px-4 font-semibold text-white">
                       <div className="flex flex-col">

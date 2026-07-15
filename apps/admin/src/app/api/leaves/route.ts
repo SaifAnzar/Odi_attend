@@ -13,7 +13,7 @@ export async function POST(request: NextRequest) {
 
     await connectToDatabase();
     const body = await request.json();
-    const { userId, startDate, endDate, reason } = body;
+    const { userId, startDate, endDate, reason, requestType } = body;
 
     // Validation
     if (!startDate || !endDate || !reason) {
@@ -34,6 +34,7 @@ export async function POST(request: NextRequest) {
       endDate: new Date(endDate),
       reason,
       status: 'Pending',
+      requestType: requestType || 'Leave',
       adminRemarks: ''
     });
 

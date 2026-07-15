@@ -6,6 +6,7 @@ export interface ILeaveRequest extends Document {
   endDate: Date;
   reason: string;
   status: 'Pending' | 'Approved' | 'Rejected';
+  requestType: 'Leave' | 'WFH';
   adminRemarks: string;
   appliedOn: Date;
   createdAt: Date;
@@ -18,6 +19,7 @@ const LeaveRequestSchema = new Schema<ILeaveRequest>({
   endDate: { type: Date, required: true },
   reason: { type: String, required: true },
   status: { type: String, enum: ['Pending', 'Approved', 'Rejected'], default: 'Pending' },
+  requestType: { type: String, enum: ['Leave', 'WFH'], default: 'Leave' },
   adminRemarks: { type: String, default: "" },
   appliedOn: { type: Date, default: Date.now }
 }, {

@@ -28,6 +28,7 @@ export interface IAttendanceRecord extends Document {
   totalMinutesWorked: number; // calculated sum of all completed sessions (in minutes)
   isFlagged: boolean;
   flagReason?: string;
+  isWFH: boolean;
   status: 'Approved' | 'Pending Approval' | 'Rejected';
   notes?: string;
   createdAt: Date;
@@ -67,6 +68,7 @@ const AttendanceRecordSchema = new Schema<IAttendanceRecord>({
   totalMinutesWorked: { type: Number, required: true, default: 0 },
   isFlagged: { type: Boolean, default: false },
   flagReason: { type: String, default: "" },
+  isWFH: { type: Boolean, default: false },
   status: {
     type: String,
     required: true,

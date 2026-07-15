@@ -201,13 +201,149 @@ function CalendarModal({ visible, onClose, selectedDate, onSelectDate, title }: 
   );
 }
 
+// Custom Alert Context
+interface CustomAlertContextType {
+  showAlert: (
+    title: string,
+    message: string,
+    type?: 'success' | 'error' | 'confirm',
+    onConfirm?: () => void,
+    onCancel?: () => void
+  ) => void;
+}
+
+const CustomAlertContext = React.createContext<CustomAlertContextType | null>(null);
+
+export function useCustomAlert() {
+  const context = React.useContext(CustomAlertContext);
+  if (!context) {
+    throw new Error('useCustomAlert must be used within a CustomAlertProvider');
+  }
+  return context;
+}
+
+interface CustomAlertConfig {
+  visible: boolean;
+  title: string;
+  message: string;
+  type: 'success' | 'error' | 'confirm';
+  onConfirm?: () => void;
+  onCancel?: () => void;
+}
+
+function CustomAlertModal({ config, onClose }: { config: CustomAlertConfig; onClose: () => void }) {
+  if (!config.visible) return null;
+
+  const handleConfirm = () => {
+    if (config.onConfirm) config.onConfirm();
+    onClose();
+  };
+
+  const handleCancel = () => {
+    if (config.onCancel) config.onCancel();
+    onClose();
+  };
+
+  let iconName: any = 'checkmark-circle-outline';
+  let iconColor = '#4ADE80';
+  let glowColor = 'rgba(74, 222, 128, 0.15)';
+  
+  if (config.type === 'error') {
+    iconName = 'alert-circle-outline';
+    iconColor = '#E16167';
+    glowColor = 'rgba(225, 97, 103, 0.15)';
+  } else if (config.type === 'confirm') {
+    iconName = 'help-circle-outline';
+    iconColor = '#FBBF24';
+    glowColor = 'rgba(251, 191, 36, 0.15)';
+  }
+
+  return (
+    <Modal transparent={true} visible={config.visible} animationType="fade" onRequestClose={onClose}>
+      <View style={styles.alertModalOverlay}>
+        <View style={[styles.alertModalCard, { shadowColor: iconColor }]}>
+          <View style={[styles.alertIconGlow, { backgroundColor: glowColor }]}>
+            <Ionicons name={iconName} size={36} color={iconColor} />
+          </View>
+          
+          <Text style={styles.alertTitle}>{config.title}</Text>
+          <Text style={styles.alertMessage}>{config.message}</Text>
+
+          <View style={styles.alertActionsRow}>
+            {config.type === 'confirm' ? (
+              <>
+                <TouchableOpacity onPress={handleCancel} style={styles.alertCancelBtn}>
+                  <Text style={styles.alertCancelBtnText}>Cancel</Text>
+                </TouchableOpacity>
+                <TouchableOpacity onPress={handleConfirm} style={styles.alertConfirmBtn}>
+                  <Text style={styles.alertConfirmBtnText}>Confirm</Text>
+                </TouchableOpacity>
+              </>
+            ) : (
+              <TouchableOpacity onPress={handleConfirm} style={[styles.alertConfirmBtn, { flex: 1, backgroundColor: '#E16167' }]}>
+                <Text style={styles.alertConfirmBtnText}>OK</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        </View>
+      </View>
+    </Modal>
+  );
+}
+
+function CustomAlertProvider({ children }: { children: React.ReactNode }) {
+  const [config, setConfig] = useState<CustomAlertConfig>({
+    visible: false,
+    title: '',
+    message: '',
+    type: 'success'
+  });
+
+  const showAlert = (
+    title: string,
+    message: string,
+    type: 'success' | 'error' | 'confirm' = 'success',
+    onConfirm?: () => void,
+    onCancel?: () => void
+  ) => {
+    setConfig({
+      visible: true,
+      title,
+      message,
+      type,
+      onConfirm,
+      onCancel
+    });
+  };
+
+  const hideAlert = () => {
+    setConfig(prev => ({ ...prev, visible: false }));
+  };
+
+  return (
+    <CustomAlertContext.Provider value={{ showAlert }}>
+      {children}
+      <CustomAlertModal config={config} onClose={hideAlert} />
+    </CustomAlertContext.Provider>
+  );
+}
+
 export default function App() {
+  return (
+    <CustomAlertProvider>
+      <AppContent />
+    </CustomAlertProvider>
+  );
+}
+
+function AppContent() {
+  const { showAlert } = useCustomAlert();
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
   
   // Navigation & Data
-  const [currentTab, setCurrentTab] = useState<'dashboard' | 'history' | 'leaves'>('dashboard');
+  const [currentTab, setCurrentTab] = useState<'dashboard' | 'history' | 'leaves' | 'wfh'>('dashboard');
   const [records, setRecords] = useState<AttendanceRecord[]>([]);
   const [loading, setLoading] = useState(false);
 
@@ -322,14 +458,14 @@ export default function App() {
     }
   };
 
-  const handleApplyLeave = async () => {
+  const handleApplyLeave = async (reqType: 'Leave' | 'WFH' = 'Leave') => {
     if (!leaveReason.trim()) {
-      Alert.alert('Error', 'Please provide a reason for the leave request.');
+      showAlert('Error', `Please provide a reason for the ${reqType === 'WFH' ? 'WFH' : 'leave'} request.`, 'error');
       return;
     }
 
     if (parseYYYYMMDD(leaveStartDate) > parseYYYYMMDD(leaveEndDate)) {
-      Alert.alert('Error', 'Start Date cannot be after End Date.');
+      showAlert('Error', 'Start Date cannot be after End Date.', 'error');
       return;
     }
 
@@ -345,23 +481,24 @@ export default function App() {
           userId: user?._id,
           startDate: leaveStartDate,
           endDate: leaveEndDate,
-          reason: leaveReason
+          reason: leaveReason,
+          requestType: reqType
         })
       });
 
       const data = await res.json();
       if (res.ok) {
-        Alert.alert('Success', 'Leave request submitted successfully.');
+        showAlert('Success', `${reqType === 'WFH' ? 'WFH' : 'Leave'} request submitted successfully.`, 'success');
         setLeaveReason('');
         setLeaveStartDate(formatDateToYYYYMMDD(new Date()));
         setLeaveEndDate(formatDateToYYYYMMDD(new Date()));
         fetchMyLeaves();
       } else {
-        Alert.alert('Error', data.error || 'Failed to submit leave request.');
+        showAlert('Error', data.error || 'Failed to submit leave request.', 'error');
       }
     } catch (e) {
       console.error('Submit leave failed:', e);
-      Alert.alert('Error', 'Something went wrong. Please try again.');
+      showAlert('Error', 'Something went wrong. Please try again.', 'error');
     } finally {
       setSubmittingLeave(false);
     }
@@ -420,7 +557,7 @@ export default function App() {
   // Handle Login Submit
   const handleLogin = async () => {
     if (!email || !password) {
-      Alert.alert('Missing Fields', 'Please enter your email and password.');
+      showAlert('Missing Fields', 'Please enter your email and password.', 'error');
       return;
     }
 
@@ -438,7 +575,7 @@ export default function App() {
       const data = await res.json();
       if (res.ok) {
         if (data.user.role === 'Admin') {
-          Alert.alert('Access Denied', 'Administrators must log in through the Web Admin portal.');
+          showAlert('Access Denied', 'Administrators must log in through the Web Admin portal.', 'error');
           setLoading(false);
           return;
         }
@@ -452,10 +589,10 @@ export default function App() {
         setIsAuthenticated(true);
         setPassword('');
       } else {
-        Alert.alert('Login Failed', data.error || 'Invalid credentials');
+        showAlert('Login Failed', data.error || 'Invalid credentials', 'error');
       }
     } catch (e) {
-      Alert.alert('Connection Timeout', 'Could not reach the server. Make sure the API URL is correct.');
+      showAlert('Connection Timeout', 'Could not reach the server. Make sure the API URL is correct.', 'error');
     } finally {
       setLoading(false);
     }
@@ -465,7 +602,7 @@ export default function App() {
   const handlePunch = async () => {
     const { status } = await Location.requestForegroundPermissionsAsync();
     if (status !== 'granted') {
-      Alert.alert('Location Blocked', 'GPS Location permission is required to log punches.');
+      showAlert('Location Blocked', 'GPS Location permission is required to log punches.', 'error');
       return;
     }
 
@@ -498,10 +635,6 @@ export default function App() {
         if (!clientSsid || clientSsid !== allowedSSID) {
           clientIsFlagged = true;
           clientFlagReason = 'Wi-Fi mismatch or network unavailable';
-          Alert.alert(
-            'Office Wi-Fi Not Detected',
-            'Office Wi-Fi not detected. Your attendance is marked but flagged for Admin approval.'
-          );
         }
       }
 
@@ -518,10 +651,10 @@ export default function App() {
         },
         body: JSON.stringify({
           type: isCheckedIn ? 'Check-Out' : 'Check-In',
-          location: {
-            latitude: loc.coords.latitude,
-            longitude: loc.coords.longitude,
-            address: 'Mobile App Checkpoint'
+          location: { 
+            latitude: loc.coords.latitude, 
+            longitude: loc.coords.longitude, 
+            address: `Mobile App Punch Location`
           },
           deviceInfo: deviceLabel,
           notes: punchNotes || undefined,
@@ -534,13 +667,17 @@ export default function App() {
       const data = await res.json();
       if (res.ok) {
         setPunchNotes('');
-        Alert.alert('Success', `Shift check-${isCheckedIn ? 'out' : 'in'} recorded!`);
+        if (clientIsFlagged) {
+          showAlert('Punch Recorded', `Shift check-${isCheckedIn ? 'out' : 'in'} recorded, but flagged: ${clientFlagReason}.`, 'error');
+        } else {
+          showAlert('Success', `Shift check-${isCheckedIn ? 'out' : 'in'} recorded!`, 'success');
+        }
         fetchLogs();
       } else {
-        Alert.alert('Punch Failed', data.error || 'Operation denied by server.');
+        showAlert('Punch Failed', data.error || 'Operation denied by server.', 'error');
       }
     } catch (e) {
-      Alert.alert('Network Error', 'Check your internet connection and try again.');
+      showAlert('Network Error', 'Check your internet connection and try again.', 'error');
     } finally {
       setPunchLoading(false);
     }
@@ -548,21 +685,19 @@ export default function App() {
 
   // Log out
   const handleLogout = async () => {
-    Alert.alert('Logout', 'Are you sure you want to log out?', [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Logout',
-        style: 'destructive',
-        onPress: async () => {
-          await AsyncStorage.removeItem('token');
-          await AsyncStorage.removeItem('user');
-          setToken(null);
-          setUser(null);
-          setIsAuthenticated(false);
-          setCurrentTab('dashboard');
-        }
+    showAlert(
+      'Logout',
+      'Are you sure you want to log out?',
+      'confirm',
+      async () => {
+        await AsyncStorage.removeItem('token');
+        await AsyncStorage.removeItem('user');
+        setToken(null);
+        setUser(null);
+        setIsAuthenticated(false);
+        setCurrentTab('dashboard');
       }
-    ]);
+    );
   };
 
   // ----------------- RENDER LOGIN INTERFACE -----------------
@@ -852,7 +987,7 @@ export default function App() {
               </ScrollView>
             )}
           </View>
-        ) : (
+        ) : currentTab === 'leaves' ? (
           /* ================= LEAVES TAB ================= */
           <View style={styles.historyWrapper}>
             <View style={styles.historyHeader}>
@@ -909,7 +1044,7 @@ export default function App() {
                 </View>
 
                 <TouchableOpacity
-                  onPress={handleApplyLeave}
+                  onPress={() => handleApplyLeave('Leave')}
                   disabled={submittingLeave}
                   style={styles.submitLeaveBtn}
                 >
@@ -931,13 +1066,13 @@ export default function App() {
 
               {fetchingLeaves && leaves.length === 0 ? (
                 <ActivityIndicator color="#E16167" size="large" style={styles.historyLoader} />
-              ) : leaves.length === 0 ? (
+              ) : leaves.filter((l: any) => !l.requestType || l.requestType === 'Leave').length === 0 ? (
                 <View style={styles.emptyLogs}>
                   <Ionicons name="airplane-outline" size={48} color="#9E9E9F" />
                   <Text style={styles.emptyLogsText}>No past leave requests found.</Text>
                 </View>
               ) : (
-                leaves.map((l) => {
+                leaves.filter((l: any) => !l.requestType || l.requestType === 'Leave').map((l) => {
                   const sDate = new Date(l.startDate).toISOString().split('T')[0];
                   const eDate = new Date(l.endDate).toISOString().split('T')[0];
                   const diffTime = Math.abs(new Date(l.endDate).getTime() - new Date(l.startDate).getTime());
@@ -956,9 +1091,19 @@ export default function App() {
                   return (
                     <View key={l._id} style={styles.historyRecordCard}>
                       <View style={styles.recordCardTop}>
-                        <Text style={styles.recordDate}>
-                          {sDate} to {eDate}
-                        </Text>
+                        <View style={{ flexDirection: 'column', gap: 4 }}>
+                          <Text style={styles.recordDate}>
+                            {sDate} to {eDate}
+                          </Text>
+                          <View style={{ flexDirection: 'row', gap: 6, alignItems: 'center' }}>
+                            <View style={[styles.recordTypeBadge, { backgroundColor: 'rgba(225, 97, 103, 0.15)' }]}>
+                              <Text style={[styles.recordTypeText, { color: '#E16167' }]}>
+                                Leave
+                              </Text>
+                            </View>
+                            <Text style={styles.recordDuration}>({diffDays} {diffDays === 1 ? 'day' : 'days'})</Text>
+                          </View>
+                        </View>
                         <View style={[styles.recordStatusBadge, { backgroundColor: badgeBg }]}>
                           <Text style={[styles.recordStatusText, { color: badgeText }]}>
                             {l.status}
@@ -966,7 +1111,151 @@ export default function App() {
                         </View>
                       </View>
 
-                      <Text style={styles.recordShiftName}>Duration: {diffDays} {diffDays === 1 ? 'day' : 'days'}</Text>
+                      <Text style={[styles.recordShiftName, { marginTop: 4, color: '#FFFFFF' }]}>Reason: {l.reason}</Text>
+
+                      {l.adminRemarks ? (
+                        <View style={styles.adminRemarksBox}>
+                          <Text style={styles.adminRemarksTitle}>Admin Remarks:</Text>
+                          <Text style={styles.adminRemarksText}>{l.adminRemarks}</Text>
+                        </View>
+                      ) : null}
+
+                      <View style={styles.recordCardFooter}>
+                        <Text style={styles.recordHoursLabel}>Applied on:</Text>
+                        <Text style={styles.recordHours}>
+                          {new Date(l.appliedOn).toLocaleDateString([], { year: 'numeric', month: 'short', day: 'numeric' })}
+                        </Text>
+                      </View>
+                    </View>
+                  );
+                })
+              )}
+            </ScrollView>
+          </View>
+        ) : (
+          /* ================= WFH TAB ================= */
+          <View style={styles.historyWrapper}>
+            <View style={styles.historyHeader}>
+              <Text style={styles.historyTitle}>Work From Home (WFH)</Text>
+              <TouchableOpacity onPress={fetchMyLeaves} style={styles.refreshLogsBtn} disabled={fetchingLeaves}>
+                <Ionicons name="refresh" size={16} color="#FFFFFF" />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView bounces={true} style={styles.historyScroll} contentContainerStyle={{ paddingBottom: 24 }}>
+              {/* UI Component 1: Apply WFH Form */}
+              <View style={styles.applyLeaveCard}>
+                <Text style={styles.applyLeaveTitle}>Apply For WFH</Text>
+                
+                <View style={styles.datePickerRow}>
+                  <View style={styles.datePickerField}>
+                    <Text style={styles.datePickerLabel}>Start Date</Text>
+                    <TouchableOpacity 
+                      style={styles.datePickerBtn}
+                      onPress={() => setShowStartPicker(true)}
+                    >
+                      <Ionicons name="calendar-outline" size={16} color="#E16167" style={{ marginRight: 6 }} />
+                      <Text style={styles.datePickerBtnText}>
+                        {leaveStartDate}
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+
+                  <View style={styles.datePickerField}>
+                    <Text style={styles.datePickerLabel}>End Date</Text>
+                    <TouchableOpacity 
+                      style={styles.datePickerBtn}
+                      onPress={() => setShowEndPicker(true)}
+                    >
+                      <Ionicons name="calendar-outline" size={16} color="#E16167" style={{ marginRight: 6 }} />
+                      <Text style={styles.datePickerBtnText}>
+                        {leaveEndDate}
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+
+                <View style={{ marginTop: 12 }}>
+                  <Text style={styles.datePickerLabel}>Reason for WFH</Text>
+                  <TextInput
+                    placeholder="Describe the reason for your WFH request..."
+                    placeholderTextColor="#9E9E9F"
+                    multiline={true}
+                    numberOfLines={3}
+                    value={leaveReason}
+                    onChangeText={setLeaveReason}
+                    style={styles.leaveReasonInput}
+                  />
+                </View>
+
+                <TouchableOpacity
+                  onPress={() => handleApplyLeave('WFH')}
+                  disabled={submittingLeave}
+                  style={styles.submitLeaveBtn}
+                >
+                  {submittingLeave ? (
+                    <ActivityIndicator color="#FFFFFF" size="small" />
+                  ) : (
+                    <>
+                      <Ionicons name="paper-plane-outline" size={16} color="#FFFFFF" style={{ marginRight: 6 }} />
+                      <Text style={styles.submitLeaveBtnText}>Submit Request</Text>
+                    </>
+                  )}
+                </TouchableOpacity>
+              </View>
+
+              {/* UI Component 2: WFH History */}
+              <Text style={[styles.historyTitle, { marginTop: 24, marginBottom: 12, fontSize: 16 }]}>
+                WFH Request History
+              </Text>
+
+              {fetchingLeaves && leaves.length === 0 ? (
+                <ActivityIndicator color="#E16167" size="large" style={styles.historyLoader} />
+              ) : leaves.filter((l: any) => l.requestType === 'WFH').length === 0 ? (
+                <View style={styles.emptyLogs}>
+                  <Ionicons name="home-outline" size={48} color="#9E9E9F" />
+                  <Text style={styles.emptyLogsText}>No past WFH requests found.</Text>
+                </View>
+              ) : (
+                leaves.filter((l: any) => l.requestType === 'WFH').map((l) => {
+                  const sDate = new Date(l.startDate).toISOString().split('T')[0];
+                  const eDate = new Date(l.endDate).toISOString().split('T')[0];
+                  const diffTime = Math.abs(new Date(l.endDate).getTime() - new Date(l.startDate).getTime());
+                  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+
+                  let badgeBg = 'rgba(251,191,36,0.15)';
+                  let badgeText = '#FBBF24';
+                  if (l.status === 'Approved') {
+                    badgeBg = 'rgba(74,222,128,0.15)';
+                    badgeText = '#4ADE80';
+                  } else if (l.status === 'Rejected') {
+                    badgeBg = 'rgba(225,97,103,0.15)';
+                    badgeText = '#E16167';
+                  }
+
+                  return (
+                    <View key={l._id} style={styles.historyRecordCard}>
+                      <View style={styles.recordCardTop}>
+                        <View style={{ flexDirection: 'column', gap: 4 }}>
+                          <Text style={styles.recordDate}>
+                            {sDate} to {eDate}
+                          </Text>
+                          <View style={{ flexDirection: 'row', gap: 6, alignItems: 'center' }}>
+                            <View style={[styles.recordTypeBadge, { backgroundColor: 'rgba(56, 189, 248, 0.15)' }]}>
+                              <Text style={[styles.recordTypeText, { color: '#38BDF8' }]}>
+                                WFH
+                              </Text>
+                            </View>
+                            <Text style={styles.recordDuration}>({diffDays} {diffDays === 1 ? 'day' : 'days'})</Text>
+                          </View>
+                        </View>
+                        <View style={[styles.recordStatusBadge, { backgroundColor: badgeBg }]}>
+                          <Text style={[styles.recordStatusText, { color: badgeText }]}>
+                            {l.status}
+                          </Text>
+                        </View>
+                      </View>
+
                       <Text style={[styles.recordShiftName, { marginTop: 4, color: '#FFFFFF' }]}>Reason: {l.reason}</Text>
 
                       {l.adminRemarks ? (
@@ -1022,6 +1311,20 @@ export default function App() {
         </TouchableOpacity>
 
         <TouchableOpacity
+          onPress={() => setCurrentTab('wfh')}
+          style={[styles.tabItem, currentTab === 'wfh' && styles.tabActive]}
+        >
+          <Ionicons 
+            name={currentTab === 'wfh' ? 'home' : 'home-outline'} 
+            size={22} 
+            color={currentTab === 'wfh' ? '#E16167' : '#9E9E9F'} 
+          />
+          <Text style={[styles.tabLabel, { color: currentTab === 'wfh' ? '#E16167' : '#9E9E9F' }]}>
+            WFH
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
           onPress={() => setCurrentTab('history')}
           style={[styles.tabItem, currentTab === 'history' && styles.tabActive]}
         >
@@ -1057,6 +1360,89 @@ export default function App() {
 
 // ----------------- PREMIUM GLASSMORPHIC STYLING -----------------
 const styles = StyleSheet.create({
+  // Alert Modal Styles
+  alertModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.75)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 24,
+  },
+  alertModalCard: {
+    width: '85%',
+    maxWidth: 320,
+    backgroundColor: '#131315',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.08)',
+    borderRadius: 24,
+    padding: 24,
+    alignItems: 'center',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.15,
+    shadowRadius: 20,
+    elevation: 8,
+  },
+  alertIconGlow: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  alertTitle: {
+    color: '#FFFFFF',
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  alertMessage: {
+    color: '#9E9E9F',
+    fontSize: 13,
+    lineHeight: 18,
+    textAlign: 'center',
+    marginBottom: 24,
+  },
+  alertActionsRow: {
+    flexDirection: 'row',
+    width: '100%',
+    gap: 12,
+    justifyContent: 'center',
+  },
+  alertConfirmBtn: {
+    flex: 1,
+    height: 44,
+    backgroundColor: '#E16167',
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#E16167',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  alertConfirmBtnText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: 'bold',
+  },
+  alertCancelBtn: {
+    flex: 1,
+    height: 44,
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  alertCancelBtnText: {
+    color: '#9E9E9F',
+    fontSize: 14,
+    fontWeight: '600',
+  },
   darkBackground: {
     flex: 1,
     backgroundColor: '#0B0B0C',
@@ -1714,5 +2100,53 @@ const styles = StyleSheet.create({
     color: '#E0E0E1',
     fontSize: 12,
     lineHeight: 16,
+  },
+  segmentControlContainer: {
+    flexDirection: 'row',
+    backgroundColor: 'rgba(255, 255, 255, 0.03)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.05)',
+    borderRadius: 12,
+    padding: 3,
+    marginBottom: 16,
+    gap: 4,
+  },
+  segmentBtn: {
+    flex: 1,
+    paddingVertical: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderRadius: 9,
+    borderWidth: 1,
+    borderColor: 'transparent',
+  },
+  segmentBtnActive: {
+    backgroundColor: 'rgba(225, 97, 103, 0.1)',
+    borderColor: 'rgba(225, 97, 103, 0.25)',
+  },
+  segmentBtnText: {
+    color: '#9E9E9F',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  segmentBtnTextActive: {
+    color: '#E16167',
+    fontWeight: 'bold',
+  },
+  recordTypeBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: 'transparent',
+  },
+  recordTypeText: {
+    fontSize: 10,
+    fontWeight: 'bold',
+    textTransform: 'uppercase',
+  },
+  recordDuration: {
+    color: '#9E9E9F',
+    fontSize: 11,
   },
 });

@@ -66,6 +66,7 @@ const AttendanceRecordSchema = new mongoose_1.Schema({
     totalMinutesWorked: { type: Number, required: true, default: 0 },
     isFlagged: { type: Boolean, default: false },
     flagReason: { type: String, default: "" },
+    isWFH: { type: Boolean, default: false },
     status: {
         type: String,
         required: true,

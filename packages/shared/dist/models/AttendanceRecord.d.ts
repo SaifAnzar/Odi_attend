@@ -25,6 +25,7 @@ export interface IAttendanceRecord extends Document {
     totalMinutesWorked: number;
     isFlagged: boolean;
     flagReason?: string;
+    isWFH: boolean;
     status: 'Approved' | 'Pending Approval' | 'Rejected';
     notes?: string;
     createdAt: Date;

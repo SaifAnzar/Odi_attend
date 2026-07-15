@@ -13,6 +13,7 @@ import {
   Search,
   AlertCircle
 } from 'lucide-react';
+import { showConfirm, showError, showSuccess } from '@/lib/swal';
 
 interface User {
   _id: string;
@@ -99,17 +100,20 @@ export default function UserManagement() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this user profile?')) return;
+    const confirmed = await showConfirm('Delete Profile', 'Are you sure you want to delete this user profile?');
+    if (!confirmed) return;
     try {
       const res = await fetch(`/api/users/${id}`, { method: 'DELETE' });
       const data = await res.json();
       if (res.ok) {
+        showSuccess('Deleted!', 'User profile deleted successfully.');
         fetchUsers();
       } else {
-        alert(data.error || 'Failed to delete user');
+        showError('Delete Failed', data.error || 'Failed to delete user');
       }
     } catch (e) {
       console.error(e);
+      showError('Error', 'An unexpected error occurred.');
     }
   };
 
@@ -143,6 +147,7 @@ export default function UserManagement() {
 
       if (res.ok) {
         setShowModal(false);
+        showSuccess(modalMode === 'create' ? 'Created!' : 'Updated!', modalMode === 'create' ? 'User profile created successfully.' : 'User profile updated successfully.');
         fetchUsers();
       } else {
         setError(data.error || 'Something went wrong');

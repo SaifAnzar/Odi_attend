@@ -5,7 +5,7 @@ import {
   Check, 
   X, 
   AlertCircle, 
-  Calendar, 
+  Home, 
   User, 
   Clock, 
   MessageSquare, 
@@ -57,9 +57,9 @@ const getDaysDiff = (startIso: string, endIso: string) => {
   return Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
 };
 
-export default function LeaveRequestsPage() {
+export default function WFHRequestsPage() {
   const [currentUser, setCurrentUser] = useState<UserDetail | null>(null);
-  const [leaves, setLeaves] = useState<LeaveRequest[]>([]);
+  const [requests, setRequests] = useState<LeaveRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [statusFilter, setStatusFilter] = useState<'All' | 'Pending' | 'Approved' | 'Rejected'>('All');
@@ -67,10 +67,10 @@ export default function LeaveRequestsPage() {
   
   // Rejection Modal states (Admin)
   const [showRejectModal, setShowRejectModal] = useState(false);
-  const [selectedLeaveId, setSelectedLeaveId] = useState('');
+  const [selectedRequestId, setSelectedRequestId] = useState('');
   const [adminRemarks, setAdminRemarks] = useState('');
   
-  // Apply Leave form states (Employee/Intern)
+  // Apply WFH form states (Employee/Intern)
   const [applyStartDate, setApplyStartDate] = useState('');
   const [applyEndDate, setApplyEndDate] = useState('');
   const [applyReason, setApplyReason] = useState('');
@@ -87,7 +87,7 @@ export default function LeaveRequestsPage() {
     }
   }, []);
 
-  const fetchLeaves = async () => {
+  const fetchRequests = async () => {
     if (!currentUser) return;
     try {
       setLoading(true);
@@ -104,32 +104,30 @@ export default function LeaveRequestsPage() {
       const data = await res.json();
       
       if (res.ok && data.leaves) {
-        // Filter out WFH requests client-side for the Leave page
-        const leaveOnly = data.leaves.filter((l: LeaveRequest) => !l.requestType || l.requestType === 'Leave');
+        // Filter WFH requests client-side
+        const wfhOnly = data.leaves.filter((l: LeaveRequest) => l.requestType === 'WFH');
         if (currentUser.role !== 'Admin' && statusFilter !== 'All') {
-          setLeaves(leaveOnly.filter((l: LeaveRequest) => l.status === statusFilter));
+          setRequests(wfhOnly.filter((l: LeaveRequest) => l.status === statusFilter));
         } else {
-          setLeaves(leaveOnly);
+          setRequests(wfhOnly);
         }
       } else {
-        setError(data.error || 'Failed to fetch leave requests.');
+        setError(data.error || 'Failed to fetch WFH requests.');
       }
     } catch (err) {
       console.error(err);
-      setError('An error occurred while fetching leave requests.');
+      setError('An error occurred while fetching WFH requests.');
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    if (currentUser) {
-      fetchLeaves();
-    }
+    fetchRequests();
   }, [currentUser, statusFilter]);
 
   const handleApprove = async (id: string) => {
-    const confirmed = await showConfirm('Approve Leave', 'Are you sure you want to APPROVE this leave request?');
+    const confirmed = await showConfirm('Approve WFH', 'Are you sure you want to APPROVE this Work From Home request?');
     if (!confirmed) return;
     try {
       setActionLoading(true);
@@ -141,8 +139,8 @@ export default function LeaveRequestsPage() {
       const data = await res.json();
       
       if (res.ok) {
-        showSuccess('Approved!', 'Leave request has been approved.');
-        fetchLeaves();
+        showSuccess('Approved!', 'WFH request has been approved.');
+        fetchRequests();
       } else {
         showError('Approval Failed', data.error || 'Failed to approve request.');
       }
@@ -155,7 +153,7 @@ export default function LeaveRequestsPage() {
   };
 
   const handleOpenRejectModal = (id: string) => {
-    setSelectedLeaveId(id);
+    setSelectedRequestId(id);
     setAdminRemarks('');
     setShowRejectModal(true);
   };
@@ -169,7 +167,7 @@ export default function LeaveRequestsPage() {
 
     try {
       setActionLoading(true);
-      const res = await fetch(`/api/leaves/${selectedLeaveId}/review`, {
+      const res = await fetch(`/api/leaves/${selectedRequestId}/review`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: 'Rejected', adminRemarks })
@@ -178,8 +176,8 @@ export default function LeaveRequestsPage() {
       
       if (res.ok) {
         setShowRejectModal(false);
-        showSuccess('Rejected', 'Leave request has been rejected.');
-        fetchLeaves();
+        showSuccess('Rejected', 'WFH request has been rejected.');
+        fetchRequests();
       } else {
         showError('Rejection Failed', data.error || 'Failed to reject request.');
       }
@@ -191,7 +189,7 @@ export default function LeaveRequestsPage() {
     }
   };
 
-  // Submit Leave Request form (Employee/Intern)
+  // Submit WFH Request form (Employee/Intern)
   const handleApplySubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setFormError('');
@@ -220,124 +218,140 @@ export default function LeaveRequestsPage() {
           startDate: applyStartDate,
           endDate: applyEndDate,
           reason: applyReason,
-          requestType: 'Leave'
+          requestType: 'WFH'
         })
       });
 
       const data = await res.json();
       if (res.ok) {
-        showSuccess('Submitted!', 'Leave request submitted successfully!');
-        setFormSuccess('Leave request submitted successfully!');
+        showSuccess('Submitted!', 'WFH request submitted successfully!');
+        setFormSuccess('WFH request submitted successfully!');
         setApplyStartDate('');
         setApplyEndDate('');
         setApplyReason('');
-        fetchLeaves();
+        fetchRequests();
       } else {
-        setFormError(data.error || 'Failed to submit leave request.');
-        showError('Submission Failed', data.error || 'Failed to submit leave request.');
+        setFormError(data.error || 'Failed to submit WFH request.');
+        showError('Submission Failed', data.error || 'Failed to submit WFH request.');
       }
     } catch (err) {
       console.error(err);
-      setFormError('An error occurred. Please try again.');
+      setFormError('Network error. Please try again.');
+      showError('Error', 'Network error. Please try again.');
     } finally {
       setActionLoading(false);
     }
   };
 
-  const filteredLeaves = leaves.filter(l => {
-    const employeeName = l.userId?.name?.toLowerCase() || '';
-    const email = l.userId?.email?.toLowerCase() || '';
+  // Search filter
+  const filteredRequests = requests.filter((req) => {
     const query = searchQuery.toLowerCase();
-    return employeeName.includes(query) || email.includes(query);
+    return (
+      req.userId?.name?.toLowerCase().includes(query) ||
+      req.reason?.toLowerCase().includes(query) ||
+      req._id?.toLowerCase().includes(query)
+    );
   });
+
+  const isAdmin = currentUser?.role === 'Admin';
 
   return (
     <div className="space-y-6">
-      {/* Upper header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-white/5 pb-5">
+      {/* Top Title Section */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-white/5 pb-5">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Leave Management</h1>
-          <p className="text-sm text-odizo-grey">
-            {currentUser?.role === 'Admin'
-              ? 'Review, Approve or Reject ODIZO team time-off requests.'
-              : 'Apply for leaves and track your approval status.'}
+          <h1 className="text-2xl font-black tracking-tight text-white flex items-center gap-2">
+            <Home className="text-odizo-red" size={24} />
+            <span>WORK FROM HOME REQUESTS</span>
+          </h1>
+          <p className="text-sm text-odizo-grey mt-1">
+            {isAdmin 
+              ? 'Review and manage employee Work From Home (WFH) applications'
+              : 'Submit and track your WFH applications for remote work validation'}
           </p>
         </div>
+
+        {/* Global Refresh Button */}
         <button 
-          onClick={fetchLeaves}
-          className="flex items-center gap-2 px-4 py-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl text-sm font-semibold transition-all duration-300 cursor-pointer"
+          onClick={fetchRequests}
+          disabled={loading}
+          className="flex items-center justify-center gap-2 px-4 py-2 border border-white/10 hover:border-white/20 bg-white/3 hover:bg-white/5 text-xs text-white rounded-xl font-semibold transition-all duration-300 cursor-pointer disabled:opacity-50"
         >
           <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
           <span>Refresh</span>
         </button>
       </div>
 
-      {currentUser?.role === 'Admin' ? (
-        /* ==================== ADMIN DASHBOARD ==================== */
+      {error && (
+        <div className="flex items-center gap-2 bg-odizo-red/10 border border-odizo-red/25 rounded-2xl p-4 text-sm text-odizo-red">
+          <AlertCircle size={16} />
+          <span>{error}</span>
+        </div>
+      )}
+
+      {isAdmin ? (
+        /* ==================== ADMIN PORTAL VIEW ==================== */
         <div className="space-y-6">
-          {/* Filter and Search Bar */}
-          <div className="flex flex-col md:flex-row gap-4 justify-between items-center bg-white/5 p-4 rounded-2xl border border-white/5">
-            {/* Status filter buttons */}
-            <div className="flex flex-wrap gap-2 w-full md:w-auto">
-              {(['All', 'Pending', 'Approved', 'Rejected'] as const).map((filter) => (
+          {/* Filters & Search Row */}
+          <div className="flex flex-col md:flex-row gap-4 justify-between items-stretch">
+            {/* Status Filter Tabs */}
+            <div className="flex bg-white/3 border border-white/5 rounded-xl p-1 gap-1 self-start">
+              {(['All', 'Pending', 'Approved', 'Rejected'] as const).map((status) => (
                 <button
-                  key={filter}
-                  onClick={() => setStatusFilter(filter)}
-                  className={`px-4 py-2 rounded-xl text-xs font-bold transition-all duration-300 cursor-pointer ${
-                    statusFilter === filter
-                      ? 'bg-odizo-red border border-odizo-red/20 text-white shadow-[0_0_15px_rgba(225,97,103,0.3)]'
-                      : 'bg-white/5 text-odizo-grey hover:text-white border border-transparent hover:bg-white/10'
+                  key={status}
+                  onClick={() => setStatusFilter(status)}
+                  className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all duration-300 cursor-pointer ${
+                    statusFilter === status
+                      ? 'bg-odizo-red text-white shadow-[0_0_10px_rgba(225,97,103,0.3)]'
+                      : 'text-odizo-grey hover:text-white'
                   }`}
                 >
-                  {filter}
+                  {status}
                 </button>
               ))}
             </div>
 
-            {/* Search bar */}
-            <div className="relative w-full md:w-80">
+            {/* Search Bar */}
+            <div className="relative md:w-80">
+              <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-odizo-grey">
+                <Search size={16} />
+              </span>
               <input
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search by employee name..."
-                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 pl-10 text-sm text-white focus:border-odizo-red focus:outline-none focus:ring-0"
+                placeholder="Search staff or reason..."
+                className="w-full bg-white/3 border border-white/5 focus:border-white/15 rounded-xl pl-10 pr-4 py-2 text-xs text-white placeholder-odizo-grey focus:outline-none transition-all"
               />
-              <Search className="absolute left-3.5 top-3.5 text-odizo-grey" size={16} />
             </div>
           </div>
 
-          {/* Main Grid */}
-          {loading ? (
-            <div className="flex flex-col items-center justify-center py-20 gap-3">
-              <RefreshCw className="animate-spin text-odizo-red" size={32} />
-              <span className="text-odizo-grey text-sm">Loading leave data...</span>
+          {/* Cards Grid */}
+          {loading && filteredRequests.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-20">
+              <div className="h-10 w-10 animate-spin rounded-full border-2 border-odizo-red border-t-transparent"></div>
+              <p className="mt-4 text-sm text-odizo-grey">Fetching WFH records...</p>
             </div>
-          ) : error ? (
-            <div className="flex items-center gap-3 bg-odizo-red/10 border border-odizo-red/25 rounded-2xl p-4 text-odizo-red">
-              <AlertCircle size={20} />
-              <span className="text-sm font-medium">{error}</span>
-            </div>
-          ) : filteredLeaves.length === 0 ? (
+          ) : filteredRequests.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-20 text-center glass-card border-white/5 p-8">
               <FileText className="text-odizo-grey/40 mb-4" size={48} />
-              <h3 className="text-lg font-bold">No Leave Requests</h3>
-              <p className="text-sm text-odizo-grey max-w-sm mt-1">There are no leave requests matching criteria.</p>
+              <h3 className="text-lg font-bold">No WFH Requests</h3>
+              <p className="text-sm text-odizo-grey max-w-sm mt-1">There are no WFH requests matching criteria.</p>
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {filteredLeaves.map((leave) => {
-                const diffDays = getDaysDiff(leave.startDate, leave.endDate);
+              {filteredRequests.map((req) => {
+                const diffDays = getDaysDiff(req.startDate, req.endDate);
                 
                 let statusBadgeClass = 'bg-yellow-500/10 border-yellow-500/25 text-yellow-400';
-                if (leave.status === 'Approved') {
+                if (req.status === 'Approved') {
                   statusBadgeClass = 'bg-green-500/10 border-green-500/25 text-green-400';
-                } else if (leave.status === 'Rejected') {
+                } else if (req.status === 'Rejected') {
                   statusBadgeClass = 'bg-odizo-red/10 border-odizo-red/25 text-odizo-red';
                 }
 
                 return (
-                  <div key={leave._id} className="glass-card glass-card-hover floating-shadow p-6 flex flex-col justify-between">
+                  <div key={req._id} className="glass-card glass-card-hover floating-shadow p-6 flex flex-col justify-between">
                     <div>
                       {/* Top Header */}
                       <div className="flex justify-between items-start mb-4">
@@ -346,33 +360,23 @@ export default function LeaveRequestsPage() {
                             <User size={18} />
                           </div>
                           <div>
-                            <h3 className="font-bold text-sm text-white leading-tight">{leave.userId?.name || 'Unknown User'}</h3>
-                            <div className="flex items-center gap-1.5 mt-0.5">
-                              <span className="text-xs text-odizo-grey font-medium uppercase tracking-wider">{leave.userId?.role || 'Employee'}</span>
-                              <span className="text-[10px] px-1.5 py-0.5 rounded border border-white/5 bg-white/5 text-odizo-grey">•</span>
-                              <span className={`text-[10px] px-1.5 py-0.5 rounded font-bold border ${
-                                leave.requestType === 'WFH'
-                                  ? 'bg-sky-500/10 border-sky-500/25 text-sky-400'
-                                  : 'bg-odizo-red/10 border-odizo-red/25 text-odizo-red'
-                              }`}>
-                                {leave.requestType || 'Leave'}
-                              </span>
-                            </div>
+                            <h3 className="font-bold text-sm text-white leading-tight">{req.userId?.name || 'Unknown User'}</h3>
+                            <span className="text-xs text-odizo-grey font-medium uppercase tracking-wider">{req.userId?.role || 'Employee'}</span>
                           </div>
                         </div>
                         <span className={`inline-flex px-2.5 py-1 rounded-full text-xs font-bold border ${statusBadgeClass}`}>
-                          {leave.status}
+                          {req.status}
                         </span>
                       </div>
 
                       {/* Dates */}
                       <div className="space-y-2 border-t border-b border-white/5 py-4 mb-4">
                         <div className="flex items-center gap-2 text-xs text-odizo-grey">
-                          <Calendar size={14} className="text-odizo-red" />
+                          <Home size={14} className="text-odizo-red" />
                           <span className="font-semibold text-white">
-                            {formatDBDate(leave.startDate)}
+                            {formatDBDate(req.startDate)}
                             {' – '}
-                            {formatDBDate(leave.endDate)}
+                            {formatDBDate(req.endDate)}
                           </span>
                         </div>
                         <div className="flex items-center gap-2 text-xs text-odizo-grey">
@@ -383,29 +387,29 @@ export default function LeaveRequestsPage() {
 
                       {/* Reason */}
                       <div className="mb-4">
-                        <h4 className="text-xs font-bold text-odizo-grey uppercase tracking-wider mb-1.5">Leave Reason</h4>
+                        <h4 className="text-xs font-bold text-odizo-grey uppercase tracking-wider mb-1.5">WFH Reason</h4>
                         <p className="text-sm text-white bg-white/3 p-3 rounded-xl border border-white/5 line-clamp-3">
-                          {leave.reason}
+                          {req.reason}
                         </p>
                       </div>
 
                       {/* Remarks */}
-                      {leave.adminRemarks && (
+                      {req.adminRemarks && (
                         <div className="mb-4 bg-white/5 border border-white/15 p-3 rounded-xl">
                           <div className="flex items-center gap-1.5 text-xs font-bold text-odizo-red uppercase tracking-wider mb-1">
                             <MessageSquare size={12} />
-                            <span>Admin Remarks</span>
+                            <span>Remarks</span>
                           </div>
-                          <p className="text-xs text-odizo-grey italic">"{leave.adminRemarks}"</p>
+                          <p className="text-xs text-odizo-grey italic">"{req.adminRemarks}"</p>
                         </div>
                       )}
                     </div>
 
-                    {/* Approve/Reject Buttons */}
-                    {leave.status === 'Pending' && (
-                      <div className="flex gap-3 mt-4 pt-4 border-t border-white/5">
+                    {/* Actions (Pending state only) */}
+                    {req.status === 'Pending' && (
+                      <div className="flex gap-3 border-t border-white/5 pt-4 mt-2">
                         <button
-                          onClick={() => handleApprove(leave._id)}
+                          onClick={() => handleApprove(req._id)}
                           disabled={actionLoading}
                           className="flex-1 py-2 px-3 bg-green-500/10 hover:bg-green-500/20 border border-green-500/20 hover:border-green-500/35 text-green-400 text-xs font-bold rounded-xl transition-all duration-300 cursor-pointer flex items-center justify-center gap-1"
                         >
@@ -413,7 +417,7 @@ export default function LeaveRequestsPage() {
                           <span>Approve</span>
                         </button>
                         <button
-                          onClick={() => handleOpenRejectModal(leave._id)}
+                          onClick={() => handleOpenRejectModal(req._id)}
                           disabled={actionLoading}
                           className="flex-1 py-2 px-3 bg-odizo-red/10 hover:bg-odizo-red/20 border border-odizo-red/20 hover:border-odizo-red/35 text-odizo-red text-xs font-bold rounded-xl transition-all duration-300 cursor-pointer flex items-center justify-center gap-1"
                         >
@@ -431,13 +435,13 @@ export default function LeaveRequestsPage() {
       ) : (
         /* ==================== EMPLOYEE / INTERN PORTAL ==================== */
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
-          {/* Column 1: Apply Leave Form */}
+          {/* Column 1: Apply WFH Form */}
           <div className="glass-card floating-shadow p-6 space-y-4">
             <h2 className="text-lg font-bold text-white flex items-center gap-2">
               <Send size={18} className="text-odizo-red" />
-              <span>Apply for Leave</span>
+              <span>Apply for WFH</span>
             </h2>
-            <p className="text-xs text-odizo-grey">Request off-duty hours. Your request will be evaluated by an Admin.</p>
+            <p className="text-xs text-odizo-grey">Request authorization to work remotely. Bypasses Wi-Fi and Geofence checks.</p>
 
             {formError && (
               <div className="flex items-center gap-2 bg-odizo-red/10 border border-odizo-red/25 rounded-xl p-3 text-xs text-odizo-red">
@@ -483,7 +487,7 @@ export default function LeaveRequestsPage() {
                   rows={3}
                   value={applyReason}
                   onChange={(e) => setApplyReason(e.target.value)}
-                  placeholder="Describe your reason for requesting leave..."
+                  placeholder="Describe your reason for requesting WFH..."
                   className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:border-odizo-red focus:outline-none focus:ring-0 resize-none"
                 />
               </div>
@@ -493,89 +497,81 @@ export default function LeaveRequestsPage() {
                 disabled={actionLoading}
                 className="w-full py-2.5 bg-odizo-red hover:bg-odizo-red/90 text-white text-sm font-semibold rounded-xl transition-all duration-300 cursor-pointer flex items-center justify-center gap-2"
               >
-                {actionLoading ? 'Submitting...' : 'Submit Leave Request'}
+                {actionLoading ? 'Submitting...' : 'Submit WFH Request'}
               </button>
             </form>
           </div>
 
-          {/* Column 2 & 3: Leave History List */}
+          {/* Column 2 & 3: WFH History List */}
           <div className="lg:col-span-2 space-y-6">
             {/* Filter */}
-            <div className="flex flex-wrap gap-2 bg-white/5 p-3 rounded-2xl border border-white/5">
-              {(['All', 'Pending', 'Approved', 'Rejected'] as const).map((filter) => (
-                <button
-                  key={filter}
-                  onClick={() => setStatusFilter(filter)}
-                  className={`px-4 py-2 rounded-xl text-xs font-bold transition-all duration-300 cursor-pointer ${
-                    statusFilter === filter
-                      ? 'bg-odizo-red border border-odizo-red/20 text-white shadow-[0_0_15px_rgba(225,97,103,0.3)]'
-                      : 'bg-white/5 text-odizo-grey hover:text-white border border-transparent hover:bg-white/10'
-                  }`}
-                >
-                  {filter}
-                </button>
-              ))}
+            <div className="flex justify-between items-center bg-white/3 border border-white/5 p-4 rounded-2xl">
+              <h3 className="font-bold text-sm text-white flex items-center gap-2">
+                <FileText size={16} className="text-odizo-red" />
+                <span>WFH Request History</span>
+              </h3>
+
+              <div className="flex bg-white/3 border border-white/5 rounded-xl p-1 gap-1">
+                {(['All', 'Pending', 'Approved', 'Rejected'] as const).map((status) => (
+                  <button
+                    key={status}
+                    onClick={() => setStatusFilter(status)}
+                    className={`px-3 py-1 rounded-lg text-[10px] font-bold transition-all duration-300 cursor-pointer ${
+                      statusFilter === status
+                        ? 'bg-odizo-red text-white shadow-[0_0_8px_rgba(225,97,103,0.3)]'
+                        : 'text-odizo-grey hover:text-white'
+                    }`}
+                  >
+                    {status}
+                  </button>
+                ))}
+              </div>
             </div>
 
-            {/* List */}
-            {loading ? (
-              <div className="flex flex-col items-center justify-center py-20 gap-3">
-                <RefreshCw className="animate-spin text-odizo-red" size={32} />
-                <span className="text-odizo-grey text-sm">Loading leave history...</span>
+            {loading && requests.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-16">
+                <div className="h-8 w-8 animate-spin rounded-full border-2 border-odizo-red border-t-transparent"></div>
+                <p className="mt-3 text-xs text-odizo-grey">Syncing history...</p>
               </div>
-            ) : error ? (
-              <div className="flex items-center gap-3 bg-odizo-red/10 border border-odizo-red/25 rounded-2xl p-4 text-odizo-red">
-                <AlertCircle size={20} />
-                <span className="text-sm font-medium">{error}</span>
-              </div>
-            ) : filteredLeaves.length === 0 ? (
+            ) : filteredRequests.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-20 text-center glass-card border-white/5 p-8">
                 <FileText className="text-odizo-grey/40 mb-4" size={48} />
-                <h3 className="text-lg font-bold">No Leave Requests Found</h3>
-                <p className="text-sm text-odizo-grey mt-1">You haven't submitted any leave requests matching this filter.</p>
+                <h3 className="text-lg font-bold">No WFH Requests Found</h3>
+                <p className="text-sm text-odizo-grey mt-1">You haven't submitted any WFH requests matching this filter.</p>
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {filteredLeaves.map((leave) => {
-                  const diffDays = getDaysDiff(leave.startDate, leave.endDate);
+                {filteredRequests.map((req) => {
+                  const diffDays = getDaysDiff(req.startDate, req.endDate);
                   
                   let statusBadgeClass = 'bg-yellow-500/10 border-yellow-500/25 text-yellow-400';
-                  if (leave.status === 'Approved') {
+                  if (req.status === 'Approved') {
                     statusBadgeClass = 'bg-green-500/10 border-green-500/25 text-green-400';
-                  } else if (leave.status === 'Rejected') {
+                  } else if (req.status === 'Rejected') {
                     statusBadgeClass = 'bg-odizo-red/10 border-odizo-red/25 text-odizo-red';
                   }
 
                   return (
-                    <div key={leave._id} className="glass-card glass-card-hover floating-shadow p-6 flex flex-col justify-between">
+                    <div key={req._id} className="glass-card glass-card-hover floating-shadow p-6 flex flex-col justify-between">
                       <div>
                         {/* Top Header */}
                         <div className="flex justify-between items-center mb-4">
-                          <div className="flex items-center gap-2">
-                            <span className="text-xs text-odizo-grey font-bold uppercase tracking-wider">
-                              Request #{leave._id.slice(-6)}
-                            </span>
-                            <span className={`text-[9px] px-1.5 py-0.5 rounded font-bold border ${
-                              leave.requestType === 'WFH'
-                                ? 'bg-sky-500/10 border-sky-500/25 text-sky-400'
-                                : 'bg-odizo-red/10 border-odizo-red/25 text-odizo-red'
-                            }`}>
-                              {leave.requestType || 'Leave'}
-                            </span>
-                          </div>
+                          <span className="text-xs text-odizo-grey font-bold uppercase tracking-wider">
+                            Request #{req._id.slice(-6)}
+                          </span>
                           <span className={`inline-flex px-2.5 py-1 rounded-full text-xs font-bold border ${statusBadgeClass}`}>
-                            {leave.status}
+                            {req.status}
                           </span>
                         </div>
 
                         {/* Dates */}
                         <div className="space-y-2 border-t border-b border-white/5 py-4 mb-4">
                           <div className="flex items-center gap-2 text-xs text-odizo-grey">
-                            <Calendar size={14} className="text-odizo-red" />
+                            <Home size={14} className="text-odizo-red" />
                             <span className="font-semibold text-white">
-                              {formatDBDate(leave.startDate)}
+                              {formatDBDate(req.startDate)}
                               {' – '}
-                              {formatDBDate(leave.endDate)}
+                              {formatDBDate(req.endDate)}
                             </span>
                           </div>
                           <div className="flex items-center gap-2 text-xs text-odizo-grey">
@@ -588,24 +584,24 @@ export default function LeaveRequestsPage() {
                         <div className="mb-4">
                           <h4 className="text-xs font-bold text-odizo-grey uppercase tracking-wider mb-1.5">Your Reason</h4>
                           <p className="text-sm text-white bg-white/3 p-3 rounded-xl border border-white/5 line-clamp-3">
-                            {leave.reason}
+                            {req.reason}
                           </p>
                         </div>
 
                         {/* Remarks */}
-                        {leave.adminRemarks && (
+                        {req.adminRemarks && (
                           <div className="mb-4 bg-white/5 border border-white/15 p-3 rounded-xl">
                             <div className="flex items-center gap-1.5 text-xs font-bold text-odizo-red uppercase tracking-wider mb-1">
                               <MessageSquare size={12} />
                               <span>Admin Remarks</span>
                             </div>
-                            <p className="text-xs text-odizo-grey italic">"{leave.adminRemarks}"</p>
+                            <p className="text-xs text-odizo-grey italic">"{req.adminRemarks}"</p>
                           </div>
                         )}
                       </div>
 
                       <div className="text-right text-[10px] text-odizo-grey border-t border-white/5 pt-3">
-                        Applied on: {new Date(leave.appliedOn).toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' })}
+                        Applied on: {new Date(req.appliedOn).toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' })}
                       </div>
                     </div>
                   );
@@ -616,49 +612,47 @@ export default function LeaveRequestsPage() {
         </div>
       )}
 
-      {/* Custom sliding glass reject modal */}
+      {/* Admin Rejection Modal */}
       {showRejectModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-md px-4">
-          <div className="w-full max-w-md glass-card border-white/10 floating-shadow-red p-6 animate-float">
-            <div className="flex items-center justify-between border-b border-white/5 pb-4 mb-5">
-              <h2 className="text-xl font-bold text-white">Reject Leave Request</h2>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="glass-card w-full max-w-md p-6 space-y-4 floating-shadow border-white/5 animate-float-in">
+            <div className="flex justify-between items-center border-b border-white/5 pb-3">
+              <h3 className="text-base font-bold text-white uppercase tracking-wider">Reject WFH Request</h3>
               <button 
                 onClick={() => setShowRejectModal(false)}
-                className="p-1 rounded-lg text-odizo-grey hover:text-white hover:bg-white/5 transition-all cursor-pointer"
+                className="p-1 rounded-lg text-odizo-grey hover:text-white"
               >
-                <X size={20} />
+                <X size={18} />
               </button>
             </div>
 
             <form onSubmit={handleRejectSubmit} className="space-y-4">
               <div>
-                <label className="block text-xs font-semibold uppercase tracking-wider text-odizo-grey mb-1.5">
-                  Admin Remarks (Rejection Reason)
-                </label>
+                <label className="block text-xs font-semibold uppercase tracking-wider text-odizo-grey mb-1.5">Remarks / Reason for Rejection</label>
                 <textarea
                   required
                   rows={4}
                   value={adminRemarks}
                   onChange={(e) => setAdminRemarks(e.target.value)}
-                  placeholder="Provide a reason for rejecting this leave request..."
+                  placeholder="Explain why this request is being rejected..."
                   className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:border-odizo-red focus:outline-none focus:ring-0 resize-none"
                 />
               </div>
 
-              <div className="flex gap-3 pt-3">
+              <div className="flex justify-end gap-3 pt-2">
                 <button
                   type="button"
                   onClick={() => setShowRejectModal(false)}
-                  className="flex-1 py-2.5 border border-white/10 text-white hover:bg-white/5 text-sm font-semibold rounded-xl transition-all duration-300 cursor-pointer"
+                  className="px-4 py-2 border border-white/10 hover:border-white/20 bg-white/3 hover:bg-white/5 text-xs text-white rounded-xl font-semibold transition-all duration-300 cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={actionLoading}
-                  className="flex-1 py-2.5 bg-odizo-red hover:bg-odizo-red/90 text-white text-sm font-semibold rounded-xl transition-all duration-300 cursor-pointer"
+                  className="px-4 py-2 bg-odizo-red hover:bg-odizo-red/90 text-xs text-white rounded-xl font-semibold transition-all duration-300 cursor-pointer"
                 >
-                  Confirm Reject
+                  {actionLoading ? 'Rejecting...' : 'Reject Request'}
                 </button>
               </div>
             </form>

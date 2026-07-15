@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { connectToDatabase } from '@/lib/db';
 import { verifyAuth } from '@/lib/auth';
-import { User, AttendanceRecord, AppConfig } from '@odi_attend/shared';
+import { User, AttendanceRecord, AppConfig, LeaveRequest } from '@odi_attend/shared';
 
 // Helper to get local date string YYYY-MM-DD (defaults to IST timezone UTC+5:30)
 function getLocalDateString(date: Date = new Date()): string {
@@ -69,21 +69,6 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Valid location coordinates are required.' }, { status: 400 });
     }
 
-    // Determine flag state from client and server-side Wi-Fi check
-    let isFlagged = body.isFlagged || false;
-    let flagReason = body.flagReason || '';
-    let approvalStatus: 'Approved' | 'Pending Approval' | 'Rejected' = isFlagged ? 'Pending Approval' : 'Approved';
-
-    // Server-side validation as double-check
-    const config = await AppConfig.findOne({});
-    if (config?.isWifiLockEnabled) {
-      if (!ssid || ssid !== config.allowedWifiSSID) {
-        isFlagged = true;
-        flagReason = flagReason ? `${flagReason} (Server verified)` : 'Wi-Fi Mismatch';
-        approvalStatus = 'Pending Approval';
-      }
-    }
-
     // Fetch the user to get their shift details
     const user = await User.findById(userPayload.id);
     if (!user || user.status !== 'Active') {
@@ -92,8 +77,37 @@ export async function POST(request: NextRequest) {
 
     const now = new Date();
     const todayStr = getLocalDateString(now);
+    const todayDate = new Date(todayStr); // UTC midnight representation of today
 
-    console.log(`[API POST /api/attendance] userPayload.id="${userPayload.id}" | user._id="${user?._id}" | todayStr="${todayStr}" | type="${type}"`);
+    // Check if user has an active and approved WFH request for today
+    const wfhRequest = await LeaveRequest.findOne({
+      userId: user._id,
+      requestType: 'WFH',
+      status: 'Approved',
+      startDate: { $lte: todayDate },
+      endDate: { $gte: todayDate }
+    });
+
+    const isWfhActive = !!wfhRequest;
+
+    // Determine flag state from client and server-side Wi-Fi check
+    let isFlagged = isWfhActive ? false : (body.isFlagged || false);
+    let flagReason = isWfhActive ? '' : (body.flagReason || '');
+    let approvalStatus: 'Approved' | 'Pending Approval' | 'Rejected' = isFlagged ? 'Pending Approval' : 'Approved';
+
+    if (!isWfhActive) {
+      // Server-side validation as double-check
+      const config = await AppConfig.findOne({});
+      if (config?.isWifiLockEnabled) {
+        if (!ssid || ssid !== config.allowedWifiSSID) {
+          isFlagged = true;
+          flagReason = flagReason ? `${flagReason} (Server verified)` : 'Wi-Fi Mismatch';
+          approvalStatus = 'Pending Approval';
+        }
+      }
+    }
+
+    console.log(`[API POST /api/attendance] userPayload.id="${userPayload.id}" | user._id="${user?._id}" | todayStr="${todayStr}" | type="${type}" | isWfhActive=${isWfhActive}`);
 
     // Find or create daily attendance record
     let record = await AttendanceRecord.findOne({ userId: user._id, date: todayStr });
@@ -115,6 +129,7 @@ export async function POST(request: NextRequest) {
           totalMinutesWorked: 0,
           isFlagged,
           flagReason,
+          isWFH: isWfhActive,
           status: approvalStatus,
           notes
         });
@@ -144,6 +159,10 @@ export async function POST(request: NextRequest) {
           record.isFlagged = true;
           record.flagReason = flagReason;
           record.status = 'Pending Approval';
+        }
+
+        if (isWfhActive) {
+          record.isWFH = true;
         }
       }
 

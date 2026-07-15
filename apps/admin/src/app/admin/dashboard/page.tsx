@@ -15,6 +15,7 @@ import {
   User as UserIcon,
   AlertCircle
 } from 'lucide-react';
+import { showError, showSuccess } from '@/lib/swal';
 
 interface User {
   _id: string;
@@ -180,7 +181,7 @@ export default function Dashboard() {
   // Perform Punch Action
   const handlePunch = async () => {
     if (!navigator.geolocation) {
-      alert('Browser geolocation is not supported.');
+      showError('Not Supported', 'Browser geolocation is not supported.');
       return;
     }
 
@@ -210,14 +211,15 @@ export default function Dashboard() {
 
           const data = await res.json();
           if (res.ok) {
+            showSuccess('Success', `Punched ${isCheckedIn ? 'Out' : 'In'} successfully!`);
             setPunchNotes('');
             fetchData();
           } else {
-            alert(data.error || 'Punch operation failed.');
+            showError('Punch Failed', data.error || 'Punch operation failed.');
           }
         } catch (e) {
           console.error(e);
-          alert('Network connection error.');
+          showError('Network Error', 'Network connection error.');
         } finally {
           setPunchLoading(false);
         }

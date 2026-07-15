@@ -5,6 +5,7 @@ export interface ILeaveRequest extends Document {
     endDate: Date;
     reason: string;
     status: 'Pending' | 'Approved' | 'Rejected';
+    requestType: 'Leave' | 'WFH';
     adminRemarks: string;
     appliedOn: Date;
     createdAt: Date;
