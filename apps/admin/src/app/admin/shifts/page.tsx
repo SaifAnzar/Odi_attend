@@ -78,13 +78,13 @@ export default function Shifts() {
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-extrabold tracking-tight bg-gradient-to-r from-white via-odizo-grey to-white bg-clip-text text-transparent">
+          <h1 className="text-3xl font-extrabold tracking-tight bg-gradient-to-r from-slate-900 via-odizo-grey to-slate-900 dark:from-white dark:via-odizo-grey dark:to-white bg-clip-text text-transparent">
             Working Hours & Shifts
           </h1>
           <p className="text-sm text-odizo-grey mt-1">Configure and assign shift hours to employees or interns</p>
         </div>
-        <div className="text-xs text-odizo-grey bg-white/5 border border-white/5 rounded-xl px-4 py-2 self-start md:self-auto">
-          Manage shift mappings inside <span className="font-semibold text-white">User Management</span>
+        <div className="text-xs text-odizo-grey bg-black/5 dark:bg-white/5 border border-black/5 dark:border-white/5 rounded-xl px-4 py-2 self-start md:self-auto">
+          Manage shift mappings inside <span className="font-semibold text-slate-900 dark:text-white">User Management</span>
         </div>
       </div>
 
@@ -94,26 +94,26 @@ export default function Shifts() {
           <p className="mt-4 text-sm text-odizo-grey">Loading shifts data...</p>
         </div>
       ) : shiftGroups.length === 0 ? (
-        <div className="text-center py-16 border border-dashed border-white/10 rounded-2xl">
+        <div className="text-center py-16 border border-dashed border-black/10 dark:border-white/10 rounded-2xl">
           <Clock size={40} className="mx-auto text-odizo-grey/50 mb-3" />
-          <p className="text-sm font-semibold text-white">No active shifts configured</p>
+          <p className="text-sm font-semibold text-slate-900 dark:text-white">No active shifts configured</p>
           <p className="text-xs text-odizo-grey mt-1">Please add staff in User Management to assign shifts.</p>
         </div>
       ) : (
-        <div className="w-full overflow-hidden rounded-xl border border-white/10 bg-[#0f0f13] backdrop-blur-md">
+        <div className="w-full overflow-hidden rounded-xl border border-black/10 dark:border-white/10 bg-white/70 dark:bg-[#0f0f13] backdrop-blur-md">
           <div className="w-full overflow-x-auto">
             <table className="w-full min-w-[800px] border-collapse text-left">
               <thead>
-                <tr className="border-b border-white/10 bg-white/3">
-                  <th className="px-6 py-4 text-xs font-semibold tracking-wider uppercase text-gray-400">Shift Name</th>
-                  <th className="px-6 py-4 text-xs font-semibold tracking-wider uppercase text-gray-400">Active Hours</th>
-                  <th className="px-6 py-4 text-xs font-semibold tracking-wider uppercase text-gray-400">Total Assigned</th>
-                  <th className="px-6 py-4 text-xs font-semibold tracking-wider uppercase text-gray-400">Assigned Staff</th>
-                  <th className="px-6 py-4 text-xs font-semibold tracking-wider uppercase text-gray-400">Timezone</th>
-                  <th className="px-6 py-4 text-xs font-semibold tracking-wider uppercase text-gray-400 w-24 text-center">Actions</th>
+                <tr className="border-b border-black/10 dark:border-white/10 bg-black/5 dark:bg-white/3">
+                  <th className="px-6 py-4 text-xs font-semibold tracking-wider uppercase text-slate-500 dark:text-gray-400">Shift Name</th>
+                  <th className="px-6 py-4 text-xs font-semibold tracking-wider uppercase text-slate-500 dark:text-gray-400">Active Hours</th>
+                  <th className="px-6 py-4 text-xs font-semibold tracking-wider uppercase text-slate-500 dark:text-gray-400">Total Assigned</th>
+                  <th className="px-6 py-4 text-xs font-semibold tracking-wider uppercase text-slate-500 dark:text-gray-400">Assigned Staff</th>
+                  <th className="px-6 py-4 text-xs font-semibold tracking-wider uppercase text-slate-500 dark:text-gray-400">Timezone</th>
+                  <th className="px-6 py-4 text-xs font-semibold tracking-wider uppercase text-slate-500 dark:text-gray-400 w-24 text-center">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-white/5">
+              <tbody className="divide-y divide-black/10 dark:divide-black/10 dark:divide-white/5">
                 {shiftGroups.map((group, index) => {
                   const key = `${group.name}-${group.startTime}-${group.endTime}`;
                   const isExpanded = !!expandedShifts[key];
@@ -122,7 +122,7 @@ export default function Shifts() {
                       {/* Main Row */}
                       <tr 
                         onClick={() => toggleExpand(key)}
-                        className="hover:bg-white/5 transition-all duration-200 cursor-pointer"
+                        className="hover:bg-black/5 dark:bg-white/5 transition-all duration-200 cursor-pointer"
                       >
                         <td className="px-6 py-4 whitespace-nowrap">
                           <span className="inline-flex px-3 py-1 bg-odizo-red/10 border border-odizo-red/20 text-odizo-red text-xs font-bold rounded-full">
@@ -130,7 +130,7 @@ export default function Shifts() {
                           </span>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="flex items-center gap-2 text-white">
+                          <div className="flex items-center gap-2 text-slate-900 dark:text-white">
                             <Clock size={14} className="text-odizo-red" />
                             <span className="text-sm font-semibold">{group.startTime}</span>
                             <ArrowRight size={12} className="text-odizo-grey" />
@@ -138,7 +138,7 @@ export default function Shifts() {
                           </div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-white/5 border border-white/10 text-xs font-semibold text-white">
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 text-xs font-semibold text-slate-900 dark:text-white">
                             <Users size={12} className="text-odizo-grey" />
                             <span>{group.staff.length} Staff</span>
                           </span>
@@ -151,7 +151,7 @@ export default function Shifts() {
                               {group.staff.slice(0, 2).map((user) => (
                                 <span 
                                   key={user._id} 
-                                  className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-white/5 border border-white/5 text-[11px] text-white"
+                                  className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-black/5 dark:bg-white/5 border border-black/5 dark:border-white/5 text-[11px] text-slate-900 dark:text-white"
                                 >
                                   <span className="font-medium truncate max-w-[80px]">{user.name}</span>
                                   <span className={`inline-flex px-1 rounded text-[9px] font-bold ${
@@ -183,7 +183,7 @@ export default function Shifts() {
                               e.stopPropagation();
                               toggleExpand(key);
                             }}
-                            className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold text-odizo-grey hover:text-white bg-white/5 hover:bg-white/10 border border-white/5 rounded-lg transition-colors"
+                            className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold text-odizo-grey hover:text-slate-900 dark:text-white bg-black/5 dark:bg-white/5 hover:bg-black/5 dark:bg-white/10 border border-black/5 dark:border-white/5 rounded-lg transition-colors"
                           >
                             <span>{isExpanded ? 'Hide' : 'Details'}</span>
                             {isExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
@@ -194,10 +194,10 @@ export default function Shifts() {
                       {/* Expandable Accordion Sub-row */}
                       {isExpanded && (
                         <tr className="bg-white/[0.01]">
-                          <td colSpan={6} className="px-6 py-5 border-t border-white/5">
+                          <td colSpan={6} className="px-6 py-5 border-t border-black/5 dark:border-white/5">
                             <div className="space-y-4 animate-fade-in">
-                              <div className="flex items-center justify-between border-b border-white/5 pb-2">
-                                <span className="text-xs font-bold text-gray-300 uppercase tracking-wider">
+                              <div className="flex items-center justify-between border-b border-black/5 dark:border-white/5 pb-2">
+                                <span className="text-xs font-bold text-slate-600 dark:text-gray-300 uppercase tracking-wider">
                                   Assigned Staff Details ({group.staff.length})
                                 </span>
                                 <span className="text-[10px] text-odizo-grey">
@@ -211,13 +211,13 @@ export default function Shifts() {
                                   {group.staff.map((user) => (
                                     <div 
                                       key={user._id} 
-                                      className="flex flex-col justify-between p-3 bg-white/3 hover:bg-white/5 rounded-xl border border-white/5 transition-all duration-300"
+                                      className="flex flex-col justify-between p-3 bg-black/5 dark:bg-white/3 hover:bg-black/5 dark:bg-white/5 rounded-xl border border-black/5 dark:border-white/5 transition-all duration-300"
                                     >
                                       <div className="min-w-0">
-                                        <p className="text-xs font-bold truncate text-white">{user.name}</p>
+                                        <p className="text-xs font-bold truncate text-slate-900 dark:text-white">{user.name}</p>
                                         <p className="text-[10px] text-odizo-grey truncate mt-0.5">{user.email}</p>
                                       </div>
-                                      <div className="flex items-center justify-between mt-2.5 pt-2 border-t border-white/5">
+                                      <div className="flex items-center justify-between mt-2.5 pt-2 border-t border-black/5 dark:border-white/5">
                                         <span className={`inline-flex px-2 py-0.5 rounded-full text-[9px] font-bold ${
                                           user.role === 'Employee' 
                                             ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20' 
@@ -226,7 +226,7 @@ export default function Shifts() {
                                           {user.role}
                                         </span>
                                         <span className={`text-[9px] font-semibold ${
-                                          user.status === 'Active' ? 'text-green-400' : 'text-gray-400'
+                                          user.status === 'Active' ? 'text-green-400' : 'text-slate-500 dark:text-gray-400'
                                         }`}>
                                           {user.status}
                                         </span>

@@ -19,6 +19,7 @@ import {
   RefreshCw
 } from 'lucide-react';
 import Logo from '@/components/Logo';
+import ThemeToggle from '@/components/ThemeToggle';
 
 interface SidebarItemProps {
   href: string;
@@ -37,7 +38,7 @@ function SidebarItem({ href, icon, label, active, badgeCount, onClick }: Sidebar
       className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-300 w-full ${
         active 
           ? 'bg-odizo-red/10 border border-odizo-red/20 text-odizo-red font-medium shadow-[0_0_15px_rgba(225,97,103,0.1)]' 
-          : 'text-odizo-grey hover:text-white hover:bg-white/5 border border-transparent'
+          : 'text-odizo-grey hover:text-slate-900 dark:hover:text-slate-900 dark:text-white hover:bg-black/5 dark:hover:bg-black/5 dark:bg-white/5 border border-transparent'
       }`}
     >
       <div className="flex items-center gap-3 flex-1">
@@ -45,7 +46,7 @@ function SidebarItem({ href, icon, label, active, badgeCount, onClick }: Sidebar
         <span>{label}</span>
       </div>
       {badgeCount !== undefined && badgeCount > 0 && (
-        <span className="flex h-5 min-w-[20px] px-1.5 items-center justify-center rounded-full bg-odizo-red text-white text-[10px] font-bold border border-black shadow-[0_0_10px_rgba(225,97,103,0.5)]">
+        <span className="flex h-5 min-w-[20px] px-1.5 items-center justify-center rounded-full bg-odizo-red text-slate-900 dark:text-white text-[10px] font-bold border border-black shadow-[0_0_10px_rgba(225,97,103,0.5)]">
           {badgeCount}
         </span>
       )}
@@ -141,10 +142,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   }
 
   return (
-    <div className="flex h-screen bg-black text-white overflow-hidden">
+    <div className="flex h-screen bg-slate-50 dark:bg-black text-slate-900 dark:text-white overflow-hidden transition-colors duration-300">
       {/* Sidebar for Desktop */}
-      <aside className="hidden md:flex flex-col w-64 glass-card m-4 mr-0 p-5 floating-shadow border-white/5">
-        <div className="mb-8 flex items-center justify-center border-b border-white/5 pb-5">
+      <aside className="hidden md:flex flex-col w-64 glass-card m-4 mr-0 p-5 floating-shadow border-black/5 dark:border-white/5">
+        <div className="mb-8 flex items-center justify-center border-b border-black/5 dark:border-white/5 pb-5">
           <Logo size="md" />
         </div>
 
@@ -161,7 +162,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           ))}
         </nav>
 
-        <div className="border-t border-white/5 pt-5 mt-auto">
+        <div className="border-t border-black/5 dark:border-white/5 pt-5 mt-auto flex flex-col gap-4">
           <button
             onClick={handleLogout}
             className="flex items-center gap-3 w-full px-4 py-3 rounded-xl text-odizo-grey hover:text-odizo-red hover:bg-odizo-red/10 border border-transparent hover:border-odizo-red/20 transition-all duration-300"
@@ -174,13 +175,13 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
       {/* Mobile Drawer Sidebar */}
       {sidebarOpen && (
-        <div className="fixed inset-0 z-50 flex md:hidden bg-black/60 backdrop-blur-sm">
-          <aside className="w-64 bg-black/90 border-r border-white/10 p-5 flex flex-col h-full animate-float-in">
-            <div className="flex items-center justify-between mb-8 pb-5 border-b border-white/5">
+        <div className="fixed inset-0 z-50 flex md:hidden bg-black/40 dark:bg-black/60 backdrop-blur-sm">
+          <aside className="w-64 bg-white/95 dark:bg-black/90 border-r border-black/10 dark:border-white/10 p-5 flex flex-col h-full animate-float-in">
+            <div className="flex items-center justify-between mb-8 pb-5 border-b border-black/5 dark:border-white/5">
               <Logo size="sm" />
               <button 
                 onClick={() => setSidebarOpen(false)}
-                className="p-1 rounded-lg text-odizo-grey hover:text-white"
+                className="p-1 rounded-lg text-odizo-grey hover:text-slate-900 dark:hover:text-slate-900 dark:text-white"
               >
                 <X size={20} />
               </button>
@@ -200,7 +201,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
               ))}
             </nav>
 
-            <div className="border-t border-white/5 pt-5">
+            <div className="border-t border-black/5 dark:border-white/5 pt-5 flex flex-col gap-4">
               <button
                 onClick={handleLogout}
                 className="flex items-center gap-3 w-full px-4 py-3 rounded-xl text-odizo-grey hover:text-odizo-red hover:bg-odizo-red/10 border border-transparent transition-all duration-300"
@@ -217,30 +218,34 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Header */}
-        <header className="flex items-center justify-between md:justify-end px-6 py-4 glass-card m-4 mb-0 border-white/5">
+        <header className="flex items-center justify-between md:justify-end px-6 py-4 glass-card m-4 mb-0 border-black/5 dark:border-white/5">
           <button
             onClick={() => setSidebarOpen(true)}
-            className="md:hidden p-2 rounded-lg text-odizo-grey hover:text-white hover:bg-white/5 border border-white/10"
+            className="md:hidden p-2 rounded-lg text-odizo-grey hover:text-slate-900 dark:hover:text-slate-900 dark:text-white hover:bg-black/5 dark:hover:bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10"
           >
             <Menu size={20} />
           </button>
 
-          <div className="flex items-center gap-3">
-            <div className="flex flex-col text-right">
-              <span className="text-sm font-semibold">{user ? user.name : 'Loading User...'}</span>
-              <span className="text-xs text-odizo-grey">{user ? `${user.role} Portal` : 'Portal'}</span>
-            </div>
-            <div className="h-10 w-10 rounded-full border border-odizo-red/20 bg-odizo-red/5 flex items-center justify-center text-odizo-red shadow-[0_0_10px_rgba(225,97,103,0.15)]">
-              <UserIcon size={18} />
+          <div className="flex items-center gap-5">
+            <ThemeToggle />
+            <div className="flex items-center gap-3">
+              <div className="flex flex-col text-right">
+                <span className="text-sm font-semibold">{user ? user.name : 'Loading User...'}</span>
+                <span className="text-xs text-odizo-grey">{user ? `${user.role} Portal` : 'Portal'}</span>
+              </div>
+              <div className="h-10 w-10 rounded-full border border-odizo-red/20 bg-odizo-red/5 flex items-center justify-center text-odizo-red shadow-[0_0_10px_rgba(225,97,103,0.15)]">
+                <UserIcon size={18} />
+              </div>
             </div>
           </div>
         </header>
 
         {/* Content Wrapper */}
-        <main className="flex-1 overflow-y-auto p-6 scrollbar-thin scrollbar-thumb-white/5">
+        <main className="flex-1 overflow-y-auto p-6 scrollbar-thin scrollbar-thumb-black/5 dark:scrollbar-thumb-white/5">
           {children}
         </main>
       </div>
     </div>
   );
 }
+

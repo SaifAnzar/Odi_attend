@@ -263,17 +263,17 @@ export default function Dashboard() {
         {/* Profile Welcome Banner */}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-extrabold tracking-tight bg-gradient-to-r from-white via-odizo-grey to-white bg-clip-text text-transparent">
+            <h1 className="text-3xl font-extrabold tracking-tight bg-gradient-to-r from-slate-900 via-odizo-grey to-slate-900 dark:from-white dark:via-odizo-grey dark:to-white bg-clip-text text-transparent">
               Welcome back, {currentUser.name}!
             </h1>
             <p className="text-sm text-odizo-grey mt-1">
-              Logged in as <span className="text-white font-medium">{currentUser.role}</span>
+              Logged in as <span className="text-slate-900 dark:text-white font-medium">{currentUser.role}</span>
             </p>
           </div>
           <button
             onClick={handleRefresh}
             disabled={refreshing}
-            className="flex items-center gap-2 px-4 py-2 bg-white/5 border border-white/10 hover:border-odizo-red/30 text-white rounded-full text-sm font-semibold transition-all duration-300 disabled:opacity-50 cursor-pointer"
+            className="flex items-center gap-2 px-4 py-2 bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 hover:border-odizo-red/30 text-slate-900 dark:text-white rounded-full text-sm font-semibold transition-all duration-300 disabled:opacity-50 cursor-pointer"
           >
             <RefreshCw size={14} className={refreshing ? 'animate-spin' : ''} />
             <span>Refresh Stats</span>
@@ -282,7 +282,7 @@ export default function Dashboard() {
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Punch In / Out Card (Left 2/3) */}
-          <div className="lg:col-span-2 glass-card p-8 border-white/10 floating-shadow-red flex flex-col justify-between relative overflow-hidden">
+          <div className="lg:col-span-2 glass-card p-8 border-black/10 dark:border-white/10 floating-shadow-red flex flex-col justify-between relative overflow-hidden">
             {/* Background Red Glow */}
             <div className="absolute -right-16 -bottom-16 w-60 h-60 bg-odizo-red/5 rounded-full blur-[60px] pointer-events-none"></div>
 
@@ -291,13 +291,13 @@ export default function Dashboard() {
                 <div>
                   <h2 className="text-xl font-bold">Shift Clock</h2>
                   <p className="text-xs text-odizo-grey mt-0.5">
-                    Assigned Shift: <span className="text-white font-semibold">{currentUser.shift?.name}</span> ({currentUser.shift?.startTime} - {currentUser.shift?.endTime})
+                    Assigned Shift: <span className="text-slate-900 dark:text-white font-semibold">{currentUser.shift?.name}</span> ({currentUser.shift?.startTime} - {currentUser.shift?.endTime})
                   </p>
                 </div>
                 <span className={`inline-flex px-3 py-1 rounded-full text-xs font-bold ${
                   isCheckedIn 
                     ? 'bg-green-500/10 text-green-400 border border-green-500/20 animate-pulse' 
-                    : 'bg-white/5 text-odizo-grey border border-white/5'
+                    : 'bg-black/5 dark:bg-white/5 text-odizo-grey border border-black/5 dark:border-white/5'
                 }`}>
                   {isCheckedIn ? 'Active On-Shift' : 'Off-Shift'}
                 </span>
@@ -313,7 +313,7 @@ export default function Dashboard() {
 
               {/* Big Glowing Timer & Button */}
               <div className="flex flex-col items-center justify-center py-6">
-                <div className="font-mono text-5xl font-extrabold tracking-widest text-white mb-6 bg-white/5 border border-white/10 rounded-2xl px-6 py-3 shadow-[0_0_15px_rgba(255,255,255,0.02)]">
+                <div className="font-mono text-5xl font-extrabold tracking-widest text-slate-900 dark:text-white mb-6 bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-2xl px-6 py-3 shadow-[0_0_15px_rgba(255,255,255,0.02)]">
                   {liveTimer}
                 </div>
 
@@ -322,7 +322,7 @@ export default function Dashboard() {
                   disabled={punchLoading}
                   className={`relative flex items-center justify-center gap-3 w-48 h-48 rounded-full font-extrabold text-lg uppercase transition-all duration-500 shadow-xl ${
                     isCheckedIn
-                      ? 'bg-odizo-red hover:shadow-[0_0_40px_rgba(225,97,103,0.4)] text-white hover:scale-105 active:scale-95'
+                      ? 'bg-odizo-red hover:shadow-[0_0_40px_rgba(225,97,103,0.4)] text-slate-900 dark:text-white hover:scale-105 active:scale-95'
                       : 'bg-white text-black hover:bg-white/95 hover:shadow-[0_0_40px_rgba(255,255,255,0.25)] hover:scale-105 active:scale-95'
                   } disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer`}
                 >
@@ -345,7 +345,7 @@ export default function Dashboard() {
             </div>
 
             {/* Geolocation & Note Field */}
-            <div className="mt-8 border-t border-white/5 pt-6 space-y-4">
+            <div className="mt-8 border-t border-black/5 dark:border-white/5 pt-6 space-y-4">
               <div className="flex items-center gap-2 text-xs text-odizo-grey">
                 <MapPin size={14} className="text-odizo-red" />
                 {geoCoordinates ? (
@@ -361,36 +361,36 @@ export default function Dashboard() {
                   placeholder="Add notes (e.g. Work location details, site notes...)"
                   value={punchNotes}
                   onChange={(e) => setPunchNotes(e.target.value)}
-                  className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-xs text-white placeholder-odizo-grey focus:border-odizo-red focus:outline-none transition-colors"
+                  className="w-full bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-xl px-4 py-2 text-xs text-slate-900 dark:text-white placeholder-odizo-grey focus:border-odizo-red focus:outline-none transition-colors"
                 />
               </div>
             </div>
           </div>
 
           {/* Daily Summary statistics (Right 1/3) */}
-          <div className="glass-card p-6 border-white/5 floating-shadow flex flex-col justify-between">
+          <div className="glass-card p-6 border-black/5 dark:border-white/5 floating-shadow flex flex-col justify-between">
             <div>
               <h2 className="text-xl font-bold mb-4">Today's Summary</h2>
               <div className="space-y-4">
-                <div className="p-4 bg-white/3 border border-white/5 rounded-xl">
+                <div className="p-4 bg-black/5 dark:bg-white/3 border border-black/5 dark:border-white/5 rounded-xl">
                   <span className="text-[10px] text-odizo-grey uppercase tracking-wider font-semibold">Total Hours Today</span>
-                  <p className="text-lg font-bold text-white mt-1">
+                  <p className="text-lg font-bold text-slate-900 dark:text-white mt-1">
                     {todayRecord
                       ? `${Math.floor(todayRecord.totalMinutesWorked / 60)}h ${todayRecord.totalMinutesWorked % 60}m`
                       : '0h 0m'}
                   </p>
                 </div>
 
-                <div className="p-4 bg-white/3 border border-white/5 rounded-xl">
+                <div className="p-4 bg-black/5 dark:bg-white/3 border border-black/5 dark:border-white/5 rounded-xl">
                   <span className="text-[10px] text-odizo-grey uppercase tracking-wider font-semibold">Checks count</span>
-                  <p className="text-lg font-bold text-white mt-1">
+                  <p className="text-lg font-bold text-slate-900 dark:text-white mt-1">
                     {todayRecord ? todayRecord.sessions.length : 0} Session(s)
                   </p>
                 </div>
 
-                <div className="p-4 bg-white/3 border border-white/5 rounded-xl">
+                <div className="p-4 bg-black/5 dark:bg-white/3 border border-black/5 dark:border-white/5 rounded-xl">
                   <span className="text-[10px] text-odizo-grey uppercase tracking-wider font-semibold">Shift Status</span>
-                  <p className="text-lg font-bold text-white mt-1">
+                  <p className="text-lg font-bold text-slate-900 dark:text-white mt-1">
                     {todayRecord ? (
                       <span className={todayRecord.attendanceStatus === 'Present' ? 'text-green-400' : 'text-amber-400'}>
                         {todayRecord.attendanceStatus}
@@ -403,14 +403,14 @@ export default function Dashboard() {
               </div>
             </div>
 
-            <div className="text-[10px] text-odizo-grey border-t border-white/5 pt-4 mt-6">
+            <div className="text-[10px] text-odizo-grey border-t border-black/5 dark:border-white/5 pt-4 mt-6">
               Records are saved to ODIZO Attendance Server and audited for payroll compliance.
             </div>
           </div>
         </div>
 
         {/* Personal Log history */}
-        <div className="glass-card p-6 floating-shadow border-white/5">
+        <div className="glass-card p-6 floating-shadow border-black/5 dark:border-white/5">
           <h2 className="text-xl font-bold mb-4">Recent Shifts Logs</h2>
           {records.length === 0 ? (
             <p className="text-center text-xs text-odizo-grey py-10">No past attendance logs found.</p>
@@ -418,7 +418,7 @@ export default function Dashboard() {
             <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse text-sm">
                 <thead>
-                  <tr className="border-b border-white/5 text-odizo-grey font-medium text-xs uppercase">
+                  <tr className="border-b border-black/5 dark:border-white/5 text-odizo-grey font-medium text-xs uppercase">
                     <th className="py-3 px-4">Date</th>
                     <th className="py-3 px-4">Shift Name</th>
                     <th className="py-3 px-4">Punch In / Out Times</th>
@@ -426,20 +426,20 @@ export default function Dashboard() {
                     <th className="py-3 px-4">Status</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-white/5">
+                <tbody className="divide-y divide-black/10 dark:divide-black/10 dark:divide-white/5">
                   {records.map((record) => (
-                    <tr key={record._id} className="hover:bg-white/3 transition-colors">
-                      <td className="py-4 px-4 font-mono font-semibold text-white">
+                    <tr key={record._id} className="hover:bg-black/5 dark:bg-white/3 transition-colors">
+                      <td className="py-4 px-4 font-mono font-semibold text-slate-900 dark:text-white">
                         {record.date}
                       </td>
-                      <td className="py-4 px-4 font-semibold text-white">
+                      <td className="py-4 px-4 font-semibold text-slate-900 dark:text-white">
                         {record.shiftSnapshot?.name}
                       </td>
-                      <td className="py-4 px-4 text-xs text-white">
+                      <td className="py-4 px-4 text-xs text-slate-900 dark:text-white">
                         <div className="space-y-1">
                           {record.sessions.map((s, idx) => (
                             <div key={idx} className="flex items-center gap-2">
-                              <span className="bg-white/5 border border-white/10 px-2 py-0.5 rounded text-[9px]">
+                              <span className="bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 px-2 py-0.5 rounded text-[9px]">
                                 Session {idx + 1}
                               </span>
                               <span>
@@ -450,7 +450,7 @@ export default function Dashboard() {
                           ))}
                         </div>
                       </td>
-                      <td className="py-4 px-4 font-mono font-medium text-white">
+                      <td className="py-4 px-4 font-mono font-medium text-slate-900 dark:text-white">
                         {Math.floor(record.totalMinutesWorked / 60)}h {record.totalMinutesWorked % 60}m
                       </td>
                       <td className="py-4 px-4">
@@ -481,7 +481,7 @@ export default function Dashboard() {
       {/* Page Header */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-extrabold tracking-tight bg-gradient-to-r from-white via-odizo-grey to-white bg-clip-text text-transparent">
+          <h1 className="text-3xl font-extrabold tracking-tight bg-gradient-to-r from-slate-900 via-odizo-grey to-slate-900 dark:from-white dark:via-odizo-grey dark:to-white bg-clip-text text-transparent">
             Attendance Dashboard
           </h1>
           <p className="text-sm text-odizo-grey mt-1">Real-time attendance intelligence & shifts tracking</p>
@@ -489,7 +489,7 @@ export default function Dashboard() {
         <button
           onClick={handleRefresh}
           disabled={refreshing}
-          className="flex items-center gap-2 px-4 py-2 bg-white/5 border border-white/10 hover:border-odizo-red/30 text-white rounded-full text-sm font-semibold transition-all duration-300 shadow-md hover:shadow-red-900/10 hover:-translate-y-0.5 active:translate-y-0 disabled:opacity-50 cursor-pointer"
+          className="flex items-center gap-2 px-4 py-2 bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 hover:border-odizo-red/30 text-slate-900 dark:text-white rounded-full text-sm font-semibold transition-all duration-300 shadow-md hover:shadow-red-900/10 hover:-translate-y-0.5 active:translate-y-0 disabled:opacity-50 cursor-pointer"
         >
           <RefreshCw size={14} className={refreshing ? 'animate-spin' : ''} />
           <span>{refreshing ? 'Refreshing...' : 'Refresh Logs'}</span>
@@ -499,7 +499,7 @@ export default function Dashboard() {
       {/* Floating Metric Cards Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         {/* Total Staff Card */}
-        <div className="glass-card glass-card-hover p-6 floating-shadow border-white/5">
+        <div className="glass-card glass-card-hover p-6 floating-shadow border-black/5 dark:border-white/5">
           <div className="flex justify-between items-start">
             <div>
               <span className="text-xs font-semibold text-odizo-grey uppercase tracking-wider">Total Staff</span>
@@ -508,14 +508,14 @@ export default function Dashboard() {
                 {totalEmployees} Employees / {totalInterns} Interns
               </p>
             </div>
-            <div className="p-3 bg-white/5 rounded-xl border border-white/10 text-white">
+            <div className="p-3 bg-black/5 dark:bg-white/5 rounded-xl border border-black/10 dark:border-white/10 text-slate-900 dark:text-white">
               <Users size={20} />
             </div>
           </div>
         </div>
 
         {/* Present Today Card */}
-        <div className="glass-card glass-card-hover p-6 floating-shadow border-white/5">
+        <div className="glass-card glass-card-hover p-6 floating-shadow border-black/5 dark:border-white/5">
           <div className="flex justify-between items-start">
             <div>
               <span className="text-xs font-semibold text-odizo-grey uppercase tracking-wider">Present Today</span>
@@ -531,7 +531,7 @@ export default function Dashboard() {
         </div>
 
         {/* Active Punches Card */}
-        <div className="glass-card glass-card-hover p-6 floating-shadow border-white/5">
+        <div className="glass-card glass-card-hover p-6 floating-shadow border-black/5 dark:border-white/5">
           <div className="flex justify-between items-start">
             <div>
               <span className="text-xs font-semibold text-odizo-grey uppercase tracking-wider">Currently On-Shift</span>
@@ -547,12 +547,12 @@ export default function Dashboard() {
         </div>
 
         {/* Attendance Rate Card */}
-        <div className="glass-card glass-card-hover p-6 floating-shadow border-white/5">
+        <div className="glass-card glass-card-hover p-6 floating-shadow border-black/5 dark:border-white/5">
           <div className="flex justify-between items-start">
             <div>
               <span className="text-xs font-semibold text-odizo-grey uppercase tracking-wider">Attendance Rate</span>
               <h3 className="text-3xl font-bold mt-2 text-blue-400">{attendanceRate}%</h3>
-              <div className="w-full bg-white/5 rounded-full h-1.5 mt-2 overflow-hidden border border-white/5">
+              <div className="w-full bg-black/5 dark:bg-white/5 rounded-full h-1.5 mt-2 overflow-hidden border border-black/5 dark:border-white/5">
                 <div 
                   className="bg-blue-400 h-full rounded-full transition-all duration-500" 
                   style={{ width: `${attendanceRate}%` }}
@@ -569,7 +569,7 @@ export default function Dashboard() {
       {/* Main Sections */}
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
         {/* Attendance Feed (Left 2/3) */}
-        <div className="xl:col-span-2 glass-card p-6 floating-shadow border-white/5">
+        <div className="xl:col-span-2 glass-card p-6 floating-shadow border-black/5 dark:border-white/5">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
             <div>
               <h2 className="text-xl font-bold">Live Attendance Feed</h2>
@@ -582,7 +582,7 @@ export default function Dashboard() {
                 placeholder="Search staff..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full sm:w-60 bg-white/5 border border-white/10 rounded-full py-1.5 pl-9 pr-4 text-xs text-white placeholder-odizo-grey focus:border-odizo-red focus:outline-none focus:ring-0 transition-colors"
+                className="w-full sm:w-60 bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-full py-1.5 pl-9 pr-4 text-xs text-slate-900 dark:text-white placeholder-odizo-grey focus:border-odizo-red focus:outline-none focus:ring-0 transition-colors"
               />
               <Search className="absolute left-3.5 top-2.5 text-odizo-grey" size={13} />
             </div>
@@ -594,16 +594,16 @@ export default function Dashboard() {
               <p className="mt-4 text-sm text-odizo-grey">Loading today's logs...</p>
             </div>
           ) : filteredRecords.length === 0 ? (
-            <div className="text-center py-16 border border-dashed border-white/10 rounded-2xl">
+            <div className="text-center py-16 border border-dashed border-black/10 dark:border-white/10 rounded-2xl">
               <UserCheck size={40} className="mx-auto text-odizo-grey/50 mb-3" />
-              <p className="text-sm font-semibold text-white">No attendance records found</p>
+              <p className="text-sm font-semibold text-slate-900 dark:text-white">No attendance records found</p>
               <p className="text-xs text-odizo-grey mt-1">No check-ins have been recorded today yet.</p>
             </div>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse text-sm">
                 <thead>
-                  <tr className="border-b border-white/5 text-odizo-grey font-medium text-xs uppercase">
+                  <tr className="border-b border-black/5 dark:border-white/5 text-odizo-grey font-medium text-xs uppercase">
                     <th className="py-3 px-4">Name</th>
                     <th className="py-3 px-4">Role</th>
                     <th className="py-3 px-4">Shift</th>
@@ -612,7 +612,7 @@ export default function Dashboard() {
                     <th className="py-3 px-4">Status</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-white/5">
+                <tbody className="divide-y divide-black/10 dark:divide-black/10 dark:divide-white/5">
                   {filteredRecords.map((record) => {
                     const activeSession = record.sessions.find(s => !s.checkOut);
                     const lastSession = record.sessions[record.sessions.length - 1];
@@ -622,8 +622,8 @@ export default function Dashboard() {
                     const location = lastSession?.checkOutLocation || lastSession?.checkInLocation;
 
                     return (
-                      <tr key={record._id} className="hover:bg-white/3 transition-colors">
-                        <td className="py-4 px-4 font-semibold text-white">
+                      <tr key={record._id} className="hover:bg-black/5 dark:bg-white/3 transition-colors">
+                        <td className="py-4 px-4 font-semibold text-slate-900 dark:text-white">
                           <div className="flex flex-col">
                             <span>{record.userId?.name || 'Unknown User'}</span>
                             <span className="text-xs text-odizo-grey font-normal">{record.userId?.email}</span>
@@ -640,11 +640,11 @@ export default function Dashboard() {
                         </td>
                         <td className="py-4 px-4 text-xs">
                           <div className="flex flex-col text-odizo-grey">
-                            <span className="font-medium text-white">{record.shiftSnapshot?.name}</span>
+                            <span className="font-medium text-slate-900 dark:text-white">{record.shiftSnapshot?.name}</span>
                             <span>{record.shiftSnapshot?.startTime} - {record.shiftSnapshot?.endTime}</span>
                           </div>
                         </td>
-                        <td className="py-4 px-4 text-xs font-medium text-white">
+                        <td className="py-4 px-4 text-xs font-medium text-slate-900 dark:text-white">
                           <div className="flex items-center gap-2">
                             <span className={`h-1.5 w-1.5 rounded-full ${activeSession ? 'bg-green-500 animate-pulse' : 'bg-odizo-grey'}`} />
                             <span>
@@ -665,7 +665,7 @@ export default function Dashboard() {
                             )}
                           </div>
                         </td>
-                        <td className="py-4 px-4 font-mono font-medium text-white">
+                        <td className="py-4 px-4 font-mono font-medium text-slate-900 dark:text-white">
                           {record.totalMinutesWorked > 0
                             ? `${Math.floor(record.totalMinutesWorked / 60)}h ${record.totalMinutesWorked % 60}m`
                             : activeSession 
@@ -693,7 +693,7 @@ export default function Dashboard() {
         </div>
 
         {/* System Activity (Right 1/3) */}
-        <div className="glass-card p-6 floating-shadow border-white/5">
+        <div className="glass-card p-6 floating-shadow border-black/5 dark:border-white/5">
           <h2 className="text-xl font-bold mb-4">Device Audits</h2>
           <p className="text-xs text-odizo-grey mb-6">Device compliance tracking for today's logs</p>
 
@@ -710,12 +710,12 @@ export default function Dashboard() {
                 const timeStr = new Date(lastSession.checkIn).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
                 return (
-                  <div key={record._id} className="flex gap-4 p-3 bg-white/3 rounded-xl border border-white/5 hover:border-white/10 transition-colors">
-                    <div className="p-2 bg-white/5 rounded-lg text-odizo-grey self-start">
+                  <div key={record._id} className="flex gap-4 p-3 bg-black/5 dark:bg-white/3 rounded-xl border border-black/5 dark:border-white/5 hover:border-black/10 dark:border-white/10 transition-colors">
+                    <div className="p-2 bg-black/5 dark:bg-white/5 rounded-lg text-odizo-grey self-start">
                       <Monitor size={16} />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-semibold truncate text-white">{record.userId?.name}</p>
+                      <p className="text-sm font-semibold truncate text-slate-900 dark:text-white">{record.userId?.name}</p>
                       <p className="text-xs text-odizo-grey truncate">{device}</p>
                       <span className="text-[10px] text-odizo-red font-medium mt-1 inline-block">Checked in at {timeStr}</span>
                     </div>

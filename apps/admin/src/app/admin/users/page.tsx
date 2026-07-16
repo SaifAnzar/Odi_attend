@@ -169,14 +169,14 @@ export default function UserManagement() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-extrabold tracking-tight bg-gradient-to-r from-white via-odizo-grey to-white bg-clip-text text-transparent">
+          <h1 className="text-3xl font-extrabold tracking-tight bg-gradient-to-r from-slate-900 via-odizo-grey to-slate-900 dark:from-white dark:via-odizo-grey dark:to-white bg-clip-text text-transparent">
             User Management
           </h1>
           <p className="text-sm text-odizo-grey mt-1">Manage staff user profiles, shift settings and active categories</p>
         </div>
         <button
           onClick={handleOpenCreate}
-          className="flex items-center gap-2 px-5 py-2.5 bg-odizo-red text-white rounded-full text-sm font-semibold hover:bg-opacity-95 hover:shadow-[0_0_20px_rgba(225,97,103,0.3)] transition-all duration-300 hover:-translate-y-0.5 active:translate-y-0 cursor-pointer"
+          className="flex items-center gap-2 px-5 py-2.5 bg-odizo-red text-slate-900 dark:text-white rounded-full text-sm font-semibold hover:bg-opacity-95 hover:shadow-[0_0_20px_rgba(225,97,103,0.3)] transition-all duration-300 hover:-translate-y-0.5 active:translate-y-0 cursor-pointer"
         >
           <Plus size={16} />
           <span>Add User Profile</span>
@@ -184,7 +184,7 @@ export default function UserManagement() {
       </div>
 
       {/* Table Container */}
-      <div className="glass-card p-6 floating-shadow border-white/5">
+      <div className="glass-card p-6 floating-shadow border-black/5 dark:border-white/5">
         <div className="flex justify-between items-center mb-6">
           <div>
             <h2 className="text-xl font-bold">Staff Directory</h2>
@@ -197,7 +197,7 @@ export default function UserManagement() {
               placeholder="Search staff name or email..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-64 bg-white/5 border border-white/10 rounded-full py-1.5 pl-9 pr-4 text-xs text-white placeholder-odizo-grey focus:border-odizo-red focus:outline-none transition-colors"
+              className="w-64 bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-full py-1.5 pl-9 pr-4 text-xs text-slate-900 dark:text-white placeholder-odizo-grey focus:border-odizo-red focus:outline-none transition-colors"
             />
             <Search className="absolute left-3.5 top-2.5 text-odizo-grey" size={13} />
           </div>
@@ -209,16 +209,16 @@ export default function UserManagement() {
             <p className="mt-4 text-sm text-odizo-grey">Loading directory...</p>
           </div>
         ) : filteredUsers.length === 0 ? (
-          <div className="text-center py-16 border border-dashed border-white/10 rounded-2xl">
+          <div className="text-center py-16 border border-dashed border-black/10 dark:border-white/10 rounded-2xl">
             <UserIcon size={40} className="mx-auto text-odizo-grey/50 mb-3" />
-            <p className="text-sm font-semibold text-white">No users found</p>
+            <p className="text-sm font-semibold text-slate-900 dark:text-white">No users found</p>
             <p className="text-xs text-odizo-grey mt-1">Try refining your search query or add a new user.</p>
           </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse text-sm">
               <thead>
-                <tr className="border-b border-white/5 text-odizo-grey font-medium text-xs uppercase">
+                <tr className="border-b border-black/5 dark:border-white/5 text-odizo-grey font-medium text-xs uppercase">
                   <th className="py-3 px-4">Name & Email</th>
                   <th className="py-3 px-4">Role</th>
                   <th className="py-3 px-4">Working Hours / Shift</th>
@@ -227,10 +227,10 @@ export default function UserManagement() {
                   <th className="py-3 px-4 text-right">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-white/5">
+              <tbody className="divide-y divide-black/10 dark:divide-black/10 dark:divide-white/5">
                 {filteredUsers.map((user) => (
-                  <tr key={user._id} className="hover:bg-white/3 transition-colors">
-                    <td className="py-4 px-4 font-semibold text-white">
+                  <tr key={user._id} className="hover:bg-black/5 dark:bg-white/3 transition-colors">
+                    <td className="py-4 px-4 font-semibold text-slate-900 dark:text-white">
                       <div className="flex flex-col">
                         <span>{user.name}</span>
                         <span className="text-xs text-odizo-grey font-normal">{user.email}</span>
@@ -251,14 +251,14 @@ export default function UserManagement() {
                       <div className="flex items-center gap-2">
                         <Clock size={12} className="text-odizo-red" />
                         <div className="flex flex-col">
-                          <span className="font-semibold text-white">{user.shift?.name || 'Standard Shift'}</span>
+                          <span className="font-semibold text-slate-900 dark:text-white">{user.shift?.name || 'Standard Shift'}</span>
                           <span>{user.shift?.startTime} - {user.shift?.endTime}</span>
                         </div>
                       </div>
                     </td>
                     <td className="py-4 px-4">
                       <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-bold ${
-                        user.status === 'Active' ? 'bg-green-500/15 text-green-400' : 'bg-white/5 text-odizo-grey'
+                        user.status === 'Active' ? 'bg-green-500/15 text-green-400' : 'bg-black/5 dark:bg-white/5 text-odizo-grey'
                       }`}>
                         {user.status}
                       </span>
@@ -270,7 +270,7 @@ export default function UserManagement() {
                       <div className="flex justify-end gap-2">
                         <button
                           onClick={() => handleOpenEdit(user)}
-                          className="p-2 bg-white/5 hover:bg-white/10 text-white rounded-lg border border-white/5 hover:border-white/15 transition-all duration-300 cursor-pointer"
+                          className="p-2 bg-black/5 dark:bg-white/5 hover:bg-black/5 dark:bg-white/10 text-slate-900 dark:text-white rounded-lg border border-black/5 dark:border-white/5 hover:border-white/15 transition-all duration-300 cursor-pointer"
                           title="Edit User"
                         >
                           <Edit size={14} />
@@ -295,14 +295,14 @@ export default function UserManagement() {
       {/* Custom Sliding Glass Modal */}
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-md px-4">
-          <div className="w-full max-w-lg glass-card border-white/10 floating-shadow-red p-6 animate-float">
-            <div className="flex items-center justify-between border-b border-white/5 pb-4 mb-5">
+          <div className="w-full max-w-lg glass-card border-black/10 dark:border-white/10 floating-shadow-red p-6 animate-float">
+            <div className="flex items-center justify-between border-b border-black/5 dark:border-white/5 pb-4 mb-5">
               <h2 className="text-xl font-bold">
                 {modalMode === 'create' ? 'Create User Profile' : 'Edit User Profile'}
               </h2>
               <button 
                 onClick={() => setShowModal(false)}
-                className="p-1 rounded-lg text-odizo-grey hover:text-white hover:bg-white/5"
+                className="p-1 rounded-lg text-odizo-grey hover:text-slate-900 dark:text-white hover:bg-black/5 dark:bg-white/5"
               >
                 <X size={20} />
               </button>
@@ -326,7 +326,7 @@ export default function UserManagement() {
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     placeholder="Enter name"
-                    className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 pl-10 text-sm text-white focus:border-odizo-red focus:outline-none focus:ring-0"
+                    className="w-full bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-xl px-4 py-2.5 pl-10 text-sm text-slate-900 dark:text-white focus:border-odizo-red focus:outline-none focus:ring-0"
                   />
                   <UserIcon className="absolute left-3.5 top-3 text-odizo-grey" size={16} />
                 </div>
@@ -342,7 +342,7 @@ export default function UserManagement() {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="Enter email"
-                    className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 pl-10 text-sm text-white focus:border-odizo-red focus:outline-none focus:ring-0"
+                    className="w-full bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-xl px-4 py-2.5 pl-10 text-sm text-slate-900 dark:text-white focus:border-odizo-red focus:outline-none focus:ring-0"
                   />
                   <Mail className="absolute left-3.5 top-3 text-odizo-grey" size={16} />
                 </div>
@@ -359,7 +359,7 @@ export default function UserManagement() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="Enter password"
-                  className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:border-odizo-red focus:outline-none focus:ring-0"
+                  className="w-full bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-xl px-4 py-2.5 text-sm text-slate-900 dark:text-white focus:border-odizo-red focus:outline-none focus:ring-0"
                 />
               </div>
 
@@ -370,11 +370,11 @@ export default function UserManagement() {
                   <select
                     value={role}
                     onChange={(e) => setRole(e.target.value as any)}
-                    className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:border-odizo-red focus:outline-none"
+                    className="w-full bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-xl px-4 py-2.5 text-sm text-slate-900 dark:text-white focus:border-odizo-red focus:outline-none"
                   >
-                    <option value="Employee" className="bg-black text-white">Employee</option>
-                    <option value="Intern" className="bg-black text-white">Intern</option>
-                    <option value="Admin" className="bg-black text-white">Admin</option>
+                    <option value="Employee" className="bg-black text-slate-900 dark:text-white">Employee</option>
+                    <option value="Intern" className="bg-black text-slate-900 dark:text-white">Intern</option>
+                    <option value="Admin" className="bg-black text-slate-900 dark:text-white">Admin</option>
                   </select>
                 </div>
                 <div>
@@ -382,17 +382,17 @@ export default function UserManagement() {
                   <select
                     value={status}
                     onChange={(e) => setStatus(e.target.value as any)}
-                    className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:border-odizo-red focus:outline-none"
+                    className="w-full bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-xl px-4 py-2.5 text-sm text-slate-900 dark:text-white focus:border-odizo-red focus:outline-none"
                   >
-                    <option value="Active" className="bg-black text-white">Active</option>
-                    <option value="Inactive" className="bg-black text-white">Inactive</option>
+                    <option value="Active" className="bg-black text-slate-900 dark:text-white">Active</option>
+                    <option value="Inactive" className="bg-black text-slate-900 dark:text-white">Inactive</option>
                   </select>
                 </div>
               </div>
 
               {/* Shift Settings */}
-              <div className="border-t border-white/5 pt-4 space-y-4">
-                <h3 className="text-sm font-bold text-white flex items-center gap-1">
+              <div className="border-t border-black/5 dark:border-white/5 pt-4 space-y-4">
+                <h3 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-1">
                   <Clock size={14} className="text-odizo-red" />
                   <span>Assign Shift Details</span>
                 </h3>
@@ -405,7 +405,7 @@ export default function UserManagement() {
                       value={shiftName}
                       onChange={(e) => setShiftName(e.target.value)}
                       placeholder="e.g. Day Shift"
-                      className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-xs text-white focus:border-odizo-red focus:outline-none"
+                      className="w-full bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-lg px-3 py-1.5 text-xs text-slate-900 dark:text-white focus:border-odizo-red focus:outline-none"
                     />
                   </div>
                   <div>
@@ -415,7 +415,7 @@ export default function UserManagement() {
                       value={shiftStart}
                       onChange={(e) => setShiftStart(e.target.value)}
                       placeholder="HH:MM (e.g. 09:00)"
-                      className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-xs text-white focus:border-odizo-red focus:outline-none"
+                      className="w-full bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-lg px-3 py-1.5 text-xs text-slate-900 dark:text-white focus:border-odizo-red focus:outline-none"
                     />
                   </div>
                   <div>
@@ -425,24 +425,24 @@ export default function UserManagement() {
                       value={shiftEnd}
                       onChange={(e) => setShiftEnd(e.target.value)}
                       placeholder="HH:MM (e.g. 18:00)"
-                      className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-xs text-white focus:border-odizo-red focus:outline-none"
+                      className="w-full bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-lg px-3 py-1.5 text-xs text-slate-900 dark:text-white focus:border-odizo-red focus:outline-none"
                     />
                   </div>
                 </div>
               </div>
 
               {/* Submit Buttons */}
-              <div className="flex gap-3 justify-end border-t border-white/5 pt-4 mt-6">
+              <div className="flex gap-3 justify-end border-t border-black/5 dark:border-white/5 pt-4 mt-6">
                 <button
                   type="button"
                   onClick={() => setShowModal(false)}
-                  className="px-5 py-2 border border-white/10 hover:border-white/20 text-white rounded-full text-xs font-semibold transition-all duration-300"
+                  className="px-5 py-2 border border-black/10 dark:border-white/10 hover:border-white/20 text-slate-900 dark:text-white rounded-full text-xs font-semibold transition-all duration-300"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-6 py-2 bg-odizo-red hover:bg-opacity-95 text-white rounded-full text-xs font-semibold hover:shadow-[0_0_15px_rgba(225,97,103,0.25)] transition-all duration-300"
+                  className="px-6 py-2 bg-odizo-red hover:bg-opacity-95 text-slate-900 dark:text-white rounded-full text-xs font-semibold hover:shadow-[0_0_15px_rgba(225,97,103,0.25)] transition-all duration-300"
                 >
                   {modalMode === 'create' ? 'Create User' : 'Save Changes'}
                 </button>

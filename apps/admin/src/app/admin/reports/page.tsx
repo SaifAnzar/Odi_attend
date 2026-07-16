@@ -163,7 +163,7 @@ export default function Reports() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-extrabold tracking-tight bg-gradient-to-r from-white via-odizo-grey to-white bg-clip-text text-transparent">
+          <h1 className="text-3xl font-extrabold tracking-tight bg-gradient-to-r from-slate-900 via-odizo-grey to-slate-900 dark:from-white dark:via-odizo-grey dark:to-white bg-clip-text text-transparent">
             {isAdmin ? 'Attendance Reports' : 'Personal History'}
           </h1>
           <p className="text-sm text-odizo-grey mt-1">
@@ -175,7 +175,7 @@ export default function Reports() {
         <button
           onClick={handleExportCSV}
           disabled={records.length === 0}
-          className="flex items-center gap-2 px-5 py-2.5 bg-white/5 border border-white/10 hover:border-odizo-red/30 text-white rounded-full text-sm font-semibold transition-all duration-300 shadow-md hover:shadow-red-900/10 hover:-translate-y-0.5 active:translate-y-0 disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"
+          className="flex items-center gap-2 px-5 py-2.5 bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 hover:border-odizo-red/30 text-slate-900 dark:text-white rounded-full text-sm font-semibold transition-all duration-300 shadow-md hover:shadow-red-900/10 hover:-translate-y-0.5 active:translate-y-0 disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"
         >
           <Download size={14} />
           <span>Export Timesheet</span>
@@ -183,7 +183,7 @@ export default function Reports() {
       </div>
 
       {/* Filters Box */}
-      <div className={`glass-card p-6 floating-shadow border-white/5 grid grid-cols-1 ${isAdmin ? 'sm:grid-cols-2' : ''} gap-6`}>
+      <div className={`glass-card p-6 floating-shadow border-black/5 dark:border-white/5 grid grid-cols-1 ${isAdmin ? 'sm:grid-cols-2' : ''} gap-6`}>
         {/* User filter (Admin only) */}
         {isAdmin && (
           <div>
@@ -194,11 +194,11 @@ export default function Reports() {
             <select
               value={selectedUserId}
               onChange={(e) => setSelectedUserId(e.target.value)}
-              className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:border-odizo-red focus:outline-none animate-float-in"
+              className="w-full bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-xl px-4 py-2.5 text-sm text-slate-900 dark:text-white focus:border-odizo-red focus:outline-none animate-float-in"
             >
-              <option value="" className="bg-black text-white">All Staff Members</option>
+              <option value="" className="bg-black text-slate-900 dark:text-white">All Staff Members</option>
               {users.map(u => (
-                <option key={u._id} value={u._id} className="bg-black text-white">{u.name} ({u.role})</option>
+                <option key={u._id} value={u._id} className="bg-black text-slate-900 dark:text-white">{u.name} ({u.role})</option>
               ))}
             </select>
           </div>
@@ -217,8 +217,8 @@ export default function Reports() {
               onChange={(e) => setSelectedDate(e.target.value)}
               className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
             />
-            <div className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white flex justify-between items-center pointer-events-none">
-              <span className={selectedDate ? 'text-white font-medium' : 'text-odizo-grey'}>
+            <div className="w-full bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-xl px-4 py-2.5 text-sm text-slate-900 dark:text-white flex justify-between items-center pointer-events-none">
+              <span className={selectedDate ? 'text-slate-900 dark:text-white font-medium' : 'text-odizo-grey'}>
                 {selectedDate ? formatDisplayDate(selectedDate) : 'DD-MM-YYYY'}
               </span>
               <div className="flex items-center gap-2 pointer-events-auto">
@@ -230,7 +230,7 @@ export default function Reports() {
                       e.preventDefault();
                       setSelectedDate('');
                     }}
-                    className="p-0.5 hover:bg-white/10 rounded text-odizo-grey hover:text-white transition-colors cursor-pointer z-20"
+                    className="p-0.5 hover:bg-black/5 dark:bg-white/10 rounded text-odizo-grey hover:text-slate-900 dark:text-white transition-colors cursor-pointer z-20"
                     title="Clear date"
                   >
                     <X size={14} />
@@ -244,7 +244,7 @@ export default function Reports() {
       </div>
 
       {/* Logs Table */}
-      <div className="glass-card p-6 floating-shadow border-white/5">
+      <div className="glass-card p-6 floating-shadow border-black/5 dark:border-white/5">
         <h2 className="text-xl font-bold mb-4">Audit Trail</h2>
 
         {loading ? (
@@ -253,16 +253,16 @@ export default function Reports() {
             <p className="mt-4 text-sm text-odizo-grey">Compiling records...</p>
           </div>
         ) : records.length === 0 ? (
-          <div className="text-center py-16 border border-dashed border-white/10 rounded-2xl">
+          <div className="text-center py-16 border border-dashed border-black/10 dark:border-white/10 rounded-2xl">
             <FileText size={40} className="mx-auto text-odizo-grey/50 mb-3" />
-            <p className="text-sm font-semibold text-white">No matching records found</p>
+            <p className="text-sm font-semibold text-slate-900 dark:text-white">No matching records found</p>
             <p className="text-xs text-odizo-grey mt-1">Try adjusting your filters above.</p>
           </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse text-sm">
               <thead>
-                <tr className="border-b border-white/5 text-odizo-grey font-medium text-xs uppercase">
+                <tr className="border-b border-black/5 dark:border-white/5 text-odizo-grey font-medium text-xs uppercase">
                   <th className="py-3 px-4">Date</th>
                   <th className="py-3 px-4">Staff</th>
                   <th className="py-3 px-4">Role</th>
@@ -273,17 +273,17 @@ export default function Reports() {
                   {isAdmin && <th className="py-3 px-4 text-right">Actions</th>}
                 </tr>
               </thead>
-              <tbody className="divide-y divide-white/5">
+              <tbody className="divide-y divide-black/10 dark:divide-black/10 dark:divide-white/5">
                 {records.map((record) => (
                   <React.Fragment key={record._id}>
                     <tr 
                       className={`transition-colors ${
                         record.isFlagged 
                           ? 'bg-red-500/5 hover:bg-red-500/10 border-l-2 border-l-odizo-red/60 animate-pulse-slow' 
-                          : 'hover:bg-white/3'
+                          : 'hover:bg-black/5 dark:bg-white/3'
                       }`}
                     >
-                      <td className="py-4 px-4 font-mono font-semibold text-white">
+                      <td className="py-4 px-4 font-mono font-semibold text-slate-900 dark:text-white">
                         <div className="flex flex-col gap-1">
                           <span>{formatDisplayDate(record.date)}</span>
                           {record.isWFH && (
@@ -294,7 +294,7 @@ export default function Reports() {
                           {record.completedTasks && record.completedTasks.length > 0 && (
                             <button
                               onClick={() => setExpandedRecordId(expandedRecordId === record._id ? null : record._id)}
-                              className="inline-flex items-center gap-1 mt-1 text-[10px] px-2 py-0.5 rounded-full border bg-white/5 hover:bg-white/10 border-white/10 text-odizo-grey hover:text-white cursor-pointer transition-colors w-fit"
+                              className="inline-flex items-center gap-1 mt-1 text-[10px] px-2 py-0.5 rounded-full border bg-black/5 dark:bg-white/5 hover:bg-black/5 dark:bg-white/10 border-black/10 dark:border-white/10 text-odizo-grey hover:text-slate-900 dark:text-white cursor-pointer transition-colors w-fit"
                             >
                               <ClipboardList size={10} className="text-odizo-red" />
                               <span>{record.completedTasks.length} Tasks</span>
@@ -303,7 +303,7 @@ export default function Reports() {
                           )}
                         </div>
                       </td>
-                      <td className="py-4 px-4 font-semibold text-white">
+                      <td className="py-4 px-4 font-semibold text-slate-900 dark:text-white">
                         <div className="flex flex-col">
                           <span>{record.userId?.name || 'Unknown User'}</span>
                           <span className="text-xs text-odizo-grey font-normal">{record.userId?.email}</span>
@@ -324,11 +324,11 @@ export default function Reports() {
                           {record.userId?.role || 'User'}
                         </span>
                       </td>
-                      <td className="py-4 px-4 text-xs text-white">
+                      <td className="py-4 px-4 text-xs text-slate-900 dark:text-white">
                         <div className="space-y-1.5">
                           {record.sessions.map((s, idx) => (
                             <div key={idx} className="flex items-center gap-2">
-                              <span className="bg-white/5 border border-white/10 px-2 py-0.5 rounded text-[10px]">
+                              <span className="bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 px-2 py-0.5 rounded text-[10px]">
                                 Session {idx + 1}
                               </span>
                               <span>
@@ -348,7 +348,7 @@ export default function Reports() {
                           ))}
                         </div>
                       </td>
-                      <td className="py-4 px-4 font-mono font-medium text-white">
+                      <td className="py-4 px-4 font-mono font-medium text-slate-900 dark:text-white">
                         {Math.floor(record.totalMinutesWorked / 60)}h {record.totalMinutesWorked % 60}m
                       </td>
                       <td className="py-4 px-4">
@@ -399,7 +399,7 @@ export default function Reports() {
                       )}
                     </tr>
                     {expandedRecordId === record._id && record.completedTasks && record.completedTasks.length > 0 && (
-                      <tr className="bg-white/2 border-b border-white/5">
+                      <tr className="bg-white/2 border-b border-black/5 dark:border-white/5">
                         <td colSpan={isAdmin ? 8 : 7} className="py-4 px-6 bg-white/1">
                           <div className="flex items-start gap-3">
                             <div className="p-2 bg-odizo-red/10 border border-odizo-red/20 text-odizo-red rounded-lg shrink-0 mt-0.5">
@@ -407,7 +407,7 @@ export default function Reports() {
                             </div>
                             <div>
                               <h4 className="text-xs font-bold uppercase tracking-wider text-odizo-grey mb-2">Completed Tasks</h4>
-                              <ul className="list-disc pl-5 space-y-1.5 text-xs text-white">
+                              <ul className="list-disc pl-5 space-y-1.5 text-xs text-slate-900 dark:text-white">
                                 {record.completedTasks.map((task, idx) => (
                                   <li key={idx} className="leading-relaxed">{task}</li>
                                 ))}

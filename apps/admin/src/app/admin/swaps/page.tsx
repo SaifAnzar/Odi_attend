@@ -258,7 +258,7 @@ export default function ShiftSwapsAdminPage() {
       <div className="space-y-6 max-w-5xl">
         {/* Header */}
         <div>
-          <h1 className="text-3xl font-extrabold tracking-tight bg-gradient-to-r from-white via-odizo-grey to-white bg-clip-text text-transparent">
+          <h1 className="text-3xl font-extrabold tracking-tight bg-gradient-to-r from-slate-900 via-odizo-grey to-slate-900 dark:from-white dark:via-odizo-grey dark:to-white bg-clip-text text-transparent">
             Shift Swapping
           </h1>
           <p className="text-sm text-odizo-grey mt-1">
@@ -267,13 +267,13 @@ export default function ShiftSwapsAdminPage() {
         </div>
 
         {/* Tab Selectors */}
-        <div className="flex gap-4 border-b border-white/5 pb-px">
+        <div className="flex gap-4 border-b border-black/5 dark:border-white/5 pb-px">
           <button
             onClick={() => setEmployeeTab('incoming')}
             className={`pb-3 text-sm font-semibold border-b-2 transition-all cursor-pointer ${
               employeeTab === 'incoming'
-                ? 'border-odizo-red text-white font-bold'
-                : 'border-transparent text-odizo-grey hover:text-white'
+                ? 'border-odizo-red text-slate-900 dark:text-white font-bold'
+                : 'border-transparent text-odizo-grey hover:text-slate-900 dark:text-white'
             }`}
           >
             Incoming Requests ({incomingSwaps.length})
@@ -282,8 +282,8 @@ export default function ShiftSwapsAdminPage() {
             onClick={() => setEmployeeTab('outgoing')}
             className={`pb-3 text-sm font-semibold border-b-2 transition-all cursor-pointer ${
               employeeTab === 'outgoing'
-                ? 'border-odizo-red text-white font-bold'
-                : 'border-transparent text-odizo-grey hover:text-white'
+                ? 'border-odizo-red text-slate-900 dark:text-white font-bold'
+                : 'border-transparent text-odizo-grey hover:text-slate-900 dark:text-white'
             }`}
           >
             My Outgoing Swaps ({outgoingSwaps.length})
@@ -292,8 +292,8 @@ export default function ShiftSwapsAdminPage() {
             onClick={() => setEmployeeTab('create')}
             className={`pb-3 text-sm font-semibold border-b-2 transition-all cursor-pointer ${
               employeeTab === 'create'
-                ? 'border-odizo-red text-white font-bold'
-                : 'border-transparent text-odizo-grey hover:text-white'
+                ? 'border-odizo-red text-slate-900 dark:text-white font-bold'
+                : 'border-transparent text-odizo-grey hover:text-slate-900 dark:text-white'
             }`}
           >
             Request Shift Swap
@@ -308,18 +308,18 @@ export default function ShiftSwapsAdminPage() {
           </div>
         ) : employeeTab === 'incoming' ? (
           /* Incoming Requests */
-          <div className="glass-card p-6 floating-shadow border-white/5">
+          <div className="glass-card p-6 floating-shadow border-black/5 dark:border-white/5">
             {incomingSwaps.length === 0 ? (
-              <div className="text-center py-16 border border-dashed border-white/10 rounded-2xl">
+              <div className="text-center py-16 border border-dashed border-black/10 dark:border-white/10 rounded-2xl">
                 <RefreshCw size={40} className="mx-auto text-odizo-grey/50 mb-3" />
-                <p className="text-sm font-semibold text-white">No incoming swap requests</p>
+                <p className="text-sm font-semibold text-slate-900 dark:text-white">No incoming swap requests</p>
                 <p className="text-xs text-odizo-grey mt-1">Colleague requests to swap shifts with you will appear here.</p>
               </div>
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full text-left border-collapse text-sm">
                   <thead>
-                    <tr className="border-b border-white/5 text-odizo-grey font-medium text-xs uppercase">
+                    <tr className="border-b border-black/5 dark:border-white/5 text-odizo-grey font-medium text-xs uppercase">
                       <th className="py-3 px-4">Swap Date</th>
                       <th className="py-3 px-4">From Colleague</th>
                       <th className="py-3 px-4">Colleague Shift</th>
@@ -327,27 +327,27 @@ export default function ShiftSwapsAdminPage() {
                       <th className="py-3 px-4 text-right">Actions</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-white/5">
+                  <tbody className="divide-y divide-black/10 dark:divide-black/10 dark:divide-white/5">
                     {incomingSwaps.map((swap) => (
-                      <tr key={swap._id} className="hover:bg-white/3 transition-colors">
-                        <td className="py-4 px-4 font-mono font-semibold text-white">
+                      <tr key={swap._id} className="hover:bg-black/5 dark:bg-white/3 transition-colors">
+                        <td className="py-4 px-4 font-mono font-semibold text-slate-900 dark:text-white">
                           <div className="flex items-center gap-2">
                             <Calendar size={14} className="text-odizo-red" />
                             <span>{formatDate(swap.swapDate)}</span>
                           </div>
                         </td>
-                        <td className="py-4 px-4 font-semibold text-white">
+                        <td className="py-4 px-4 font-semibold text-slate-900 dark:text-white">
                           <span>{swap.requesterId?.name || 'Unknown'}</span>
                         </td>
                         <td className="py-4 px-4">
                           <div className="flex flex-col">
-                            <span className="text-xs font-bold text-white">{swap.requesterId?.shift?.name || 'Standard'}</span>
+                            <span className="text-xs font-bold text-slate-900 dark:text-white">{swap.requesterId?.shift?.name || 'Standard'}</span>
                             <span className="text-[10px] text-odizo-grey">{swap.requesterId?.shift?.startTime} - {swap.requesterId?.shift?.endTime}</span>
                           </div>
                         </td>
                         <td className="py-4 px-4">
                           <div className="flex flex-col">
-                            <span className="text-xs font-bold text-white">{swap.targetUserId?.shift?.name || 'Standard'}</span>
+                            <span className="text-xs font-bold text-slate-900 dark:text-white">{swap.targetUserId?.shift?.name || 'Standard'}</span>
                             <span className="text-[10px] text-odizo-grey">{swap.targetUserId?.shift?.startTime} - {swap.targetUserId?.shift?.endTime}</span>
                           </div>
                         </td>
@@ -378,18 +378,18 @@ export default function ShiftSwapsAdminPage() {
           </div>
         ) : employeeTab === 'outgoing' ? (
           /* My Outgoing Swaps */
-          <div className="glass-card p-6 floating-shadow border-white/5">
+          <div className="glass-card p-6 floating-shadow border-black/5 dark:border-white/5">
             {outgoingSwaps.length === 0 ? (
-              <div className="text-center py-16 border border-dashed border-white/10 rounded-2xl">
+              <div className="text-center py-16 border border-dashed border-black/10 dark:border-white/10 rounded-2xl">
                 <FileText size={40} className="mx-auto text-odizo-grey/50 mb-3" />
-                <p className="text-sm font-semibold text-white">No outgoing requests</p>
+                <p className="text-sm font-semibold text-slate-900 dark:text-white">No outgoing requests</p>
                 <p className="text-xs text-odizo-grey mt-1">You haven't requested any shift swaps yet.</p>
               </div>
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full text-left border-collapse text-sm">
                   <thead>
-                    <tr className="border-b border-white/5 text-odizo-grey font-medium text-xs uppercase">
+                    <tr className="border-b border-black/5 dark:border-white/5 text-odizo-grey font-medium text-xs uppercase">
                       <th className="py-3 px-4">Swap Date</th>
                       <th className="py-3 px-4">Colleague</th>
                       <th className="py-3 px-4">Colleague Shift</th>
@@ -398,9 +398,9 @@ export default function ShiftSwapsAdminPage() {
                       <th className="py-3 px-4">Admin Remarks</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-white/5">
+                  <tbody className="divide-y divide-black/10 dark:divide-black/10 dark:divide-white/5">
                     {outgoingSwaps.map((swap) => {
-                      let badgeColor = 'bg-white/5 text-odizo-grey border border-white/10';
+                      let badgeColor = 'bg-black/5 dark:bg-white/5 text-odizo-grey border border-black/10 dark:border-white/10';
                       let statusText: string = swap.status;
                       if (swap.status === 'Approved') {
                         badgeColor = 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20';
@@ -415,25 +415,25 @@ export default function ShiftSwapsAdminPage() {
                       }
 
                       return (
-                        <tr key={swap._id} className="hover:bg-white/3 transition-colors">
-                          <td className="py-4 px-4 font-mono font-semibold text-white">
+                        <tr key={swap._id} className="hover:bg-black/5 dark:bg-white/3 transition-colors">
+                          <td className="py-4 px-4 font-mono font-semibold text-slate-900 dark:text-white">
                             <div className="flex items-center gap-2">
                               <Calendar size={14} className="text-odizo-red" />
                               <span>{formatDate(swap.swapDate)}</span>
                             </div>
                           </td>
-                          <td className="py-4 px-4 font-semibold text-white">
+                          <td className="py-4 px-4 font-semibold text-slate-900 dark:text-white">
                             <span>{swap.targetUserId?.name || 'Unknown'}</span>
                           </td>
                           <td className="py-4 px-4">
                             <div className="flex flex-col">
-                              <span className="text-xs font-bold text-white">{swap.targetUserId?.shift?.name || 'Standard'}</span>
+                              <span className="text-xs font-bold text-slate-900 dark:text-white">{swap.targetUserId?.shift?.name || 'Standard'}</span>
                               <span className="text-[10px] text-odizo-grey">{swap.targetUserId?.shift?.startTime} - {swap.targetUserId?.shift?.endTime}</span>
                             </div>
                           </td>
                           <td className="py-4 px-4">
                             <div className="flex flex-col">
-                              <span className="text-xs font-bold text-white">{swap.requesterId?.shift?.name || 'Standard'}</span>
+                              <span className="text-xs font-bold text-slate-900 dark:text-white">{swap.requesterId?.shift?.name || 'Standard'}</span>
                               <span className="text-[10px] text-odizo-grey">{swap.requesterId?.shift?.startTime} - {swap.requesterId?.shift?.endTime}</span>
                             </div>
                           </td>
@@ -455,8 +455,8 @@ export default function ShiftSwapsAdminPage() {
           </div>
         ) : (
           /* Request Swap Form */
-          <div className="glass-card p-6 floating-shadow border-white/5 max-w-xl">
-            <h3 className="font-bold text-white mb-4">New Shift Swap Request</h3>
+          <div className="glass-card p-6 floating-shadow border-black/5 dark:border-white/5 max-w-xl">
+            <h3 className="font-bold text-slate-900 dark:text-white mb-4">New Shift Swap Request</h3>
             <form onSubmit={handleCreateSwap} className="space-y-4">
               <div className="space-y-2">
                 <label className="block text-xs font-semibold uppercase tracking-wider text-odizo-grey">
@@ -466,7 +466,7 @@ export default function ShiftSwapsAdminPage() {
                   required
                   value={targetColleagueId}
                   onChange={(e) => setTargetColleagueId(e.target.value)}
-                  className="w-full bg-black border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:border-odizo-red focus:outline-none transition-colors"
+                  className="w-full bg-black border border-black/10 dark:border-white/10 rounded-xl px-4 py-3 text-sm text-slate-900 dark:text-white focus:border-odizo-red focus:outline-none transition-colors"
                 >
                   <option value="">-- Choose a colleague --</option>
                   {colleagues.map((c) => (
@@ -486,14 +486,14 @@ export default function ShiftSwapsAdminPage() {
                   required
                   value={swapDate}
                   onChange={(e) => setSwapDate(e.target.value)}
-                  className="w-full bg-black border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:border-odizo-red focus:outline-none transition-colors"
+                  className="w-full bg-black border border-black/10 dark:border-white/10 rounded-xl px-4 py-3 text-sm text-slate-900 dark:text-white focus:border-odizo-red focus:outline-none transition-colors"
                 />
               </div>
 
               <button
                 type="submit"
                 disabled={submittingSwap}
-                className="w-full flex items-center justify-center gap-1.5 px-4 py-3 bg-odizo-red hover:bg-odizo-red/80 text-white rounded-xl text-sm font-bold transition-all disabled:opacity-50 cursor-pointer"
+                className="w-full flex items-center justify-center gap-1.5 px-4 py-3 bg-odizo-red hover:bg-odizo-red/80 text-slate-900 dark:text-white rounded-xl text-sm font-bold transition-all disabled:opacity-50 cursor-pointer"
               >
                 {submittingSwap ? 'Submitting...' : 'Submit Swap Request'}
               </button>
@@ -509,7 +509,7 @@ export default function ShiftSwapsAdminPage() {
     <div className="space-y-6 max-w-5xl">
       {/* Header */}
       <div>
-        <h1 className="text-3xl font-extrabold tracking-tight bg-gradient-to-r from-white via-odizo-grey to-white bg-clip-text text-transparent">
+        <h1 className="text-3xl font-extrabold tracking-tight bg-gradient-to-r from-slate-900 via-odizo-grey to-slate-900 dark:from-white dark:via-odizo-grey dark:to-white bg-clip-text text-transparent">
           Shift Swaps Approval
         </h1>
         <p className="text-sm text-odizo-grey mt-1">
@@ -518,13 +518,13 @@ export default function ShiftSwapsAdminPage() {
       </div>
 
       {/* Tab Selectors */}
-      <div className="flex gap-4 border-b border-white/5 pb-px">
+      <div className="flex gap-4 border-b border-black/5 dark:border-white/5 pb-px">
         <button
           onClick={() => setActiveTab('pending')}
           className={`pb-3 text-sm font-semibold border-b-2 transition-all cursor-pointer ${
             activeTab === 'pending'
-              ? 'border-odizo-red text-white font-bold'
-              : 'border-transparent text-odizo-grey hover:text-white'
+              ? 'border-odizo-red text-slate-900 dark:text-white font-bold'
+              : 'border-transparent text-odizo-grey hover:text-slate-900 dark:text-white'
           }`}
         >
           Pending Decisions ({swaps.filter(s => s.status === 'Pending Admin').length})
@@ -533,8 +533,8 @@ export default function ShiftSwapsAdminPage() {
           onClick={() => setActiveTab('all')}
           className={`pb-3 text-sm font-semibold border-b-2 transition-all cursor-pointer ${
             activeTab === 'all'
-              ? 'border-odizo-red text-white font-bold'
-              : 'border-transparent text-odizo-grey hover:text-white'
+              ? 'border-odizo-red text-slate-900 dark:text-white font-bold'
+              : 'border-transparent text-odizo-grey hover:text-slate-900 dark:text-white'
           }`}
         >
           All Requests Tracker ({swaps.length})
@@ -542,13 +542,13 @@ export default function ShiftSwapsAdminPage() {
       </div>
 
       {/* Main Content */}
-      <div className="glass-card p-6 floating-shadow border-white/5">
-        <div className="flex items-center gap-3 border-b border-white/5 pb-4 mb-6">
+      <div className="glass-card p-6 floating-shadow border-black/5 dark:border-white/5">
+        <div className="flex items-center gap-3 border-b border-black/5 dark:border-white/5 pb-4 mb-6">
           <div className="p-2 bg-odizo-red/10 border border-odizo-red/20 text-odizo-red rounded-lg">
             <RefreshCw size={18} />
           </div>
           <div>
-            <h3 className="font-bold text-white">
+            <h3 className="font-bold text-slate-900 dark:text-white">
               {activeTab === 'pending' ? 'Pending Final Decisions' : 'All Swap Requests Log'}
             </h3>
             <p className="text-xs text-odizo-grey">
@@ -565,9 +565,9 @@ export default function ShiftSwapsAdminPage() {
             <p className="mt-4 text-sm text-odizo-grey">Fetching swap requests...</p>
           </div>
         ) : (activeTab === 'pending' ? swaps.filter(s => s.status === 'Pending Admin') : swaps).length === 0 ? (
-          <div className="text-center py-16 border border-dashed border-white/10 rounded-2xl">
+          <div className="text-center py-16 border border-dashed border-black/10 dark:border-white/10 rounded-2xl">
             <FileText size={40} className="mx-auto text-odizo-grey/50 mb-3" />
-            <p className="text-sm font-semibold text-white">No swaps found in this list</p>
+            <p className="text-sm font-semibold text-slate-900 dark:text-white">No swaps found in this list</p>
             <p className="text-xs text-odizo-grey mt-1">
               {activeTab === 'pending' 
                 ? 'Any shift swap accepted by both peers will appear here.' 
@@ -578,7 +578,7 @@ export default function ShiftSwapsAdminPage() {
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse text-sm">
               <thead>
-                <tr className="border-b border-white/5 text-odizo-grey font-medium text-xs uppercase">
+                <tr className="border-b border-black/5 dark:border-white/5 text-odizo-grey font-medium text-xs uppercase">
                   <th className="py-3 px-4">Swap Date</th>
                   <th className="py-3 px-4">Requester</th>
                   <th className="py-3 px-4">Target Colleague</th>
@@ -589,22 +589,22 @@ export default function ShiftSwapsAdminPage() {
                   </th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-white/5">
+              <tbody className="divide-y divide-black/10 dark:divide-black/10 dark:divide-white/5">
                 {(activeTab === 'pending' ? swaps.filter(s => s.status === 'Pending Admin') : swaps).map((swap) => (
-                  <tr key={swap._id} className="hover:bg-white/3 transition-colors">
-                    <td className="py-4 px-4 font-mono font-semibold text-white">
+                  <tr key={swap._id} className="hover:bg-black/5 dark:bg-white/3 transition-colors">
+                    <td className="py-4 px-4 font-mono font-semibold text-slate-900 dark:text-white">
                       <div className="flex items-center gap-2">
                         <Calendar size={14} className="text-odizo-red" />
                         <span>{formatDate(swap.swapDate)}</span>
                       </div>
                     </td>
-                    <td className="py-4 px-4 font-semibold text-white">
+                    <td className="py-4 px-4 font-semibold text-slate-900 dark:text-white">
                       <div className="flex flex-col">
                         <span>{swap.requesterId?.name || 'Unknown'}</span>
                         <span className="text-xs text-odizo-grey font-normal">{swap.requesterId?.email}</span>
                       </div>
                     </td>
-                    <td className="py-4 px-4 font-semibold text-white">
+                    <td className="py-4 px-4 font-semibold text-slate-900 dark:text-white">
                       <div className="flex flex-col">
                         <span>{swap.targetUserId?.name || 'Unknown'}</span>
                         <span className="text-xs text-odizo-grey font-normal">{swap.targetUserId?.email}</span>
@@ -612,13 +612,13 @@ export default function ShiftSwapsAdminPage() {
                     </td>
                     <td className="py-4 px-4">
                       <div className="flex flex-col">
-                        <span className="text-xs font-bold text-white">{swap.requesterId?.shift?.name || 'Standard'}</span>
+                        <span className="text-xs font-bold text-slate-900 dark:text-white">{swap.requesterId?.shift?.name || 'Standard'}</span>
                         <span className="text-[10px] text-odizo-grey">{swap.requesterId?.shift?.startTime} - {swap.requesterId?.shift?.endTime}</span>
                       </div>
                     </td>
                     <td className="py-4 px-4">
                       <div className="flex flex-col">
-                        <span className="text-xs font-bold text-white">{swap.targetUserId?.shift?.name || 'Standard'}</span>
+                        <span className="text-xs font-bold text-slate-900 dark:text-white">{swap.targetUserId?.shift?.name || 'Standard'}</span>
                         <span className="text-[10px] text-odizo-grey">{swap.targetUserId?.shift?.startTime} - {swap.targetUserId?.shift?.endTime}</span>
                       </div>
                     </td>
@@ -650,7 +650,7 @@ export default function ShiftSwapsAdminPage() {
                               ? 'bg-odizo-red/10 text-odizo-red border border-odizo-red/20'
                               : swap.status === 'Pending Admin'
                                 ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20 animate-pulse'
-                                : 'bg-white/5 text-odizo-grey border border-white/10'
+                                : 'bg-black/5 dark:bg-white/5 text-odizo-grey border border-black/10 dark:border-white/10'
                         }`}>
                           {swap.status === 'Pending Target' ? 'Waiting on Colleague' : swap.status}
                         </span>
@@ -667,15 +667,15 @@ export default function ShiftSwapsAdminPage() {
       {/* Rejection Remarks Modal */}
       {showRejectModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fade-in">
-          <div className="w-full max-w-md glass-card p-6 floating-shadow border-white/10 space-y-4">
-            <div className="flex items-center justify-between border-b border-white/5 pb-3">
+          <div className="w-full max-w-md glass-card p-6 floating-shadow border-black/10 dark:border-white/10 space-y-4">
+            <div className="flex items-center justify-between border-b border-black/5 dark:border-white/5 pb-3">
               <div className="flex items-center gap-2 text-odizo-red">
                 <AlertCircle size={18} />
-                <h3 className="font-bold text-white">Decline Shift Swap</h3>
+                <h3 className="font-bold text-slate-900 dark:text-white">Decline Shift Swap</h3>
               </div>
               <button 
                 onClick={() => setShowRejectModal(false)}
-                className="text-odizo-grey hover:text-white transition-colors"
+                className="text-odizo-grey hover:text-slate-900 dark:text-white transition-colors"
               >
                 <X size={18} />
               </button>
@@ -692,7 +692,7 @@ export default function ShiftSwapsAdminPage() {
                   value={adminRemarks}
                   onChange={(e) => setAdminRemarks(e.target.value)}
                   placeholder="Provide the reason for rejecting this swap (e.g. Schedule conflicts, resource constraints)..."
-                  className="w-full bg-white/3 border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder-odizo-grey focus:border-odizo-red focus:outline-none transition-colors"
+                  className="w-full bg-black/5 dark:bg-white/3 border border-black/10 dark:border-white/10 rounded-xl px-4 py-3 text-sm text-slate-900 dark:text-white placeholder-odizo-grey focus:border-odizo-red focus:outline-none transition-colors"
                 />
               </div>
 
@@ -700,14 +700,14 @@ export default function ShiftSwapsAdminPage() {
                 <button
                   type="button"
                   onClick={() => setShowRejectModal(false)}
-                  className="px-4 py-2 text-xs font-semibold text-odizo-grey hover:text-white transition-colors border border-transparent rounded-lg"
+                  className="px-4 py-2 text-xs font-semibold text-odizo-grey hover:text-slate-900 dark:text-white transition-colors border border-transparent rounded-lg"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={actionLoading}
-                  className="flex items-center gap-1.5 px-4 py-2 bg-odizo-red hover:bg-odizo-red/80 text-white rounded-lg text-xs font-bold transition-all disabled:opacity-50 cursor-pointer"
+                  className="flex items-center gap-1.5 px-4 py-2 bg-odizo-red hover:bg-odizo-red/80 text-slate-900 dark:text-white rounded-lg text-xs font-bold transition-all disabled:opacity-50 cursor-pointer"
                 >
                   Decline Request
                 </button>

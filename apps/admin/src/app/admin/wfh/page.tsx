@@ -271,9 +271,9 @@ export default function WFHRequestsPage() {
   return (
     <div className="space-y-6">
       {/* Top Title Section */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-white/5 pb-5">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-black/5 dark:border-white/5 pb-5">
         <div>
-          <h1 className="text-2xl font-black tracking-tight text-white flex items-center gap-2">
+          <h1 className="text-2xl font-black tracking-tight text-slate-900 dark:text-white flex items-center gap-2">
             <Home className="text-odizo-red" size={24} />
             <span>WORK FROM HOME REQUESTS</span>
           </h1>
@@ -288,7 +288,7 @@ export default function WFHRequestsPage() {
         <button 
           onClick={fetchRequests}
           disabled={loading}
-          className="flex items-center justify-center gap-2 px-4 py-2 border border-white/10 hover:border-white/20 bg-white/3 hover:bg-white/5 text-xs text-white rounded-xl font-semibold transition-all duration-300 cursor-pointer disabled:opacity-50"
+          className="flex items-center justify-center gap-2 px-4 py-2 border border-black/10 dark:border-white/10 hover:border-white/20 bg-black/5 dark:bg-white/3 hover:bg-black/5 dark:bg-white/5 text-xs text-slate-900 dark:text-white rounded-xl font-semibold transition-all duration-300 cursor-pointer disabled:opacity-50"
         >
           <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
           <span>Refresh</span>
@@ -308,15 +308,15 @@ export default function WFHRequestsPage() {
           {/* Filters & Search Row */}
           <div className="flex flex-col md:flex-row gap-4 justify-between items-stretch">
             {/* Status Filter Tabs */}
-            <div className="flex bg-white/3 border border-white/5 rounded-xl p-1 gap-1 self-start">
+            <div className="flex bg-black/5 dark:bg-white/3 border border-black/5 dark:border-white/5 rounded-xl p-1 gap-1 self-start">
               {(['All', 'Pending', 'Approved', 'Rejected'] as const).map((status) => (
                 <button
                   key={status}
                   onClick={() => setStatusFilter(status)}
                   className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all duration-300 cursor-pointer ${
                     statusFilter === status
-                      ? 'bg-odizo-red text-white shadow-[0_0_10px_rgba(225,97,103,0.3)]'
-                      : 'text-odizo-grey hover:text-white'
+                      ? 'bg-odizo-red text-slate-900 dark:text-white shadow-[0_0_10px_rgba(225,97,103,0.3)]'
+                      : 'text-odizo-grey hover:text-slate-900 dark:text-white'
                   }`}
                 >
                   {status}
@@ -334,7 +334,7 @@ export default function WFHRequestsPage() {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search staff or reason..."
-                className="w-full bg-white/3 border border-white/5 focus:border-white/15 rounded-xl pl-10 pr-4 py-2 text-xs text-white placeholder-odizo-grey focus:outline-none transition-all"
+                className="w-full bg-black/5 dark:bg-white/3 border border-black/5 dark:border-white/5 focus:border-white/15 rounded-xl pl-10 pr-4 py-2 text-xs text-slate-900 dark:text-white placeholder-odizo-grey focus:outline-none transition-all"
               />
             </div>
           </div>
@@ -346,27 +346,27 @@ export default function WFHRequestsPage() {
               <p className="mt-4 text-sm text-odizo-grey">Fetching WFH records...</p>
             </div>
           ) : filteredRequests.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-20 text-center glass-card border-white/5 p-8">
+            <div className="flex flex-col items-center justify-center py-20 text-center glass-card border-black/5 dark:border-white/5 p-8">
               <FileText className="text-odizo-grey/40 mb-4" size={48} />
               <h3 className="text-lg font-bold">No WFH Requests</h3>
               <p className="text-sm text-odizo-grey max-w-sm mt-1">There are no WFH requests matching criteria.</p>
             </div>
           ) : (
-            <div className="w-full overflow-hidden rounded-xl border border-white/10 bg-[#0f0f13] backdrop-blur-md">
+            <div className="w-full overflow-hidden rounded-xl border border-black/10 dark:border-white/10 bg-white/70 dark:bg-[#0f0f13] backdrop-blur-md">
               <div className="w-full overflow-x-auto">
                 <table className="w-full min-w-[1000px] border-collapse text-left">
                   <thead>
-                    <tr className="border-b border-white/10 bg-white/3">
-                      <th className="px-6 py-4 text-xs font-semibold tracking-wider uppercase text-gray-400">Employee Info</th>
-                      <th className="px-6 py-4 text-xs font-semibold tracking-wider uppercase text-gray-400">WFH Duration</th>
-                      <th className="px-6 py-4 text-xs font-semibold tracking-wider uppercase text-gray-400">Reason</th>
-                      <th className="px-6 py-4 text-xs font-semibold tracking-wider uppercase text-gray-400">Applied On</th>
-                      <th className="px-6 py-4 text-xs font-semibold tracking-wider uppercase text-gray-400">Status</th>
-                      <th className="px-6 py-4 text-xs font-semibold tracking-wider uppercase text-gray-400 w-28 text-center">Actions</th>
-                      <th className="px-6 py-4 text-xs font-semibold tracking-wider uppercase text-gray-400 w-24 text-center">Details</th>
+                    <tr className="border-b border-black/10 dark:border-white/10 bg-black/5 dark:bg-white/3">
+                      <th className="px-6 py-4 text-xs font-semibold tracking-wider uppercase text-slate-500 dark:text-gray-400">Employee Info</th>
+                      <th className="px-6 py-4 text-xs font-semibold tracking-wider uppercase text-slate-500 dark:text-gray-400">WFH Duration</th>
+                      <th className="px-6 py-4 text-xs font-semibold tracking-wider uppercase text-slate-500 dark:text-gray-400">Reason</th>
+                      <th className="px-6 py-4 text-xs font-semibold tracking-wider uppercase text-slate-500 dark:text-gray-400">Applied On</th>
+                      <th className="px-6 py-4 text-xs font-semibold tracking-wider uppercase text-slate-500 dark:text-gray-400">Status</th>
+                      <th className="px-6 py-4 text-xs font-semibold tracking-wider uppercase text-slate-500 dark:text-gray-400 w-28 text-center">Actions</th>
+                      <th className="px-6 py-4 text-xs font-semibold tracking-wider uppercase text-slate-500 dark:text-gray-400 w-24 text-center">Details</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-white/5">
+                  <tbody className="divide-y divide-black/10 dark:divide-black/10 dark:divide-white/5">
                     {filteredRequests.map((req) => {
                       const diffDays = getDaysDiff(req.startDate, req.endDate);
                       const isExpanded = !!expandedRequests[req._id];
@@ -382,15 +382,15 @@ export default function WFHRequestsPage() {
                         <React.Fragment key={req._id}>
                           <tr 
                             onClick={() => toggleExpand(req._id)}
-                            className="hover:bg-white/5 transition-all duration-200 cursor-pointer"
+                            className="hover:bg-black/5 dark:bg-white/5 transition-all duration-200 cursor-pointer"
                           >
                             <td className="px-6 py-4 whitespace-nowrap">
                               <div className="flex items-center gap-3">
-                                <div className="h-8 w-8 rounded-full border border-white/10 bg-white/5 flex items-center justify-center text-white">
+                                <div className="h-8 w-8 rounded-full border border-black/10 dark:border-white/10 bg-black/5 dark:bg-white/5 flex items-center justify-center text-slate-900 dark:text-white">
                                   <User size={14} />
                                 </div>
                                 <div className="min-w-0">
-                                  <p className="text-sm font-bold text-white leading-tight truncate max-w-[150px]">{req.userId?.name || 'Unknown User'}</p>
+                                  <p className="text-sm font-bold text-slate-900 dark:text-white leading-tight truncate max-w-[150px]">{req.userId?.name || 'Unknown User'}</p>
                                   <div className="flex items-center gap-1.5 mt-0.5">
                                     <span className="text-[10px] text-odizo-grey font-medium uppercase tracking-wider">{req.userId?.role || 'Employee'}</span>
                                   </div>
@@ -398,20 +398,20 @@ export default function WFHRequestsPage() {
                               </div>
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap">
-                              <div className="flex flex-col text-white">
+                              <div className="flex flex-col text-slate-900 dark:text-white">
                                 <div className="flex items-center gap-1.5 text-sm font-semibold">
                                   <Home size={14} className="text-odizo-red" />
                                   <span>{formatDBDate(req.startDate)}</span>
                                   <span className="text-odizo-grey">➔</span>
                                   <span>{formatDBDate(req.endDate)}</span>
                                 </div>
-                                <span className="text-[10px] text-odizo-grey mt-0.5">Duration: <strong className="text-white font-medium">{diffDays} {diffDays === 1 ? 'day' : 'days'}</strong></span>
+                                <span className="text-[10px] text-odizo-grey mt-0.5">Duration: <strong className="text-slate-900 dark:text-white font-medium">{diffDays} {diffDays === 1 ? 'day' : 'days'}</strong></span>
                               </div>
                             </td>
                             <td className="px-6 py-4 max-w-xs">
                               <p 
                                 title={req.reason}
-                                className="text-xs text-gray-300 truncate"
+                                className="text-xs text-slate-600 dark:text-gray-300 truncate"
                               >
                                 {req.reason}
                               </p>
@@ -456,7 +456,7 @@ export default function WFHRequestsPage() {
                                   e.stopPropagation();
                                   toggleExpand(req._id);
                                 }}
-                                className="inline-flex items-center gap-1 px-2.5 py-1 text-[10px] font-semibold text-odizo-grey hover:text-white bg-white/5 hover:bg-white/10 border border-white/5 rounded-lg transition-colors"
+                                className="inline-flex items-center gap-1 px-2.5 py-1 text-[10px] font-semibold text-odizo-grey hover:text-slate-900 dark:text-white bg-black/5 dark:bg-white/5 hover:bg-black/5 dark:bg-white/10 border border-black/5 dark:border-white/5 rounded-lg transition-colors"
                               >
                                 <span>{isExpanded ? 'Hide' : 'View'}</span>
                                 {isExpanded ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
@@ -465,24 +465,24 @@ export default function WFHRequestsPage() {
                           </tr>
                           {isExpanded && (
                             <tr className="bg-white/[0.01]">
-                              <td colSpan={7} className="px-6 py-5 border-t border-white/5">
+                              <td colSpan={7} className="px-6 py-5 border-t border-black/5 dark:border-white/5">
                                 <div className="space-y-4 animate-fade-in text-left">
-                                  <div className="flex items-center justify-between border-b border-white/5 pb-2">
-                                    <span className="text-xs font-bold text-gray-300 uppercase tracking-wider">
+                                  <div className="flex items-center justify-between border-b border-black/5 dark:border-white/5 pb-2">
+                                    <span className="text-xs font-bold text-slate-600 dark:text-gray-300 uppercase tracking-wider">
                                       Request Details
                                     </span>
                                     <span className="text-[10px] text-odizo-grey">
-                                      Employee Email: <strong className="text-white font-medium">{req.userId?.email || 'N/A'}</strong>
+                                      Employee Email: <strong className="text-slate-900 dark:text-white font-medium">{req.userId?.email || 'N/A'}</strong>
                                     </span>
                                   </div>
                                   <div>
                                     <h4 className="text-xs font-bold text-odizo-grey uppercase tracking-wider mb-1">Full Reason</h4>
-                                    <p className="text-xs text-white bg-white/3 p-3 rounded-xl border border-white/5 whitespace-pre-wrap leading-relaxed">
+                                    <p className="text-xs text-slate-900 dark:text-white bg-black/5 dark:bg-white/3 p-3 rounded-xl border border-black/5 dark:border-white/5 whitespace-pre-wrap leading-relaxed">
                                       {req.reason}
                                     </p>
                                   </div>
                                   {req.adminRemarks && (
-                                    <div className="bg-white/5 border border-white/15 p-3 rounded-xl">
+                                    <div className="bg-black/5 dark:bg-white/5 border border-white/15 p-3 rounded-xl">
                                       <div className="flex items-center gap-1.5 text-xs font-bold text-odizo-red uppercase tracking-wider mb-1">
                                         <MessageSquare size={12} />
                                         <span>Admin Remarks</span>
@@ -508,7 +508,7 @@ export default function WFHRequestsPage() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
           {/* Column 1: Apply WFH Form */}
           <div className="glass-card floating-shadow p-6 space-y-4">
-            <h2 className="text-lg font-bold text-white flex items-center gap-2">
+            <h2 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
               <Send size={18} className="text-odizo-red" />
               <span>Apply for WFH</span>
             </h2>
@@ -536,7 +536,7 @@ export default function WFHRequestsPage() {
                   required
                   value={applyStartDate}
                   onChange={(e) => setApplyStartDate(e.target.value)}
-                  className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:border-odizo-red focus:outline-none focus:ring-0"
+                  className="w-full bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-xl px-4 py-2.5 text-sm text-slate-900 dark:text-white focus:border-odizo-red focus:outline-none focus:ring-0"
                 />
               </div>
 
@@ -547,7 +547,7 @@ export default function WFHRequestsPage() {
                   required
                   value={applyEndDate}
                   onChange={(e) => setApplyEndDate(e.target.value)}
-                  className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:border-odizo-red focus:outline-none focus:ring-0"
+                  className="w-full bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-xl px-4 py-2.5 text-sm text-slate-900 dark:text-white focus:border-odizo-red focus:outline-none focus:ring-0"
                 />
               </div>
 
@@ -559,14 +559,14 @@ export default function WFHRequestsPage() {
                   value={applyReason}
                   onChange={(e) => setApplyReason(e.target.value)}
                   placeholder="Describe your reason for requesting WFH..."
-                  className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:border-odizo-red focus:outline-none focus:ring-0 resize-none"
+                  className="w-full bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-xl px-4 py-2.5 text-sm text-slate-900 dark:text-white focus:border-odizo-red focus:outline-none focus:ring-0 resize-none"
                 />
               </div>
 
               <button
                 type="submit"
                 disabled={actionLoading}
-                className="w-full py-2.5 bg-odizo-red hover:bg-odizo-red/90 text-white text-sm font-semibold rounded-xl transition-all duration-300 cursor-pointer flex items-center justify-center gap-2"
+                className="w-full py-2.5 bg-odizo-red hover:bg-odizo-red/90 text-slate-900 dark:text-white text-sm font-semibold rounded-xl transition-all duration-300 cursor-pointer flex items-center justify-center gap-2"
               >
                 {actionLoading ? 'Submitting...' : 'Submit WFH Request'}
               </button>
@@ -576,21 +576,21 @@ export default function WFHRequestsPage() {
           {/* Column 2 & 3: WFH History List */}
           <div className="lg:col-span-2 space-y-6">
             {/* Filter */}
-            <div className="flex justify-between items-center bg-white/3 border border-white/5 p-4 rounded-2xl">
-              <h3 className="font-bold text-sm text-white flex items-center gap-2">
+            <div className="flex justify-between items-center bg-black/5 dark:bg-white/3 border border-black/5 dark:border-white/5 p-4 rounded-2xl">
+              <h3 className="font-bold text-sm text-slate-900 dark:text-white flex items-center gap-2">
                 <FileText size={16} className="text-odizo-red" />
                 <span>WFH Request History</span>
               </h3>
 
-              <div className="flex bg-white/3 border border-white/5 rounded-xl p-1 gap-1">
+              <div className="flex bg-black/5 dark:bg-white/3 border border-black/5 dark:border-white/5 rounded-xl p-1 gap-1">
                 {(['All', 'Pending', 'Approved', 'Rejected'] as const).map((status) => (
                   <button
                     key={status}
                     onClick={() => setStatusFilter(status)}
                     className={`px-3 py-1 rounded-lg text-[10px] font-bold transition-all duration-300 cursor-pointer ${
                       statusFilter === status
-                        ? 'bg-odizo-red text-white shadow-[0_0_8px_rgba(225,97,103,0.3)]'
-                        : 'text-odizo-grey hover:text-white'
+                        ? 'bg-odizo-red text-slate-900 dark:text-white shadow-[0_0_8px_rgba(225,97,103,0.3)]'
+                        : 'text-odizo-grey hover:text-slate-900 dark:text-white'
                     }`}
                   >
                     {status}
@@ -611,26 +611,26 @@ export default function WFHRequestsPage() {
                 <span className="text-sm font-medium">{error}</span>
               </div>
             ) : filteredRequests.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-20 text-center glass-card border-white/5 p-8">
+              <div className="flex flex-col items-center justify-center py-20 text-center glass-card border-black/5 dark:border-white/5 p-8">
                 <FileText className="text-odizo-grey/40 mb-4" size={48} />
                 <h3 className="text-lg font-bold">No WFH Requests Found</h3>
                 <p className="text-sm text-odizo-grey mt-1">You haven't submitted any WFH requests matching this filter.</p>
               </div>
             ) : (
-              <div className="w-full overflow-hidden rounded-xl border border-white/10 bg-[#0f0f13] backdrop-blur-md">
+              <div className="w-full overflow-hidden rounded-xl border border-black/10 dark:border-white/10 bg-white/70 dark:bg-[#0f0f13] backdrop-blur-md">
                 <div className="w-full overflow-x-auto">
                   <table className="w-full min-w-[700px] border-collapse text-left">
                     <thead>
-                      <tr className="border-b border-white/10 bg-white/3">
-                        <th className="px-6 py-4 text-xs font-semibold tracking-wider uppercase text-gray-400">Request ID</th>
-                        <th className="px-6 py-4 text-xs font-semibold tracking-wider uppercase text-gray-400">WFH Duration</th>
-                        <th className="px-6 py-4 text-xs font-semibold tracking-wider uppercase text-gray-400">Reason</th>
-                        <th className="px-6 py-4 text-xs font-semibold tracking-wider uppercase text-gray-400">Applied On</th>
-                        <th className="px-6 py-4 text-xs font-semibold tracking-wider uppercase text-gray-400">Status</th>
-                        <th className="px-6 py-4 text-xs font-semibold tracking-wider uppercase text-gray-400 w-24 text-center">Details</th>
+                      <tr className="border-b border-black/10 dark:border-white/10 bg-black/5 dark:bg-white/3">
+                        <th className="px-6 py-4 text-xs font-semibold tracking-wider uppercase text-slate-500 dark:text-gray-400">Request ID</th>
+                        <th className="px-6 py-4 text-xs font-semibold tracking-wider uppercase text-slate-500 dark:text-gray-400">WFH Duration</th>
+                        <th className="px-6 py-4 text-xs font-semibold tracking-wider uppercase text-slate-500 dark:text-gray-400">Reason</th>
+                        <th className="px-6 py-4 text-xs font-semibold tracking-wider uppercase text-slate-500 dark:text-gray-400">Applied On</th>
+                        <th className="px-6 py-4 text-xs font-semibold tracking-wider uppercase text-slate-500 dark:text-gray-400">Status</th>
+                        <th className="px-6 py-4 text-xs font-semibold tracking-wider uppercase text-slate-500 dark:text-gray-400 w-24 text-center">Details</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-white/5">
+                    <tbody className="divide-y divide-black/10 dark:divide-black/10 dark:divide-white/5">
                       {filteredRequests.map((req) => {
                         const diffDays = getDaysDiff(req.startDate, req.endDate);
                         const isExpanded = !!expandedRequests[req._id];
@@ -646,26 +646,26 @@ export default function WFHRequestsPage() {
                           <React.Fragment key={req._id}>
                             <tr 
                               onClick={() => toggleExpand(req._id)}
-                              className="hover:bg-white/5 transition-all duration-200 cursor-pointer"
+                              className="hover:bg-black/5 dark:bg-white/5 transition-all duration-200 cursor-pointer"
                             >
                               <td className="px-6 py-4 whitespace-nowrap text-xs font-bold text-odizo-grey">
                                 Request #{req._id.slice(-6).toUpperCase()}
                               </td>
                               <td className="px-6 py-4 whitespace-nowrap">
-                                <div className="flex flex-col text-white">
+                                <div className="flex flex-col text-slate-900 dark:text-white">
                                   <div className="flex items-center gap-1.5 text-sm font-semibold">
                                     <Home size={14} className="text-odizo-red" />
                                     <span>{formatDBDate(req.startDate)}</span>
                                     <span className="text-odizo-grey">➔</span>
                                     <span>{formatDBDate(req.endDate)}</span>
                                   </div>
-                                  <span className="text-[10px] text-odizo-grey mt-0.5">Duration: <strong className="text-white font-medium">{diffDays} {diffDays === 1 ? 'day' : 'days'}</strong></span>
+                                  <span className="text-[10px] text-odizo-grey mt-0.5">Duration: <strong className="text-slate-900 dark:text-white font-medium">{diffDays} {diffDays === 1 ? 'day' : 'days'}</strong></span>
                                 </div>
                               </td>
                               <td className="px-6 py-4 max-w-xs">
                                 <p 
                                   title={req.reason}
-                                  className="text-xs text-gray-300 truncate"
+                                  className="text-xs text-slate-600 dark:text-gray-300 truncate"
                                 >
                                   {req.reason}
                                 </p>
@@ -686,7 +686,7 @@ export default function WFHRequestsPage() {
                                     e.stopPropagation();
                                     toggleExpand(req._id);
                                   }}
-                                  className="inline-flex items-center gap-1 px-2.5 py-1 text-[10px] font-semibold text-odizo-grey hover:text-white bg-white/5 hover:bg-white/10 border border-white/5 rounded-lg transition-colors"
+                                  className="inline-flex items-center gap-1 px-2.5 py-1 text-[10px] font-semibold text-odizo-grey hover:text-slate-900 dark:text-white bg-black/5 dark:bg-white/5 hover:bg-black/5 dark:bg-white/10 border border-black/5 dark:border-white/5 rounded-lg transition-colors"
                                 >
                                   <span>{isExpanded ? 'Hide' : 'View'}</span>
                                   {isExpanded ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
@@ -695,24 +695,24 @@ export default function WFHRequestsPage() {
                             </tr>
                             {isExpanded && (
                               <tr className="bg-white/[0.01]">
-                                <td colSpan={6} className="px-6 py-5 border-t border-white/5">
+                                <td colSpan={6} className="px-6 py-5 border-t border-black/5 dark:border-white/5">
                                   <div className="space-y-4 animate-fade-in text-left">
-                                    <div className="flex items-center justify-between border-b border-white/5 pb-2">
-                                      <span className="text-xs font-bold text-gray-300 uppercase tracking-wider">
+                                    <div className="flex items-center justify-between border-b border-black/5 dark:border-white/5 pb-2">
+                                      <span className="text-xs font-bold text-slate-600 dark:text-gray-300 uppercase tracking-wider">
                                         Request Details
                                       </span>
-                                      <span className="text-xs text-white">
+                                      <span className="text-xs text-slate-900 dark:text-white">
                                         Duration: <strong className="text-odizo-red">{diffDays} {diffDays === 1 ? 'day' : 'days'}</strong>
                                       </span>
                                     </div>
                                     <div>
                                       <h4 className="text-xs font-bold text-odizo-grey uppercase tracking-wider mb-1">Your Full Reason</h4>
-                                      <p className="text-xs text-white bg-white/3 p-3 rounded-xl border border-white/5 whitespace-pre-wrap leading-relaxed font-sans">
+                                      <p className="text-xs text-slate-900 dark:text-white bg-black/5 dark:bg-white/3 p-3 rounded-xl border border-black/5 dark:border-white/5 whitespace-pre-wrap leading-relaxed font-sans">
                                         {req.reason}
                                       </p>
                                     </div>
                                     {req.adminRemarks && (
-                                      <div className="bg-white/5 border border-white/15 p-3 rounded-xl">
+                                      <div className="bg-black/5 dark:bg-white/5 border border-white/15 p-3 rounded-xl">
                                         <div className="flex items-center gap-1.5 text-xs font-bold text-odizo-red uppercase tracking-wider mb-1">
                                           <MessageSquare size={12} />
                                           <span>Admin Remarks</span>
@@ -739,12 +739,12 @@ export default function WFHRequestsPage() {
       {/* Admin Rejection Modal */}
       {showRejectModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-          <div className="glass-card w-full max-w-md p-6 space-y-4 floating-shadow border-white/5 animate-float-in">
-            <div className="flex justify-between items-center border-b border-white/5 pb-3">
-              <h3 className="text-base font-bold text-white uppercase tracking-wider">Reject WFH Request</h3>
+          <div className="glass-card w-full max-w-md p-6 space-y-4 floating-shadow border-black/5 dark:border-white/5 animate-float-in">
+            <div className="flex justify-between items-center border-b border-black/5 dark:border-white/5 pb-3">
+              <h3 className="text-base font-bold text-slate-900 dark:text-white uppercase tracking-wider">Reject WFH Request</h3>
               <button 
                 onClick={() => setShowRejectModal(false)}
-                className="p-1 rounded-lg text-odizo-grey hover:text-white"
+                className="p-1 rounded-lg text-odizo-grey hover:text-slate-900 dark:text-white"
               >
                 <X size={18} />
               </button>
@@ -759,7 +759,7 @@ export default function WFHRequestsPage() {
                   value={adminRemarks}
                   onChange={(e) => setAdminRemarks(e.target.value)}
                   placeholder="Explain why this request is being rejected..."
-                  className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:border-odizo-red focus:outline-none focus:ring-0 resize-none"
+                  className="w-full bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-xl px-4 py-2.5 text-sm text-slate-900 dark:text-white focus:border-odizo-red focus:outline-none focus:ring-0 resize-none"
                 />
               </div>
 
@@ -767,14 +767,14 @@ export default function WFHRequestsPage() {
                 <button
                   type="button"
                   onClick={() => setShowRejectModal(false)}
-                  className="px-4 py-2 border border-white/10 hover:border-white/20 bg-white/3 hover:bg-white/5 text-xs text-white rounded-xl font-semibold transition-all duration-300 cursor-pointer"
+                  className="px-4 py-2 border border-black/10 dark:border-white/10 hover:border-white/20 bg-black/5 dark:bg-white/3 hover:bg-black/5 dark:bg-white/5 text-xs text-slate-900 dark:text-white rounded-xl font-semibold transition-all duration-300 cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={actionLoading}
-                  className="px-4 py-2 bg-odizo-red hover:bg-odizo-red/90 text-xs text-white rounded-xl font-semibold transition-all duration-300 cursor-pointer"
+                  className="px-4 py-2 bg-odizo-red hover:bg-odizo-red/90 text-xs text-slate-900 dark:text-white rounded-xl font-semibold transition-all duration-300 cursor-pointer"
                 >
                   {actionLoading ? 'Rejecting...' : 'Reject Request'}
                 </button>

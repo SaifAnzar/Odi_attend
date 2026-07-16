@@ -65,7 +65,7 @@ export default function Settings() {
     <div className="max-w-2xl space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-3xl font-extrabold tracking-tight bg-gradient-to-r from-white via-odizo-grey to-white bg-clip-text text-transparent">
+        <h1 className="text-3xl font-extrabold tracking-tight bg-gradient-to-r from-slate-900 via-odizo-grey to-slate-900 dark:from-white dark:via-odizo-grey dark:to-white bg-clip-text text-transparent">
           System Settings
         </h1>
         <p className="text-sm text-odizo-grey mt-1">
@@ -98,13 +98,13 @@ export default function Settings() {
           )}
 
           {/* Wi-Fi Settings Card */}
-          <div className="glass-card p-6 floating-shadow border-white/5 space-y-6">
-            <div className="flex items-center gap-3 border-b border-white/5 pb-4">
+          <div className="glass-card p-6 floating-shadow border-black/5 dark:border-white/5 space-y-6">
+            <div className="flex items-center gap-3 border-b border-black/5 dark:border-white/5 pb-4">
               <div className="p-2 bg-odizo-red/10 border border-odizo-red/20 text-odizo-red rounded-lg">
                 <Wifi size={18} />
               </div>
               <div>
-                <h3 className="font-bold text-white">Wi-Fi Connection Lock</h3>
+                <h3 className="font-bold text-slate-900 dark:text-white">Wi-Fi Connection Lock</h3>
                 <p className="text-xs text-odizo-grey">Restrict where attendance punches can be submitted.</p>
               </div>
             </div>
@@ -112,7 +112,7 @@ export default function Settings() {
             {/* Toggle switch */}
             <div className="flex items-center justify-between py-2">
               <div className="space-y-0.5">
-                <label className="text-sm font-semibold text-white">Enable Wi-Fi Lock</label>
+                <label className="text-sm font-semibold text-slate-900 dark:text-white">Enable Wi-Fi Lock</label>
                 <p className="text-xs text-odizo-grey pr-8">
                   Forces the mobile application to verify the employee is connected to the office Wi-Fi network before letting them check in or out.
                 </p>
@@ -122,7 +122,7 @@ export default function Settings() {
                 type="button"
                 onClick={() => setIsWifiLockEnabled(!isWifiLockEnabled)}
                 className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
-                  isWifiLockEnabled ? 'bg-odizo-red' : 'bg-white/10'
+                  isWifiLockEnabled ? 'bg-odizo-red' : 'bg-black/5 dark:bg-white/10'
                 }`}
               >
                 <span
@@ -135,7 +135,7 @@ export default function Settings() {
 
             {/* SSID text input */}
             {isWifiLockEnabled && (
-              <div className="space-y-2 pt-2 border-t border-white/5 animate-fade-in">
+              <div className="space-y-2 pt-2 border-t border-black/5 dark:border-white/5 animate-fade-in">
                 <label className="block text-xs font-semibold uppercase tracking-wider text-odizo-grey">
                   Allowed Wi-Fi SSID (Network Name)
                 </label>
@@ -145,7 +145,7 @@ export default function Settings() {
                   value={allowedWifiSSID}
                   onChange={(e) => setAllowedWifiSSID(e.target.value)}
                   placeholder="e.g., Office_Wifi_5G"
-                  className="w-full bg-white/3 border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder-odizo-grey focus:border-odizo-red focus:outline-none transition-colors"
+                  className="w-full bg-black/5 dark:bg-white/3 border border-black/10 dark:border-white/10 rounded-xl px-4 py-3 text-sm text-slate-900 dark:text-white placeholder-odizo-grey focus:border-odizo-red focus:outline-none transition-colors"
                 />
                 <p className="text-[10px] text-odizo-grey">
                   Note: The SSID is case-sensitive. The mobile app must connect to exactly this network name.
@@ -155,10 +155,10 @@ export default function Settings() {
           </div>
 
           {/* Info Card */}
-          <div className="flex gap-3 bg-white/3 border border-white/5 rounded-2xl p-4 text-xs text-odizo-grey">
+          <div className="flex gap-3 bg-black/5 dark:bg-white/3 border border-black/5 dark:border-white/5 rounded-2xl p-4 text-xs text-odizo-grey">
             <Shield size={16} className="shrink-0 text-odizo-red" />
             <div className="space-y-1">
-              <span className="font-semibold text-white">System Security Note</span>
+              <span className="font-semibold text-slate-900 dark:text-white">System Security Note</span>
               <p>
                 When active, Wi-Fi checks are performed both client-side on the mobile device and server-side in the attendance verification endpoint.
               </p>
@@ -170,7 +170,7 @@ export default function Settings() {
             <button
               type="submit"
               disabled={saving}
-              className="flex items-center gap-2 bg-odizo-red text-white px-6 py-3 rounded-full text-sm font-bold hover:bg-opacity-95 hover:shadow-[0_0_20px_rgba(225,97,103,0.3)] transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+              className="flex items-center gap-2 bg-odizo-red text-slate-900 dark:text-white px-6 py-3 rounded-full text-sm font-bold hover:bg-opacity-95 hover:shadow-[0_0_20px_rgba(225,97,103,0.3)] transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
             >
               {saving ? (
                 <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent"></div>

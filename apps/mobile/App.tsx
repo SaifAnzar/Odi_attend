@@ -19,6 +19,9 @@ import {
 import { StatusBar } from 'expo-status-bar';
 import { LinearGradient } from 'expo-linear-gradient';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { ThemeProvider as AppThemeProvider, useAppTheme } from './contexts/ThemeContext';
+import { colors } from './constants/colors';
+
 import * as Location from 'expo-location';
 import { Ionicons } from '@expo/vector-icons';
 import NetInfo from '@react-native-community/netinfo';
@@ -109,6 +112,8 @@ interface CalendarModalProps {
 }
 
 function CalendarModal({ visible, onClose, selectedDate, onSelectDate, title }: CalendarModalProps) {
+  const { theme } = useAppTheme();
+  const styles = getStyles(theme);
   const parsedDate = parseYYYYMMDD(selectedDate);
   const [currentMonth, setCurrentMonth] = useState(new Date(parsedDate.getFullYear(), parsedDate.getMonth(), 1));
 
@@ -164,7 +169,7 @@ function CalendarModal({ visible, onClose, selectedDate, onSelectDate, title }: 
           <View style={styles.calendarModalHeader}>
             <Text style={styles.calendarModalTitle}>{title}</Text>
             <TouchableOpacity onPress={onClose} style={styles.calendarCloseBtn}>
-              <Ionicons name="close" size={20} color="#FFFFFF" />
+              <Ionicons name="close" size={20} color={colors[theme].text} />
             </TouchableOpacity>
           </View>
 
@@ -252,6 +257,8 @@ interface CustomAlertConfig {
 }
 
 function CustomAlertModal({ config, onClose }: { config: CustomAlertConfig; onClose: () => void }) {
+  const { theme } = useAppTheme();
+  const styles = getStyles(theme);
   if (!config.visible) return null;
 
   const handleConfirm = () => {
@@ -350,13 +357,17 @@ function CustomAlertProvider({ children }: { children: React.ReactNode }) {
 
 export default function App() {
   return (
-    <CustomAlertProvider>
-      <AppContent />
-    </CustomAlertProvider>
+    <AppThemeProvider>
+      <CustomAlertProvider>
+        <AppContent />
+      </CustomAlertProvider>
+    </AppThemeProvider>
   );
 }
 
 function AppContent() {
+  const { theme, toggleTheme } = useAppTheme();
+  const styles = getStyles(theme);
   const { showAlert } = useCustomAlert();
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [user, setUser] = useState<User | null>(null);
@@ -906,7 +917,7 @@ function AppContent() {
   if (!isAuthenticated) {
     return (
       <SafeAreaView style={styles.darkBackground}>
-        <StatusBar style="light" />
+        <StatusBar style={theme === 'light' ? 'dark' : 'light'} />
         <KeyboardAvoidingView
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
           style={styles.keyboardContainer}
@@ -927,10 +938,10 @@ function AppContent() {
               <Text style={styles.formTitle}>Sign In</Text>
 
               <View style={styles.inputWrapper}>
-                <Ionicons name="mail-outline" size={18} color="#9E9E9F" style={styles.inputIcon} />
+                <Ionicons name="mail-outline" size={18} color={colors[theme].textMuted} style={styles.inputIcon} />
                 <TextInput
                   placeholder="name@odizo.in"
-                  placeholderTextColor="#9E9E9F"
+                  placeholderTextColor={colors[theme].textMuted}
                   value={email}
                   onChangeText={setEmail}
                   autoCapitalize="none"
@@ -940,10 +951,10 @@ function AppContent() {
               </View>
 
               <View style={styles.inputWrapper}>
-                <Ionicons name="lock-closed-outline" size={18} color="#9E9E9F" style={styles.inputIcon} />
+                <Ionicons name="lock-closed-outline" size={18} color={colors[theme].textMuted} style={styles.inputIcon} />
                 <TextInput
                   placeholder="Password"
-                  placeholderTextColor="#9E9E9F"
+                  placeholderTextColor={colors[theme].textMuted}
                   value={password}
                   onChangeText={setPassword}
                   secureTextEntry
@@ -970,7 +981,7 @@ function AppContent() {
               onPress={() => setShowSettings(!showSettings)} 
               style={styles.settingsToggle}
             >
-              <Ionicons name="cog-outline" size={16} color="#9E9E9F" />
+              <Ionicons name="cog-outline" size={16} color={colors[theme].textMuted} />
               <Text style={styles.settingsToggleText}>API Connections Settings</Text>
             </TouchableOpacity>
 
@@ -981,13 +992,35 @@ function AppContent() {
                   value={apiUrl}
                   onChangeText={setApiUrl}
                   placeholder="http://192.168.X.X:3000"
-                  placeholderTextColor="#9E9E9F"
+                  placeholderTextColor={colors[theme].textMuted}
                   autoCapitalize="none"
                   style={styles.settingsInput}
                 />
                 <Text style={styles.settingsInfo}>
                   Enter the computer local IP hosting the Next.js API portal.
                 </Text>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 12, paddingTop: 12, borderTopWidth: 1, borderTopColor: colors[theme].border }}>
+                  <Text style={[styles.settingsTitle, { marginBottom: 0 }]}>Dark Mode Theme</Text>
+                  <TouchableOpacity 
+                    onPress={toggleTheme}
+                    style={{
+                      width: 48,
+                      height: 26,
+                      borderRadius: 13,
+                      backgroundColor: theme === 'dark' ? '#E16167' : '#D1D5DB',
+                      justifyContent: 'center',
+                      paddingHorizontal: 3
+                    }}
+                  >
+                    <View style={{
+                      width: 20,
+                      height: 20,
+                      borderRadius: 10,
+                      backgroundColor: '#FFFFFF',
+                      alignSelf: theme === 'dark' ? 'flex-end' : 'flex-start'
+                    }} />
+                  </TouchableOpacity>
+                </View>
               </View>
             )}
 
@@ -1003,7 +1036,7 @@ function AppContent() {
   // ----------------- RENDER PORTAL INTERFACE -----------------
   return (
     <SafeAreaView style={styles.darkBackground}>
-      <StatusBar style="light" />
+      <StatusBar style={theme === 'light' ? 'dark' : 'light'} />
       
       {/* Header Panel */}
       <View style={styles.portalHeader}>
@@ -1015,9 +1048,14 @@ function AppContent() {
           />
           <Text style={styles.portalHeaderSub}>{user?.name} ({user?.role})</Text>
         </View>
-        <TouchableOpacity onPress={handleLogout} style={styles.logoutBtn}>
-          <Ionicons name="log-out-outline" size={20} color="#E16167" />
-        </TouchableOpacity>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16 }}>
+          <TouchableOpacity onPress={toggleTheme} style={styles.themeToggleBtn} activeOpacity={0.7}>
+            <Ionicons name={theme === 'light' ? 'moon' : 'sunny'} size={20} color={colors[theme].text} />
+          </TouchableOpacity>
+          <TouchableOpacity onPress={handleLogout} style={styles.logoutBtn}>
+            <Ionicons name="log-out-outline" size={20} color="#E16167" />
+          </TouchableOpacity>
+        </View>
       </View>
 
       {/* Main Tab Wrapper */}
@@ -1061,7 +1099,7 @@ function AppContent() {
                     onPress={() => handleAcknowledgeNotice(notice._id)}
                     style={[styles.noticeAckBtn, { borderColor: cardBorder }]}
                   >
-                    <Ionicons name="eye-outline" size={14} color="#FFFFFF" style={{ marginRight: 4 }} />
+                    <Ionicons name="eye-outline" size={14} color={colors[theme].text} style={{ marginRight: 4 }} />
                     <Text style={styles.noticeAckBtnText}>Acknowledge / Mark as Read</Text>
                   </TouchableOpacity>
                 </View>
@@ -1140,7 +1178,7 @@ function AppContent() {
               <View style={styles.noteWrapper}>
                 <TextInput
                   placeholder="Add notes for today's punch..."
-                  placeholderTextColor="#9E9E9F"
+                  placeholderTextColor={colors[theme].textMuted}
                   value={punchNotes}
                   onChangeText={setPunchNotes}
                   style={styles.notesInput}
@@ -1279,7 +1317,7 @@ function AppContent() {
                   <Text style={styles.datePickerLabel}>Reason for Leave</Text>
                   <TextInput
                     placeholder="Describe the reason for your leave request..."
-                    placeholderTextColor="#9E9E9F"
+                    placeholderTextColor={colors[theme].textMuted}
                     multiline={true}
                     numberOfLines={3}
                     value={leaveReason}
@@ -1641,7 +1679,7 @@ function AppContent() {
                   <Text style={styles.datePickerLabel}>Reason for WFH</Text>
                   <TextInput
                     placeholder="Describe the reason for your WFH request..."
-                    placeholderTextColor="#9E9E9F"
+                    placeholderTextColor={colors[theme].textMuted}
                     multiline={true}
                     numberOfLines={3}
                     value={leaveReason}
@@ -1751,9 +1789,9 @@ function AppContent() {
           <Ionicons 
             name={currentTab === 'dashboard' ? 'time' : 'time-outline'} 
             size={22} 
-            color={currentTab === 'dashboard' ? '#E16167' : '#9E9E9F'} 
+            color={currentTab === 'dashboard' ? '#E16167' : colors[theme].textMuted} 
           />
-          <Text style={[styles.tabLabel, { color: currentTab === 'dashboard' ? '#E16167' : '#9E9E9F' }]}>
+          <Text style={[styles.tabLabel, { color: currentTab === 'dashboard' ? '#E16167' : colors[theme].textMuted }]}>
             Clock
           </Text>
         </TouchableOpacity>
@@ -1766,7 +1804,7 @@ function AppContent() {
             <Ionicons 
               name={currentTab === 'swaps' ? 'swap-horizontal' : 'swap-horizontal-outline'} 
               size={22} 
-              color={currentTab === 'swaps' ? '#E16167' : '#9E9E9F'} 
+              color={currentTab === 'swaps' ? '#E16167' : colors[theme].textMuted} 
             />
             {swaps.filter(s => {
               const targetId = s.targetUserId?._id || s.targetUserId?.id || s.targetUserId;
@@ -1788,7 +1826,7 @@ function AppContent() {
               />
             )}
           </View>
-          <Text style={[styles.tabLabel, { color: currentTab === 'swaps' ? '#E16167' : '#9E9E9F' }]}>
+          <Text style={[styles.tabLabel, { color: currentTab === 'swaps' ? '#E16167' : colors[theme].textMuted }]}>
             Swaps
           </Text>
         </TouchableOpacity>
@@ -1800,9 +1838,9 @@ function AppContent() {
           <Ionicons 
             name={currentTab === 'leaves' ? 'airplane' : 'airplane-outline'} 
             size={22} 
-            color={currentTab === 'leaves' ? '#E16167' : '#9E9E9F'} 
+            color={currentTab === 'leaves' ? '#E16167' : colors[theme].textMuted} 
           />
-          <Text style={[styles.tabLabel, { color: currentTab === 'leaves' ? '#E16167' : '#9E9E9F' }]}>
+          <Text style={[styles.tabLabel, { color: currentTab === 'leaves' ? '#E16167' : colors[theme].textMuted }]}>
             Leaves
           </Text>
         </TouchableOpacity>
@@ -1814,9 +1852,9 @@ function AppContent() {
           <Ionicons 
             name={currentTab === 'wfh' ? 'home' : 'home-outline'} 
             size={22} 
-            color={currentTab === 'wfh' ? '#E16167' : '#9E9E9F'} 
+            color={currentTab === 'wfh' ? '#E16167' : colors[theme].textMuted} 
           />
-          <Text style={[styles.tabLabel, { color: currentTab === 'wfh' ? '#E16167' : '#9E9E9F' }]}>
+          <Text style={[styles.tabLabel, { color: currentTab === 'wfh' ? '#E16167' : colors[theme].textMuted }]}>
             WFH
           </Text>
         </TouchableOpacity>
@@ -1828,9 +1866,9 @@ function AppContent() {
           <Ionicons 
             name={currentTab === 'history' ? 'calendar' : 'calendar-outline'} 
             size={22} 
-            color={currentTab === 'history' ? '#E16167' : '#9E9E9F'} 
+            color={currentTab === 'history' ? '#E16167' : colors[theme].textMuted} 
           />
-          <Text style={[styles.tabLabel, { color: currentTab === 'history' ? '#E16167' : '#9E9E9F' }]}>
+          <Text style={[styles.tabLabel, { color: currentTab === 'history' ? '#E16167' : colors[theme].textMuted }]}>
             History
           </Text>
         </TouchableOpacity>
@@ -1866,7 +1904,7 @@ function AppContent() {
             <View style={styles.calendarModalHeader}>
               <Text style={styles.calendarModalTitle}>End-of-Day Tasks</Text>
               <TouchableOpacity onPress={() => setShowTaskModal(false)} style={styles.calendarCloseBtn}>
-                <Ionicons name="close" size={20} color="#FFFFFF" />
+                <Ionicons name="close" size={20} color={colors[theme].text} />
               </TouchableOpacity>
             </View>
 
@@ -1874,7 +1912,7 @@ function AppContent() {
               <Text style={styles.datePickerLabel}>What tasks did you complete today?</Text>
               <TextInput
                 placeholder="Type your completed tasks here (use separate lines)..."
-                placeholderTextColor="#9E9E9F"
+                placeholderTextColor={colors[theme].textMuted}
                 multiline={true}
                 numberOfLines={6}
                 value={completedTasksText}
@@ -1905,11 +1943,13 @@ function AppContent() {
 }
 
 // ----------------- PREMIUM GLASSMORPHIC STYLING -----------------
-const styles = StyleSheet.create({
+const getStyles = (theme: 'light' | 'dark') => {
+  const themeColors = colors[theme];
+  return StyleSheet.create({
   // Alert Modal Styles
   alertModalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.75)',
+    backgroundColor: themeColors.overlay,
     justifyContent: 'center',
     alignItems: 'center',
     padding: 24,
@@ -1917,14 +1957,14 @@ const styles = StyleSheet.create({
   alertModalCard: {
     width: '85%',
     maxWidth: 320,
-    backgroundColor: '#131315',
+    backgroundColor: theme === 'light' ? '#FFFFFF' : '#131315',
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.08)',
+    borderColor: themeColors.border,
     borderRadius: 24,
     padding: 24,
     alignItems: 'center',
     shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.15,
+    shadowOpacity: themeColors.shadowOpacity,
     shadowRadius: 20,
     elevation: 8,
   },
@@ -1937,14 +1977,14 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   alertTitle: {
-    color: '#FFFFFF',
+    color: themeColors.text,
     fontSize: 18,
     fontWeight: 'bold',
     marginBottom: 8,
     textAlign: 'center',
   },
   alertMessage: {
-    color: '#9E9E9F',
+    color: themeColors.textMuted,
     fontSize: 13,
     lineHeight: 18,
     textAlign: 'center',
@@ -1970,28 +2010,28 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   alertConfirmBtnText: {
-    color: '#FFFFFF',
+    color: themeColors.text,
     fontSize: 14,
     fontWeight: 'bold',
   },
   alertCancelBtn: {
     flex: 1,
     height: 44,
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    backgroundColor: themeColors.inputBg,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
+    borderColor: themeColors.border,
     borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
   },
   alertCancelBtnText: {
-    color: '#9E9E9F',
+    color: themeColors.textMuted,
     fontSize: 14,
     fontWeight: '600',
   },
   darkBackground: {
     flex: 1,
-    backgroundColor: '#0B0B0C',
+    backgroundColor: themeColors.background,
     paddingTop: Platform.OS === 'android' ? RNStatusBar.currentHeight : 0,
   },
   keyboardContainer: {
@@ -2025,8 +2065,8 @@ const styles = StyleSheet.create({
   },
   formPanel: {
     width: '100%',
-    backgroundColor: 'rgba(255, 255, 255, 0.03)',
-    borderColor: 'rgba(255, 255, 255, 0.08)',
+    backgroundColor: themeColors.surface,
+    borderColor: themeColors.border,
     borderWidth: 1,
     borderRadius: 24,
     padding: 24,
@@ -2039,7 +2079,7 @@ const styles = StyleSheet.create({
   formTitle: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#FFFFFF',
+    color: themeColors.text,
     marginBottom: 20,
     letterSpacing: 0.5,
   },
@@ -2047,7 +2087,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: 'rgba(255, 255, 255, 0.04)',
-    borderColor: 'rgba(255, 255, 255, 0.08)',
+    borderColor: themeColors.border,
     borderWidth: 1,
     borderRadius: 16,
     marginBottom: 16,
@@ -2059,7 +2099,7 @@ const styles = StyleSheet.create({
   },
   textInput: {
     flex: 1,
-    color: '#FFFFFF',
+    color: themeColors.text,
     fontSize: 14,
   },
   loginBtn: {
@@ -2076,7 +2116,7 @@ const styles = StyleSheet.create({
     elevation: 5,
   },
   loginBtnText: {
-    color: '#FFFFFF',
+    color: themeColors.text,
     fontSize: 15,
     fontWeight: 'bold',
     letterSpacing: 0.5,
@@ -2089,37 +2129,37 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
   },
   settingsToggleText: {
-    color: '#9E9E9F',
+    color: themeColors.textMuted,
     fontSize: 12,
     fontWeight: '600',
   },
   settingsPanel: {
     width: '100%',
-    backgroundColor: 'rgba(255, 255, 255, 0.02)',
-    borderColor: 'rgba(255, 255, 255, 0.05)',
+    backgroundColor: themeColors.cardBackground,
+    borderColor: themeColors.border,
     borderWidth: 1,
     borderRadius: 16,
     padding: 16,
     marginTop: 16,
   },
   settingsTitle: {
-    color: '#FFFFFF',
+    color: themeColors.text,
     fontSize: 12,
     fontWeight: 'bold',
     marginBottom: 8,
   },
   settingsInput: {
     backgroundColor: 'rgba(255, 255, 255, 0.04)',
-    borderColor: 'rgba(255, 255, 255, 0.08)',
+    borderColor: themeColors.border,
     borderWidth: 1,
     borderRadius: 12,
-    color: '#FFFFFF',
+    color: themeColors.text,
     fontSize: 12,
     paddingHorizontal: 12,
     height: 40,
   },
   settingsInfo: {
-    color: '#9E9E9F',
+    color: themeColors.textMuted,
     fontSize: 10,
     marginTop: 6,
     lineHeight: 14,
@@ -2138,16 +2178,22 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 16,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255, 255, 255, 0.05)',
+    borderBottomColor: themeColors.border,
   },
   portalLogoImage: {
     width: 90,
     height: 27,
   },
   portalHeaderSub: {
-    color: '#9E9E9F',
+    color: themeColors.textMuted,
     fontSize: 11,
     marginTop: 2,
+  },
+  themeToggleBtn: {
+    padding: 8,
+    borderRadius: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   logoutBtn: {
     padding: 8,
@@ -2164,8 +2210,8 @@ const styles = StyleSheet.create({
     paddingBottom: 40,
   },
   shiftCard: {
-    backgroundColor: 'rgba(255, 255, 255, 0.02)',
-    borderColor: 'rgba(255, 255, 255, 0.08)',
+    backgroundColor: themeColors.cardBackground,
+    borderColor: themeColors.border,
     borderWidth: 1,
     borderRadius: 20,
     padding: 20,
@@ -2178,7 +2224,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   shiftTitle: {
-    color: '#9E9E9F',
+    color: themeColors.textMuted,
     fontSize: 11,
     textTransform: 'uppercase',
     letterSpacing: 1,
@@ -2187,23 +2233,23 @@ const styles = StyleSheet.create({
   shiftStatusLabel: {
     fontSize: 10,
     fontWeight: 'bold',
-    color: '#E16167',
+    color: themeColors.primary,
     letterSpacing: 0.5,
   },
   shiftValue: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#FFFFFF',
+    color: themeColors.text,
   },
   shiftTime: {
-    color: '#9E9E9F',
+    color: themeColors.textMuted,
     fontSize: 12,
     marginTop: 6,
   },
   timerWrapper: {
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.03)',
+    backgroundColor: themeColors.surface,
     borderColor: 'rgba(255, 255, 255, 0.06)',
     borderWidth: 1,
     borderRadius: 20,
@@ -2211,7 +2257,7 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   timerTitle: {
-    color: '#9E9E9F',
+    color: themeColors.textMuted,
     fontSize: 11,
     textTransform: 'uppercase',
     letterSpacing: 1,
@@ -2222,7 +2268,7 @@ const styles = StyleSheet.create({
     fontFamily: Platform.OS === 'ios' ? 'Courier New' : 'monospace',
     fontSize: 32,
     fontWeight: 'bold',
-    color: '#FFFFFF',
+    color: themeColors.text,
     letterSpacing: 2,
   },
   punchActionSection: {
@@ -2242,7 +2288,7 @@ const styles = StyleSheet.create({
     elevation: 10,
   },
   punchBtnIn: {
-    shadowOpacity: 0.15,
+    shadowOpacity: themeColors.shadowOpacity,
   },
   punchBtnOut: {
     shadowOpacity: 0.35,
@@ -2260,7 +2306,7 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
   },
   detailsSection: {
-    backgroundColor: 'rgba(255, 255, 255, 0.02)',
+    backgroundColor: themeColors.cardBackground,
     borderColor: 'rgba(255, 255, 255, 0.06)',
     borderWidth: 1,
     borderRadius: 20,
@@ -2274,12 +2320,12 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   infoRowText: {
-    color: '#9E9E9F',
+    color: themeColors.textMuted,
     fontSize: 12,
   },
   noteWrapper: {
     backgroundColor: 'rgba(255, 255, 255, 0.04)',
-    borderColor: 'rgba(255, 255, 255, 0.08)',
+    borderColor: themeColors.border,
     borderWidth: 1,
     borderRadius: 12,
     paddingHorizontal: 12,
@@ -2287,7 +2333,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   notesInput: {
-    color: '#FFFFFF',
+    color: themeColors.text,
     fontSize: 12,
   },
   summaryStatsGrid: {
@@ -2296,21 +2342,21 @@ const styles = StyleSheet.create({
   },
   statBox: {
     flex: 1,
-    backgroundColor: 'rgba(255, 255, 255, 0.02)',
-    borderColor: 'rgba(255, 255, 255, 0.05)',
+    backgroundColor: themeColors.cardBackground,
+    borderColor: themeColors.border,
     borderWidth: 1,
     borderRadius: 16,
     padding: 16,
   },
   statLabel: {
-    color: '#9E9E9F',
+    color: themeColors.textMuted,
     fontSize: 10,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
     fontWeight: 'bold',
   },
   statValue: {
-    color: '#FFFFFF',
+    color: themeColors.text,
     fontSize: 16,
     fontWeight: 'bold',
     marginTop: 6,
@@ -2330,11 +2376,11 @@ const styles = StyleSheet.create({
   historyTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#FFFFFF',
+    color: themeColors.text,
   },
   refreshLogsBtn: {
     padding: 6,
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    backgroundColor: themeColors.inputBg,
     borderRadius: 8,
   },
   historyLoader: {
@@ -2348,14 +2394,14 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   emptyLogsText: {
-    color: '#9E9E9F',
+    color: themeColors.textMuted,
     fontSize: 13,
   },
   historyScroll: {
     flex: 1,
   },
   historyRecordCard: {
-    backgroundColor: 'rgba(255, 255, 255, 0.02)',
+    backgroundColor: themeColors.cardBackground,
     borderColor: 'rgba(255, 255, 255, 0.06)',
     borderWidth: 1,
     borderRadius: 16,
@@ -2371,7 +2417,7 @@ const styles = StyleSheet.create({
   recordDate: {
     fontSize: 15,
     fontWeight: 'bold',
-    color: '#FFFFFF',
+    color: themeColors.text,
     fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
   },
   recordStatusBadge: {
@@ -2385,7 +2431,7 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
   },
   recordShiftName: {
-    color: '#9E9E9F',
+    color: themeColors.textMuted,
     fontSize: 12,
     marginBottom: 12,
   },
@@ -2404,7 +2450,7 @@ const styles = StyleSheet.create({
     fontSize: 11,
   },
   sessionTime: {
-    color: '#FFFFFF',
+    color: themeColors.text,
     fontSize: 11,
     fontWeight: '500',
   },
@@ -2417,11 +2463,11 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   recordHoursLabel: {
-    color: '#9E9E9F',
+    color: themeColors.textMuted,
     fontSize: 11,
   },
   recordHours: {
-    color: '#E16167',
+    color: themeColors.primary,
     fontSize: 12,
     fontWeight: 'bold',
   },
@@ -2431,7 +2477,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     height: Platform.OS === 'ios' ? 76 : 60,
     borderTopWidth: 1,
-    borderTopColor: 'rgba(255, 255, 255, 0.05)',
+    borderTopColor: themeColors.border,
     backgroundColor: '#060607',
     paddingBottom: Platform.OS === 'ios' ? 16 : 0,
   },
@@ -2451,7 +2497,7 @@ const styles = StyleSheet.create({
   // Calendar Modal Styles
   calendarModalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.75)',
+    backgroundColor: themeColors.overlay,
     justifyContent: 'center',
     alignItems: 'center',
     padding: 20,
@@ -2459,15 +2505,15 @@ const styles = StyleSheet.create({
   calendarModalCard: {
     width: '90%',
     maxWidth: 340,
-    backgroundColor: '#131315',
+    backgroundColor: theme === 'light' ? '#FFFFFF' : '#131315',
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.08)',
+    borderColor: themeColors.border,
     borderRadius: 20,
     padding: 16,
     alignItems: 'center',
     shadowColor: '#E16167',
     shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.15,
+    shadowOpacity: themeColors.shadowOpacity,
     shadowRadius: 20,
     elevation: 5,
   },
@@ -2482,14 +2528,14 @@ const styles = StyleSheet.create({
     paddingBottom: 10,
   },
   calendarModalTitle: {
-    color: '#FFFFFF',
+    color: themeColors.text,
     fontSize: 16,
     fontWeight: 'bold',
   },
   calendarCloseBtn: {
     padding: 4,
     borderRadius: 8,
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    backgroundColor: themeColors.inputBg,
   },
   calendarMonthHeader: {
     flexDirection: 'row',
@@ -2501,12 +2547,12 @@ const styles = StyleSheet.create({
   calendarNavBtn: {
     padding: 8,
     borderRadius: 10,
-    backgroundColor: 'rgba(255,255,255,0.03)',
+    backgroundColor: themeColors.surface,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.05)',
+    borderColor: themeColors.border,
   },
   calendarMonthText: {
-    color: '#FFFFFF',
+    color: themeColors.text,
     fontSize: 15,
     fontWeight: '600',
   },
@@ -2517,7 +2563,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   calendarWeekdayLabel: {
-    color: '#9E9E9F',
+    color: themeColors.textMuted,
     fontSize: 12,
     fontWeight: '500',
     width: 36,
@@ -2546,23 +2592,23 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   calendarDayText: {
-    color: '#FFFFFF',
+    color: themeColors.text,
     fontSize: 13,
   },
   calendarDayTextSelected: {
-    color: '#FFFFFF',
+    color: themeColors.text,
     fontWeight: 'bold',
   },
   applyLeaveCard: {
-    backgroundColor: 'rgba(255, 255, 255, 0.03)',
+    backgroundColor: themeColors.surface,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.08)',
+    borderColor: themeColors.border,
     borderRadius: 16,
     padding: 16,
     marginBottom: 8,
   },
   applyLeaveTitle: {
-    color: '#FFFFFF',
+    color: themeColors.text,
     fontSize: 16,
     fontWeight: 'bold',
     marginBottom: 14,
@@ -2576,7 +2622,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   datePickerLabel: {
-    color: '#9E9E9F',
+    color: themeColors.textMuted,
     fontSize: 11,
     fontWeight: '600',
     marginBottom: 6,
@@ -2585,23 +2631,23 @@ const styles = StyleSheet.create({
   datePickerBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    backgroundColor: themeColors.inputBg,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
+    borderColor: themeColors.border,
     borderRadius: 12,
     paddingHorizontal: 12,
     paddingVertical: 10,
   },
   datePickerBtnText: {
-    color: '#FFFFFF',
+    color: themeColors.text,
     fontSize: 13,
   },
   leaveReasonInput: {
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    backgroundColor: themeColors.inputBg,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
+    borderColor: themeColors.border,
     borderRadius: 12,
-    color: '#FFFFFF',
+    color: themeColors.text,
     fontSize: 13,
     paddingHorizontal: 12,
     paddingVertical: 10,
@@ -2623,7 +2669,7 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   submitLeaveBtnText: {
-    color: '#FFFFFF',
+    color: themeColors.text,
     fontSize: 14,
     fontWeight: 'bold',
   },
@@ -2636,22 +2682,22 @@ const styles = StyleSheet.create({
     borderRadius: 10,
   },
   adminRemarksTitle: {
-    color: '#E16167',
+    color: themeColors.primary,
     fontSize: 11,
     fontWeight: '700',
     textTransform: 'uppercase',
     marginBottom: 2,
   },
   adminRemarksText: {
-    color: '#E0E0E1',
+    color: themeColors.text,
     fontSize: 12,
     lineHeight: 16,
   },
   segmentControlContainer: {
     flexDirection: 'row',
-    backgroundColor: 'rgba(255, 255, 255, 0.03)',
+    backgroundColor: themeColors.surface,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.05)',
+    borderColor: themeColors.border,
     borderRadius: 12,
     padding: 3,
     marginBottom: 16,
@@ -2671,12 +2717,12 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(225, 97, 103, 0.25)',
   },
   segmentBtnText: {
-    color: '#9E9E9F',
+    color: themeColors.textMuted,
     fontSize: 12,
     fontWeight: '600',
   },
   segmentBtnTextActive: {
-    color: '#E16167',
+    color: themeColors.primary,
     fontWeight: 'bold',
   },
   recordTypeBadge: {
@@ -2692,7 +2738,7 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
   },
   recordDuration: {
-    color: '#9E9E9F',
+    color: themeColors.textMuted,
     fontSize: 11,
   },
   // Notice styles
@@ -2713,17 +2759,17 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   noticeTime: {
-    color: '#9E9E9F',
+    color: themeColors.textMuted,
     fontSize: 10,
   },
   noticeTitleText: {
-    color: '#FFFFFF',
+    color: themeColors.text,
     fontSize: 14,
     fontWeight: 'bold',
     marginBottom: 6,
   },
   noticeContentText: {
-    color: '#E0E0E1',
+    color: themeColors.text,
     fontSize: 12,
     lineHeight: 16,
     marginBottom: 12,
@@ -2732,22 +2778,22 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    backgroundColor: themeColors.inputBg,
     borderWidth: 1,
     borderRadius: 10,
     paddingVertical: 8,
   },
   noticeAckBtnText: {
-    color: '#FFFFFF',
+    color: themeColors.text,
     fontSize: 11,
     fontWeight: 'bold',
   },
   // Swaps styles
   swapTabRow: {
     flexDirection: 'row',
-    backgroundColor: 'rgba(255, 255, 255, 0.03)',
+    backgroundColor: themeColors.surface,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.05)',
+    borderColor: themeColors.border,
     borderRadius: 12,
     padding: 3,
     marginBottom: 16,
@@ -2767,7 +2813,7 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(225, 97, 103, 0.25)',
   },
   swapTabLabel: {
-    color: '#9E9E9F',
+    color: themeColors.textMuted,
     fontSize: 12,
     fontWeight: '600',
   },
@@ -2779,16 +2825,16 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 10,
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    backgroundColor: themeColors.inputBg,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
+    borderColor: themeColors.border,
   },
   colleagueChipActive: {
     backgroundColor: '#FFFFFF',
     borderColor: '#FFFFFF',
   },
   colleagueChipText: {
-    color: '#E0E0E1',
+    color: themeColors.text,
     fontSize: 12,
   },
   swapActionRow: {
@@ -2797,7 +2843,7 @@ const styles = StyleSheet.create({
     gap: 12,
     marginTop: 14,
     borderTopWidth: 1,
-    borderTopColor: 'rgba(255, 255, 255, 0.05)',
+    borderTopColor: themeColors.border,
     paddingTop: 12,
   },
   swapDeclineBtn: {
@@ -2809,7 +2855,7 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(225, 97, 103, 0.2)',
   },
   swapDeclineText: {
-    color: '#E16167',
+    color: themeColors.primary,
     fontSize: 12,
     fontWeight: 'bold',
   },
@@ -2826,4 +2872,5 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: 'bold',
   },
-});
+  });
+};

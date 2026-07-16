@@ -266,7 +266,7 @@ export default function LeaveRequestsPage() {
   return (
     <div className="space-y-6">
       {/* Upper header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-white/5 pb-5">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-black/5 dark:border-white/5 pb-5">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Leave Management</h1>
           <p className="text-sm text-odizo-grey">
@@ -277,7 +277,7 @@ export default function LeaveRequestsPage() {
         </div>
         <button 
           onClick={fetchLeaves}
-          className="flex items-center gap-2 px-4 py-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl text-sm font-semibold transition-all duration-300 cursor-pointer"
+          className="flex items-center gap-2 px-4 py-2 bg-black/5 dark:bg-white/5 hover:bg-black/5 dark:bg-white/10 border border-black/10 dark:border-white/10 rounded-xl text-sm font-semibold transition-all duration-300 cursor-pointer"
         >
           <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
           <span>Refresh</span>
@@ -288,7 +288,7 @@ export default function LeaveRequestsPage() {
         /* ==================== ADMIN DASHBOARD ==================== */
         <div className="space-y-6">
           {/* Filter and Search Bar */}
-          <div className="flex flex-col md:flex-row gap-4 justify-between items-center bg-white/5 p-4 rounded-2xl border border-white/5">
+          <div className="flex flex-col md:flex-row gap-4 justify-between items-center bg-black/5 dark:bg-white/5 p-4 rounded-2xl border border-black/5 dark:border-white/5">
             {/* Status filter buttons */}
             <div className="flex flex-wrap gap-2 w-full md:w-auto">
               {(['All', 'Pending', 'Approved', 'Rejected'] as const).map((filter) => (
@@ -297,8 +297,8 @@ export default function LeaveRequestsPage() {
                   onClick={() => setStatusFilter(filter)}
                   className={`px-4 py-2 rounded-xl text-xs font-bold transition-all duration-300 cursor-pointer ${
                     statusFilter === filter
-                      ? 'bg-odizo-red border border-odizo-red/20 text-white shadow-[0_0_15px_rgba(225,97,103,0.3)]'
-                      : 'bg-white/5 text-odizo-grey hover:text-white border border-transparent hover:bg-white/10'
+                      ? 'bg-odizo-red border border-odizo-red/20 text-slate-900 dark:text-white shadow-[0_0_15px_rgba(225,97,103,0.3)]'
+                      : 'bg-black/5 dark:bg-white/5 text-odizo-grey hover:text-slate-900 dark:text-white border border-transparent hover:bg-black/5 dark:bg-white/10'
                   }`}
                 >
                   {filter}
@@ -313,7 +313,7 @@ export default function LeaveRequestsPage() {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search by employee name..."
-                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 pl-10 text-sm text-white focus:border-odizo-red focus:outline-none focus:ring-0"
+                className="w-full bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-xl px-4 py-2.5 pl-10 text-sm text-slate-900 dark:text-white focus:border-odizo-red focus:outline-none focus:ring-0"
               />
               <Search className="absolute left-3.5 top-3.5 text-odizo-grey" size={16} />
             </div>
@@ -331,27 +331,27 @@ export default function LeaveRequestsPage() {
               <span className="text-sm font-medium">{error}</span>
             </div>
           ) : filteredLeaves.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-20 text-center glass-card border-white/5 p-8">
+            <div className="flex flex-col items-center justify-center py-20 text-center glass-card border-black/5 dark:border-white/5 p-8">
               <FileText className="text-odizo-grey/40 mb-4" size={48} />
               <h3 className="text-lg font-bold">No Leave Requests</h3>
               <p className="text-sm text-odizo-grey max-w-sm mt-1">There are no leave requests matching criteria.</p>
             </div>
           ) : (
-            <div className="w-full overflow-hidden rounded-xl border border-white/10 bg-[#0f0f13] backdrop-blur-md">
+            <div className="w-full overflow-hidden rounded-xl border border-black/10 dark:border-white/10 bg-white/70 dark:bg-[#0f0f13] backdrop-blur-md">
               <div className="w-full overflow-x-auto">
                 <table className="w-full min-w-[1000px] border-collapse text-left">
                   <thead>
-                    <tr className="border-b border-white/10 bg-white/3">
-                      <th className="px-6 py-4 text-xs font-semibold tracking-wider uppercase text-gray-400">Employee Info</th>
-                      <th className="px-6 py-4 text-xs font-semibold tracking-wider uppercase text-gray-400">Leave Duration</th>
-                      <th className="px-6 py-4 text-xs font-semibold tracking-wider uppercase text-gray-400">Reason</th>
-                      <th className="px-6 py-4 text-xs font-semibold tracking-wider uppercase text-gray-400">Applied On</th>
-                      <th className="px-6 py-4 text-xs font-semibold tracking-wider uppercase text-gray-400">Status</th>
-                      <th className="px-6 py-4 text-xs font-semibold tracking-wider uppercase text-gray-400 w-28 text-center">Actions</th>
-                      <th className="px-6 py-4 text-xs font-semibold tracking-wider uppercase text-gray-400 w-24 text-center">Details</th>
+                    <tr className="border-b border-black/10 dark:border-white/10 bg-black/5 dark:bg-white/3">
+                      <th className="px-6 py-4 text-xs font-semibold tracking-wider uppercase text-slate-500 dark:text-gray-400">Employee Info</th>
+                      <th className="px-6 py-4 text-xs font-semibold tracking-wider uppercase text-slate-500 dark:text-gray-400">Leave Duration</th>
+                      <th className="px-6 py-4 text-xs font-semibold tracking-wider uppercase text-slate-500 dark:text-gray-400">Reason</th>
+                      <th className="px-6 py-4 text-xs font-semibold tracking-wider uppercase text-slate-500 dark:text-gray-400">Applied On</th>
+                      <th className="px-6 py-4 text-xs font-semibold tracking-wider uppercase text-slate-500 dark:text-gray-400">Status</th>
+                      <th className="px-6 py-4 text-xs font-semibold tracking-wider uppercase text-slate-500 dark:text-gray-400 w-28 text-center">Actions</th>
+                      <th className="px-6 py-4 text-xs font-semibold tracking-wider uppercase text-slate-500 dark:text-gray-400 w-24 text-center">Details</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-white/5">
+                  <tbody className="divide-y divide-black/10 dark:divide-black/10 dark:divide-white/5">
                     {filteredLeaves.map((leave) => {
                       const diffDays = getDaysDiff(leave.startDate, leave.endDate);
                       const isExpanded = !!expandedLeaves[leave._id];
@@ -367,15 +367,15 @@ export default function LeaveRequestsPage() {
                         <React.Fragment key={leave._id}>
                           <tr 
                             onClick={() => toggleExpand(leave._id)}
-                            className="hover:bg-white/5 transition-all duration-200 cursor-pointer"
+                            className="hover:bg-black/5 dark:bg-white/5 transition-all duration-200 cursor-pointer"
                           >
                             <td className="px-6 py-4 whitespace-nowrap">
                               <div className="flex items-center gap-3">
-                                <div className="h-8 w-8 rounded-full border border-white/10 bg-white/5 flex items-center justify-center text-white">
+                                <div className="h-8 w-8 rounded-full border border-black/10 dark:border-white/10 bg-black/5 dark:bg-white/5 flex items-center justify-center text-slate-900 dark:text-white">
                                   <User size={14} />
                                 </div>
                                 <div className="min-w-0">
-                                  <p className="text-sm font-bold text-white leading-tight truncate max-w-[150px]">{leave.userId?.name || 'Unknown User'}</p>
+                                  <p className="text-sm font-bold text-slate-900 dark:text-white leading-tight truncate max-w-[150px]">{leave.userId?.name || 'Unknown User'}</p>
                                   <div className="flex items-center gap-1.5 mt-0.5">
                                     <span className="text-[10px] text-odizo-grey font-medium uppercase tracking-wider">{leave.userId?.role || 'Employee'}</span>
                                   </div>
@@ -383,20 +383,20 @@ export default function LeaveRequestsPage() {
                               </div>
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap">
-                              <div className="flex flex-col text-white">
+                              <div className="flex flex-col text-slate-900 dark:text-white">
                                 <div className="flex items-center gap-1.5 text-sm font-semibold">
                                   <Calendar size={14} className="text-odizo-red" />
                                   <span>{formatDBDate(leave.startDate)}</span>
                                   <span className="text-odizo-grey">➔</span>
                                   <span>{formatDBDate(leave.endDate)}</span>
                                 </div>
-                                <span className="text-[10px] text-odizo-grey mt-0.5">Duration: <strong className="text-white font-medium">{diffDays} {diffDays === 1 ? 'day' : 'days'}</strong></span>
+                                <span className="text-[10px] text-odizo-grey mt-0.5">Duration: <strong className="text-slate-900 dark:text-white font-medium">{diffDays} {diffDays === 1 ? 'day' : 'days'}</strong></span>
                               </div>
                             </td>
                             <td className="px-6 py-4 max-w-xs">
                               <p 
                                 title={leave.reason}
-                                className="text-xs text-gray-300 truncate"
+                                className="text-xs text-slate-600 dark:text-gray-300 truncate"
                               >
                                 {leave.reason}
                               </p>
@@ -441,7 +441,7 @@ export default function LeaveRequestsPage() {
                                   e.stopPropagation();
                                   toggleExpand(leave._id);
                                 }}
-                                className="inline-flex items-center gap-1 px-2.5 py-1 text-[10px] font-semibold text-odizo-grey hover:text-white bg-white/5 hover:bg-white/10 border border-white/5 rounded-lg transition-colors"
+                                className="inline-flex items-center gap-1 px-2.5 py-1 text-[10px] font-semibold text-odizo-grey hover:text-slate-900 dark:text-white bg-black/5 dark:bg-white/5 hover:bg-black/5 dark:bg-white/10 border border-black/5 dark:border-white/5 rounded-lg transition-colors"
                               >
                                 <span>{isExpanded ? 'Hide' : 'View'}</span>
                                 {isExpanded ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
@@ -450,24 +450,24 @@ export default function LeaveRequestsPage() {
                           </tr>
                           {isExpanded && (
                             <tr className="bg-white/[0.01]">
-                              <td colSpan={7} className="px-6 py-5 border-t border-white/5">
+                              <td colSpan={7} className="px-6 py-5 border-t border-black/5 dark:border-white/5">
                                 <div className="space-y-4 animate-fade-in text-left">
-                                  <div className="flex items-center justify-between border-b border-white/5 pb-2">
-                                    <span className="text-xs font-bold text-gray-300 uppercase tracking-wider">
+                                  <div className="flex items-center justify-between border-b border-black/5 dark:border-white/5 pb-2">
+                                    <span className="text-xs font-bold text-slate-600 dark:text-gray-300 uppercase tracking-wider">
                                       Request Details
                                     </span>
                                     <span className="text-[10px] text-odizo-grey">
-                                      Employee Email: <strong className="text-white font-medium">{leave.userId?.email || 'N/A'}</strong>
+                                      Employee Email: <strong className="text-slate-900 dark:text-white font-medium">{leave.userId?.email || 'N/A'}</strong>
                                     </span>
                                   </div>
                                   <div>
                                     <h4 className="text-xs font-bold text-odizo-grey uppercase tracking-wider mb-1">Full Reason</h4>
-                                    <p className="text-xs text-white bg-white/3 p-3 rounded-xl border border-white/5 whitespace-pre-wrap leading-relaxed">
+                                    <p className="text-xs text-slate-900 dark:text-white bg-black/5 dark:bg-white/3 p-3 rounded-xl border border-black/5 dark:border-white/5 whitespace-pre-wrap leading-relaxed">
                                       {leave.reason}
                                     </p>
                                   </div>
                                   {leave.adminRemarks && (
-                                    <div className="bg-white/5 border border-white/15 p-3 rounded-xl">
+                                    <div className="bg-black/5 dark:bg-white/5 border border-white/15 p-3 rounded-xl">
                                       <div className="flex items-center gap-1.5 text-xs font-bold text-odizo-red uppercase tracking-wider mb-1">
                                         <MessageSquare size={12} />
                                         <span>Admin Remarks</span>
@@ -493,7 +493,7 @@ export default function LeaveRequestsPage() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
           {/* Column 1: Apply Leave Form */}
           <div className="glass-card floating-shadow p-6 space-y-4">
-            <h2 className="text-lg font-bold text-white flex items-center gap-2">
+            <h2 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
               <Send size={18} className="text-odizo-red" />
               <span>Apply for Leave</span>
             </h2>
@@ -521,7 +521,7 @@ export default function LeaveRequestsPage() {
                   required
                   value={applyStartDate}
                   onChange={(e) => setApplyStartDate(e.target.value)}
-                  className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:border-odizo-red focus:outline-none focus:ring-0"
+                  className="w-full bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-xl px-4 py-2.5 text-sm text-slate-900 dark:text-white focus:border-odizo-red focus:outline-none focus:ring-0"
                 />
               </div>
 
@@ -532,7 +532,7 @@ export default function LeaveRequestsPage() {
                   required
                   value={applyEndDate}
                   onChange={(e) => setApplyEndDate(e.target.value)}
-                  className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:border-odizo-red focus:outline-none focus:ring-0"
+                  className="w-full bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-xl px-4 py-2.5 text-sm text-slate-900 dark:text-white focus:border-odizo-red focus:outline-none focus:ring-0"
                 />
               </div>
 
@@ -544,14 +544,14 @@ export default function LeaveRequestsPage() {
                   value={applyReason}
                   onChange={(e) => setApplyReason(e.target.value)}
                   placeholder="Describe your reason for requesting leave..."
-                  className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:border-odizo-red focus:outline-none focus:ring-0 resize-none"
+                  className="w-full bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-xl px-4 py-2.5 text-sm text-slate-900 dark:text-white focus:border-odizo-red focus:outline-none focus:ring-0 resize-none"
                 />
               </div>
 
               <button
                 type="submit"
                 disabled={actionLoading}
-                className="w-full py-2.5 bg-odizo-red hover:bg-odizo-red/90 text-white text-sm font-semibold rounded-xl transition-all duration-300 cursor-pointer flex items-center justify-center gap-2"
+                className="w-full py-2.5 bg-odizo-red hover:bg-odizo-red/90 text-slate-900 dark:text-white text-sm font-semibold rounded-xl transition-all duration-300 cursor-pointer flex items-center justify-center gap-2"
               >
                 {actionLoading ? 'Submitting...' : 'Submit Leave Request'}
               </button>
@@ -561,21 +561,21 @@ export default function LeaveRequestsPage() {
           {/* Column 2 & 3: Leave History List */}
           <div className="lg:col-span-2 space-y-6">
             {/* Filter */}
-            <div className="flex justify-between items-center bg-white/3 border border-white/5 p-4 rounded-2xl">
-              <h3 className="font-bold text-sm text-white flex items-center gap-2">
+            <div className="flex justify-between items-center bg-black/5 dark:bg-white/3 border border-black/5 dark:border-white/5 p-4 rounded-2xl">
+              <h3 className="font-bold text-sm text-slate-900 dark:text-white flex items-center gap-2">
                 <FileText size={16} className="text-odizo-red" />
                 <span>Leave Request History</span>
               </h3>
 
-              <div className="flex bg-white/3 border border-white/5 rounded-xl p-1 gap-1">
+              <div className="flex bg-black/5 dark:bg-white/3 border border-black/5 dark:border-white/5 rounded-xl p-1 gap-1">
                 {(['All', 'Pending', 'Approved', 'Rejected'] as const).map((filter) => (
                   <button
                     key={filter}
                     onClick={() => setStatusFilter(filter)}
                     className={`px-3 py-1 rounded-lg text-[10px] font-bold transition-all duration-300 cursor-pointer ${
                       statusFilter === filter
-                        ? 'bg-odizo-red text-white shadow-[0_0_8px_rgba(225,97,103,0.3)]'
-                        : 'text-odizo-grey hover:text-white'
+                        ? 'bg-odizo-red text-slate-900 dark:text-white shadow-[0_0_8px_rgba(225,97,103,0.3)]'
+                        : 'text-odizo-grey hover:text-slate-900 dark:text-white'
                     }`}
                   >
                     {filter}
@@ -596,26 +596,26 @@ export default function LeaveRequestsPage() {
                 <span className="text-sm font-medium">{error}</span>
               </div>
             ) : filteredLeaves.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-20 text-center glass-card border-white/5 p-8">
+              <div className="flex flex-col items-center justify-center py-20 text-center glass-card border-black/5 dark:border-white/5 p-8">
                 <FileText className="text-odizo-grey/40 mb-4" size={48} />
                 <h3 className="text-lg font-bold">No Leave Requests Found</h3>
                 <p className="text-sm text-odizo-grey mt-1">You haven't submitted any leave requests matching this filter.</p>
               </div>
             ) : (
-              <div className="w-full overflow-hidden rounded-xl border border-white/10 bg-[#0f0f13] backdrop-blur-md">
+              <div className="w-full overflow-hidden rounded-xl border border-black/10 dark:border-white/10 bg-white/70 dark:bg-[#0f0f13] backdrop-blur-md">
                 <div className="w-full overflow-x-auto">
                   <table className="w-full min-w-[700px] border-collapse text-left">
                     <thead>
-                      <tr className="border-b border-white/10 bg-white/3">
-                        <th className="px-6 py-4 text-xs font-semibold tracking-wider uppercase text-gray-400">Request ID</th>
-                        <th className="px-6 py-4 text-xs font-semibold tracking-wider uppercase text-gray-400">Leave Duration</th>
-                        <th className="px-6 py-4 text-xs font-semibold tracking-wider uppercase text-gray-400">Reason</th>
-                        <th className="px-6 py-4 text-xs font-semibold tracking-wider uppercase text-gray-400">Applied On</th>
-                        <th className="px-6 py-4 text-xs font-semibold tracking-wider uppercase text-gray-400">Status</th>
-                        <th className="px-6 py-4 text-xs font-semibold tracking-wider uppercase text-gray-400 w-24 text-center">Details</th>
+                      <tr className="border-b border-black/10 dark:border-white/10 bg-black/5 dark:bg-white/3">
+                        <th className="px-6 py-4 text-xs font-semibold tracking-wider uppercase text-slate-500 dark:text-gray-400">Request ID</th>
+                        <th className="px-6 py-4 text-xs font-semibold tracking-wider uppercase text-slate-500 dark:text-gray-400">Leave Duration</th>
+                        <th className="px-6 py-4 text-xs font-semibold tracking-wider uppercase text-slate-500 dark:text-gray-400">Reason</th>
+                        <th className="px-6 py-4 text-xs font-semibold tracking-wider uppercase text-slate-500 dark:text-gray-400">Applied On</th>
+                        <th className="px-6 py-4 text-xs font-semibold tracking-wider uppercase text-slate-500 dark:text-gray-400">Status</th>
+                        <th className="px-6 py-4 text-xs font-semibold tracking-wider uppercase text-slate-500 dark:text-gray-400 w-24 text-center">Details</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-white/5">
+                    <tbody className="divide-y divide-black/10 dark:divide-black/10 dark:divide-white/5">
                       {filteredLeaves.map((leave) => {
                         const diffDays = getDaysDiff(leave.startDate, leave.endDate);
                         const isExpanded = !!expandedLeaves[leave._id];
@@ -631,26 +631,26 @@ export default function LeaveRequestsPage() {
                           <React.Fragment key={leave._id}>
                             <tr 
                               onClick={() => toggleExpand(leave._id)}
-                              className="hover:bg-white/5 transition-all duration-200 cursor-pointer"
+                              className="hover:bg-black/5 dark:bg-white/5 transition-all duration-200 cursor-pointer"
                             >
                               <td className="px-6 py-4 whitespace-nowrap text-xs font-bold text-odizo-grey">
                                 Request #{leave._id.slice(-6).toUpperCase()}
                               </td>
                               <td className="px-6 py-4 whitespace-nowrap">
-                                <div className="flex flex-col text-white">
+                                <div className="flex flex-col text-slate-900 dark:text-white">
                                   <div className="flex items-center gap-1.5 text-sm font-semibold">
                                     <Calendar size={14} className="text-odizo-red" />
                                     <span>{formatDBDate(leave.startDate)}</span>
                                     <span className="text-odizo-grey">➔</span>
                                     <span>{formatDBDate(leave.endDate)}</span>
                                   </div>
-                                  <span className="text-[10px] text-odizo-grey mt-0.5">Duration: <strong className="text-white font-medium">{diffDays} {diffDays === 1 ? 'day' : 'days'}</strong></span>
+                                  <span className="text-[10px] text-odizo-grey mt-0.5">Duration: <strong className="text-slate-900 dark:text-white font-medium">{diffDays} {diffDays === 1 ? 'day' : 'days'}</strong></span>
                                 </div>
                               </td>
                               <td className="px-6 py-4 max-w-xs">
                                 <p 
                                   title={leave.reason}
-                                  className="text-xs text-gray-300 truncate"
+                                  className="text-xs text-slate-600 dark:text-gray-300 truncate"
                                 >
                                   {leave.reason}
                                 </p>
@@ -671,7 +671,7 @@ export default function LeaveRequestsPage() {
                                     e.stopPropagation();
                                     toggleExpand(leave._id);
                                   }}
-                                  className="inline-flex items-center gap-1 px-2.5 py-1 text-[10px] font-semibold text-odizo-grey hover:text-white bg-white/5 hover:bg-white/10 border border-white/5 rounded-lg transition-colors"
+                                  className="inline-flex items-center gap-1 px-2.5 py-1 text-[10px] font-semibold text-odizo-grey hover:text-slate-900 dark:text-white bg-black/5 dark:bg-white/5 hover:bg-black/5 dark:bg-white/10 border border-black/5 dark:border-white/5 rounded-lg transition-colors"
                                 >
                                   <span>{isExpanded ? 'Hide' : 'View'}</span>
                                   {isExpanded ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
@@ -680,24 +680,24 @@ export default function LeaveRequestsPage() {
                             </tr>
                             {isExpanded && (
                               <tr className="bg-white/[0.01]">
-                                <td colSpan={6} className="px-6 py-5 border-t border-white/5">
+                                <td colSpan={6} className="px-6 py-5 border-t border-black/5 dark:border-white/5">
                                   <div className="space-y-4 animate-fade-in text-left">
-                                    <div className="flex items-center justify-between border-b border-white/5 pb-2">
-                                      <span className="text-xs font-bold text-gray-300 uppercase tracking-wider">
+                                    <div className="flex items-center justify-between border-b border-black/5 dark:border-white/5 pb-2">
+                                      <span className="text-xs font-bold text-slate-600 dark:text-gray-300 uppercase tracking-wider">
                                         Request Details
                                       </span>
-                                      <span className="text-xs text-white">
+                                      <span className="text-xs text-slate-900 dark:text-white">
                                         Duration: <strong className="text-odizo-red">{diffDays} {diffDays === 1 ? 'day' : 'days'}</strong>
                                       </span>
                                     </div>
                                     <div>
                                       <h4 className="text-xs font-bold text-odizo-grey uppercase tracking-wider mb-1">Your Full Reason</h4>
-                                      <p className="text-xs text-white bg-white/3 p-3 rounded-xl border border-white/5 whitespace-pre-wrap leading-relaxed font-sans">
+                                      <p className="text-xs text-slate-900 dark:text-white bg-black/5 dark:bg-white/3 p-3 rounded-xl border border-black/5 dark:border-white/5 whitespace-pre-wrap leading-relaxed font-sans">
                                         {leave.reason}
                                       </p>
                                     </div>
                                     {leave.adminRemarks && (
-                                      <div className="bg-white/5 border border-white/15 p-3 rounded-xl">
+                                      <div className="bg-black/5 dark:bg-white/5 border border-white/15 p-3 rounded-xl">
                                         <div className="flex items-center gap-1.5 text-xs font-bold text-odizo-red uppercase tracking-wider mb-1">
                                           <MessageSquare size={12} />
                                           <span>Admin Remarks</span>
@@ -724,12 +724,12 @@ export default function LeaveRequestsPage() {
       {/* Custom sliding glass reject modal */}
       {showRejectModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-md px-4">
-          <div className="w-full max-w-md glass-card border-white/10 floating-shadow-red p-6 animate-float">
-            <div className="flex items-center justify-between border-b border-white/5 pb-4 mb-5">
-              <h2 className="text-xl font-bold text-white">Reject Leave Request</h2>
+          <div className="w-full max-w-md glass-card border-black/10 dark:border-white/10 floating-shadow-red p-6 animate-float">
+            <div className="flex items-center justify-between border-b border-black/5 dark:border-white/5 pb-4 mb-5">
+              <h2 className="text-xl font-bold text-slate-900 dark:text-white">Reject Leave Request</h2>
               <button 
                 onClick={() => setShowRejectModal(false)}
-                className="p-1 rounded-lg text-odizo-grey hover:text-white hover:bg-white/5 transition-all cursor-pointer"
+                className="p-1 rounded-lg text-odizo-grey hover:text-slate-900 dark:text-white hover:bg-black/5 dark:bg-white/5 transition-all cursor-pointer"
               >
                 <X size={20} />
               </button>
@@ -746,7 +746,7 @@ export default function LeaveRequestsPage() {
                   value={adminRemarks}
                   onChange={(e) => setAdminRemarks(e.target.value)}
                   placeholder="Provide a reason for rejecting this leave request..."
-                  className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:border-odizo-red focus:outline-none focus:ring-0 resize-none"
+                  className="w-full bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-xl px-4 py-2.5 text-sm text-slate-900 dark:text-white focus:border-odizo-red focus:outline-none focus:ring-0 resize-none"
                 />
               </div>
 
@@ -754,14 +754,14 @@ export default function LeaveRequestsPage() {
                 <button
                   type="button"
                   onClick={() => setShowRejectModal(false)}
-                  className="flex-1 py-2.5 border border-white/10 text-white hover:bg-white/5 text-sm font-semibold rounded-xl transition-all duration-300 cursor-pointer"
+                  className="flex-1 py-2.5 border border-black/10 dark:border-white/10 text-slate-900 dark:text-white hover:bg-black/5 dark:bg-white/5 text-sm font-semibold rounded-xl transition-all duration-300 cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={actionLoading}
-                  className="flex-1 py-2.5 bg-odizo-red hover:bg-odizo-red/90 text-white text-sm font-semibold rounded-xl transition-all duration-300 cursor-pointer"
+                  className="flex-1 py-2.5 bg-odizo-red hover:bg-odizo-red/90 text-slate-900 dark:text-white text-sm font-semibold rounded-xl transition-all duration-300 cursor-pointer"
                 >
                   Confirm Reject
                 </button>

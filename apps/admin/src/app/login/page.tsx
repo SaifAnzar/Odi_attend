@@ -50,7 +50,7 @@ export default function Login() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-black px-4 py-12 relative overflow-hidden">
+    <div className="flex min-h-screen items-center justify-center bg-slate-50 dark:bg-black px-4 py-12 relative overflow-hidden transition-colors duration-300">
       {/* Background glow orb */}
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-odizo-red/5 rounded-full blur-[100px] -z-10 pointer-events-none"></div>
 
@@ -58,7 +58,7 @@ export default function Login() {
         {/* Logo and title */}
         <div className="flex flex-col items-center text-center">
           <Logo size="lg" className="mb-2" />
-          <h2 className="text-xl font-bold tracking-tight text-white mt-4">
+          <h2 className="text-xl font-bold tracking-tight text-slate-900 dark:text-white mt-4">
             Attendance Portal
           </h2>
           <p className="text-xs text-odizo-grey mt-1">
@@ -67,7 +67,7 @@ export default function Login() {
         </div>
 
         {/* Glassmorphic Card */}
-        <div className="glass-card p-8 border-white/10 floating-shadow-red">
+        <div className="glass-card p-8 border-black/10 dark:border-white/10 floating-shadow-red">
           {error && (
             <div className="flex items-center gap-2 bg-odizo-red/10 border border-odizo-red/25 rounded-xl p-3 mb-6 text-xs text-odizo-red">
               <AlertCircle size={16} className="shrink-0" />
@@ -92,7 +92,7 @@ export default function Login() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="name@odizo.in"
-                  className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 pl-10 text-sm text-white placeholder-odizo-grey focus:border-odizo-red focus:outline-none focus:ring-0 transition-colors"
+                  className="w-full bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-xl px-4 py-3 pl-10 text-sm text-slate-900 dark:text-white placeholder-odizo-grey focus:border-odizo-red focus:outline-none focus:ring-0 transition-colors"
                 />
                 <Mail className="absolute left-3.5 top-3.5 text-odizo-grey" size={16} />
               </div>
@@ -114,7 +114,7 @@ export default function Login() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••"
-                  className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 pl-10 text-sm text-white placeholder-odizo-grey focus:border-odizo-red focus:outline-none focus:ring-0 transition-colors"
+                  className="w-full bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-xl px-4 py-3 pl-10 text-sm text-slate-900 dark:text-white placeholder-odizo-grey focus:border-odizo-red focus:outline-none focus:ring-0 transition-colors"
                 />
                 <Lock className="absolute left-3.5 top-3.5 text-odizo-grey" size={16} />
               </div>
@@ -124,7 +124,7 @@ export default function Login() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-odizo-red text-white py-3 rounded-full text-sm font-bold hover:bg-opacity-95 hover:shadow-[0_0_20px_rgba(225,97,103,0.3)] transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+              className="w-full bg-odizo-red text-slate-900 dark:text-white py-3 rounded-full text-sm font-bold hover:bg-opacity-95 hover:shadow-[0_0_20px_rgba(225,97,103,0.3)] transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
             >
               {loading ? 'Authenticating...' : 'Sign In'}
             </button>

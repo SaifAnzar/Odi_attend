@@ -127,16 +127,16 @@ export default function NoticeBoardAdminPage() {
       {/* Col 1: Form */}
       <div className="lg:col-span-1 space-y-6">
         <div>
-          <h1 className="text-3xl font-extrabold tracking-tight bg-gradient-to-r from-white via-odizo-grey to-white bg-clip-text text-transparent">
+          <h1 className="text-3xl font-extrabold tracking-tight bg-gradient-to-r from-slate-900 via-odizo-grey to-slate-900 dark:from-white dark:via-odizo-grey dark:to-white bg-clip-text text-transparent">
             Notice Board
           </h1>
           <p className="text-sm text-odizo-grey mt-1">Publish alerts and announcements</p>
         </div>
 
-        <form onSubmit={handlePublish} className="glass-card p-6 floating-shadow border-white/5 space-y-4">
-          <div className="flex items-center gap-2 border-b border-white/5 pb-3">
+        <form onSubmit={handlePublish} className="glass-card p-6 floating-shadow border-black/5 dark:border-white/5 space-y-4">
+          <div className="flex items-center gap-2 border-b border-black/5 dark:border-white/5 pb-3">
             <Megaphone size={16} className="text-odizo-red" />
-            <h3 className="font-bold text-white">Broadcast Announcement</h3>
+            <h3 className="font-bold text-slate-900 dark:text-white">Broadcast Announcement</h3>
           </div>
 
           <div className="space-y-1.5">
@@ -147,7 +147,7 @@ export default function NoticeBoardAdminPage() {
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="e.g. Office Closed (Holiday)"
-              className="w-full bg-white/3 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white placeholder-odizo-grey focus:border-odizo-red focus:outline-none transition-colors"
+              className="w-full bg-black/5 dark:bg-white/3 border border-black/10 dark:border-white/10 rounded-xl px-4 py-2.5 text-sm text-slate-900 dark:text-white placeholder-odizo-grey focus:border-odizo-red focus:outline-none transition-colors"
             />
           </div>
 
@@ -156,11 +156,11 @@ export default function NoticeBoardAdminPage() {
             <select
               value={type}
               onChange={(e) => setType(e.target.value as any)}
-              className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:border-odizo-red focus:outline-none"
+              className="w-full bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-xl px-4 py-2.5 text-sm text-slate-900 dark:text-white focus:border-odizo-red focus:outline-none"
             >
-              <option value="Info" className="bg-black text-white">Info (Blue alert)</option>
-              <option value="Warning" className="bg-black text-white">Warning (Red alert)</option>
-              <option value="Holiday" className="bg-black text-white">Holiday (Green alert)</option>
+              <option value="Info" className="bg-black text-slate-900 dark:text-white">Info (Blue alert)</option>
+              <option value="Warning" className="bg-black text-slate-900 dark:text-white">Warning (Red alert)</option>
+              <option value="Holiday" className="bg-black text-slate-900 dark:text-white">Holiday (Green alert)</option>
             </select>
           </div>
 
@@ -172,14 +172,14 @@ export default function NoticeBoardAdminPage() {
               value={content}
               onChange={(e) => setContent(e.target.value)}
               placeholder="Type message content here..."
-              className="w-full bg-white/3 border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder-odizo-grey focus:border-odizo-red focus:outline-none transition-colors"
+              className="w-full bg-black/5 dark:bg-white/3 border border-black/10 dark:border-white/10 rounded-xl px-4 py-3 text-sm text-slate-900 dark:text-white placeholder-odizo-grey focus:border-odizo-red focus:outline-none transition-colors"
             />
           </div>
 
           <button
             type="submit"
             disabled={publishing}
-            className="w-full flex items-center justify-center gap-2 py-3 bg-odizo-red hover:bg-odizo-red/80 text-white rounded-xl text-sm font-bold transition-all disabled:opacity-50 cursor-pointer shadow-lg shadow-red-900/25"
+            className="w-full flex items-center justify-center gap-2 py-3 bg-odizo-red hover:bg-odizo-red/80 text-slate-900 dark:text-white rounded-xl text-sm font-bold transition-all disabled:opacity-50 cursor-pointer shadow-lg shadow-red-900/25"
           >
             {publishing ? (
               <div className="h-5 w-5 animate-spin rounded-full border-2 border-white border-t-transparent"></div>
@@ -195,22 +195,22 @@ export default function NoticeBoardAdminPage() {
 
       {/* Col 2 & 3: Board Feed */}
       <div className="lg:col-span-2 space-y-4">
-        <h2 className="text-xl font-bold text-white flex items-center gap-2">
+        <h2 className="text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
           <span>Active Broadcast History</span>
-          <span className="text-xs font-normal text-odizo-grey bg-white/5 border border-white/10 rounded-full px-2.5 py-0.5">
+          <span className="text-xs font-normal text-odizo-grey bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-full px-2.5 py-0.5">
             {notices.length} Total
           </span>
         </h2>
 
         {loading ? (
-          <div className="glass-card p-20 flex flex-col items-center justify-center border-white/5">
+          <div className="glass-card p-20 flex flex-col items-center justify-center border-black/5 dark:border-white/5">
             <div className="h-10 w-10 animate-spin rounded-full border-2 border-odizo-red border-t-transparent"></div>
             <p className="mt-4 text-sm text-odizo-grey">Refreshing notices...</p>
           </div>
         ) : notices.length === 0 ? (
-          <div className="text-center py-20 border border-dashed border-white/10 rounded-2xl">
+          <div className="text-center py-20 border border-dashed border-black/10 dark:border-white/10 rounded-2xl">
             <Megaphone size={40} className="mx-auto text-odizo-grey/40 mb-3" />
-            <p className="text-sm font-semibold text-white">No active notices broadcasted</p>
+            <p className="text-sm font-semibold text-slate-900 dark:text-white">No active notices broadcasted</p>
             <p className="text-xs text-odizo-grey mt-1">Use the panel on the left to issue notice alerts.</p>
           </div>
         ) : (
@@ -223,7 +223,7 @@ export default function NoticeBoardAdminPage() {
                     ? 'border-odizo-red/25 bg-gradient-to-br from-odizo-red/3 to-transparent shadow-[0_0_20px_rgba(225,97,103,0.02)]'
                     : notice.type === 'Holiday'
                       ? 'border-emerald-500/25 bg-gradient-to-br from-emerald-500/3 to-transparent'
-                      : 'border-white/5 bg-white/1'
+                      : 'border-black/5 dark:border-white/5 bg-white/1'
                 }`}
               >
                 <div className="flex justify-between items-start gap-4 mb-2">
@@ -248,7 +248,7 @@ export default function NoticeBoardAdminPage() {
                   <div className="flex gap-2">
                     <button
                       onClick={() => handleViewAcks(notice)}
-                      className="flex items-center gap-1 px-2.5 py-1 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg text-[10px] text-odizo-grey hover:text-white transition-colors cursor-pointer"
+                      className="flex items-center gap-1 px-2.5 py-1 bg-black/5 dark:bg-white/5 hover:bg-black/5 dark:bg-white/10 border border-black/10 dark:border-white/10 rounded-lg text-[10px] text-odizo-grey hover:text-slate-900 dark:text-white transition-colors cursor-pointer"
                     >
                       <Users size={12} />
                       <span>{notice.acknowledgedBy.length} Acknowledged</span>
@@ -266,8 +266,8 @@ export default function NoticeBoardAdminPage() {
                   </div>
                 </div>
 
-                <h3 className="font-bold text-white text-base mb-2">{notice.title}</h3>
-                <p className="text-xs text-white/80 leading-relaxed whitespace-pre-wrap">{notice.content}</p>
+                <h3 className="font-bold text-slate-900 dark:text-white text-base mb-2">{notice.title}</h3>
+                <p className="text-xs text-slate-900 dark:text-white/80 leading-relaxed whitespace-pre-wrap">{notice.content}</p>
               </div>
             ))}
           </div>
@@ -277,15 +277,15 @@ export default function NoticeBoardAdminPage() {
       {/* Reader Acknowledgements Modal */}
       {showAckModal && selectedNotice && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fade-in">
-          <div className="w-full max-w-md glass-card p-6 floating-shadow border-white/10 space-y-4">
-            <div className="flex items-center justify-between border-b border-white/5 pb-3">
-              <div className="flex items-center gap-2 text-white font-bold text-sm">
+          <div className="w-full max-w-md glass-card p-6 floating-shadow border-black/10 dark:border-white/10 space-y-4">
+            <div className="flex items-center justify-between border-b border-black/5 dark:border-white/5 pb-3">
+              <div className="flex items-center gap-2 text-slate-900 dark:text-white font-bold text-sm">
                 <Users size={18} className="text-odizo-red" />
                 <span>Notice Read Receipts</span>
               </div>
               <button 
                 onClick={() => setShowAckModal(false)}
-                className="text-odizo-grey hover:text-white transition-colors"
+                className="text-odizo-grey hover:text-slate-900 dark:text-white transition-colors"
               >
                 <X size={18} />
               </button>
@@ -293,7 +293,7 @@ export default function NoticeBoardAdminPage() {
 
             <div className="space-y-1">
               <h4 className="text-xs font-bold uppercase tracking-wider text-odizo-grey">Notice Title</h4>
-              <p className="text-sm font-semibold text-white">{selectedNotice.title}</p>
+              <p className="text-sm font-semibold text-slate-900 dark:text-white">{selectedNotice.title}</p>
             </div>
 
             <div className="space-y-2">
@@ -305,10 +305,10 @@ export default function NoticeBoardAdminPage() {
                   selectedNotice.acknowledgedBy.map((user) => (
                     <div
                       key={user._id}
-                      className="flex items-center justify-between p-3 bg-white/3 border border-white/5 rounded-xl hover:bg-white/5 transition-colors"
+                      className="flex items-center justify-between p-3 bg-black/5 dark:bg-white/3 border border-black/5 dark:border-white/5 rounded-xl hover:bg-black/5 dark:bg-white/5 transition-colors"
                     >
                       <div className="min-w-0">
-                        <p className="text-xs font-bold truncate text-white">{user.name}</p>
+                        <p className="text-xs font-bold truncate text-slate-900 dark:text-white">{user.name}</p>
                         <p className="text-[10px] text-odizo-grey truncate">{user.email}</p>
                       </div>
                       <div className="flex items-center gap-1 text-[10px] font-bold text-emerald-400">
@@ -325,7 +325,7 @@ export default function NoticeBoardAdminPage() {
               <button
                 type="button"
                 onClick={() => setShowAckModal(false)}
-                className="px-4 py-2 bg-white/5 hover:bg-white/10 text-white rounded-lg text-xs font-bold border border-white/10 cursor-pointer"
+                className="px-4 py-2 bg-black/5 dark:bg-white/5 hover:bg-black/5 dark:bg-white/10 text-slate-900 dark:text-white rounded-lg text-xs font-bold border border-black/10 dark:border-white/10 cursor-pointer"
               >
                 Close
               </button>
