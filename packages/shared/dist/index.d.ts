@@ -5,3 +5,4 @@ export * from './models/AppConfig';
 export * from './models/LeaveRequest';
 export * from './models/ShiftSwapRequest';
 export * from './models/Notice';
+export * from './utils/dateFormatter';

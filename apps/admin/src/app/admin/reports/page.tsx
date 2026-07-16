@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { FileText, Calendar, User as UserIcon, Search, MapPin, Download, Check, X, ShieldAlert, Home, ChevronDown, ChevronUp, ClipboardList } from 'lucide-react';
 import { showError, showSuccess } from '@/lib/swal';
+import { formatDisplayDate } from '@/lib/dateFormatter';
 
 interface User {
   _id: string;
@@ -209,12 +210,36 @@ export default function Reports() {
             <Calendar size={12} className="text-odizo-red" />
             <span>Filter by Date</span>
           </label>
-          <input
-            type="date"
-            value={selectedDate}
-            onChange={(e) => setSelectedDate(e.target.value)}
-            className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:border-odizo-red focus:outline-none"
-          />
+          <div className="relative w-full">
+            <input
+              type="date"
+              value={selectedDate}
+              onChange={(e) => setSelectedDate(e.target.value)}
+              className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+            />
+            <div className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white flex justify-between items-center pointer-events-none">
+              <span className={selectedDate ? 'text-white font-medium' : 'text-odizo-grey'}>
+                {selectedDate ? formatDisplayDate(selectedDate) : 'DD-MM-YYYY'}
+              </span>
+              <div className="flex items-center gap-2 pointer-events-auto">
+                {selectedDate && (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      e.preventDefault();
+                      setSelectedDate('');
+                    }}
+                    className="p-0.5 hover:bg-white/10 rounded text-odizo-grey hover:text-white transition-colors cursor-pointer z-20"
+                    title="Clear date"
+                  >
+                    <X size={14} />
+                  </button>
+                )}
+                <Calendar size={14} className="text-odizo-grey" />
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -260,7 +285,7 @@ export default function Reports() {
                     >
                       <td className="py-4 px-4 font-mono font-semibold text-white">
                         <div className="flex flex-col gap-1">
-                          <span>{record.date}</span>
+                          <span>{formatDisplayDate(record.date)}</span>
                           {record.isWFH && (
                             <span className="inline-flex items-center gap-1 text-[9px] px-1.5 py-0.5 rounded font-bold border bg-sky-500/10 border-sky-500/25 text-sky-400 w-fit uppercase">
                               <Home size={10} /> WFH

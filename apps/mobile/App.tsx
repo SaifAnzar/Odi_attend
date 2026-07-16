@@ -80,6 +80,26 @@ const parseYYYYMMDD = (str: string) => {
   return new Date(y, m - 1, d);
 };
 
+const formatDisplayDate = (date: Date | string | number | null | undefined): string => {
+  if (!date) return '';
+  const d = new Date(date);
+  if (isNaN(d.getTime())) return '';
+  const day = String(d.getDate()).padStart(2, '0');
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const year = d.getFullYear();
+  return `${day}-${month}-${year}`;
+};
+
+const formatApiDate = (date: Date | string | number | null | undefined): string => {
+  if (!date) return '';
+  const d = new Date(date);
+  if (isNaN(d.getTime())) return '';
+  const day = String(d.getDate()).padStart(2, '0');
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const year = d.getFullYear();
+  return `${year}-${month}-${day}`;
+};
+
 interface CalendarModalProps {
   visible: boolean;
   onClose: () => void;
@@ -430,11 +450,7 @@ function AppContent() {
   }, [isAuthenticated]);
 
   const formatDate = (isoStr: string) => {
-    if (!isoStr) return '';
-    const datePart = isoStr.split('T')[0];
-    const [y, m, d] = datePart.split('-');
-    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-    return `${months[parseInt(m) - 1]} ${parseInt(d)}, ${y}`;
+    return formatDisplayDate(isoStr);
   };
 
   const fetchNotices = async () => {
@@ -1176,7 +1192,7 @@ function AppContent() {
                 {records.map((r) => (
                   <View key={r._id} style={styles.historyRecordCard}>
                     <View style={styles.recordCardTop}>
-                      <Text style={styles.recordDate}>{r.date}</Text>
+                      <Text style={styles.recordDate}>{formatDisplayDate(r.date)}</Text>
                       <View style={[
                         styles.recordStatusBadge,
                         { backgroundColor: r.attendanceStatus === 'Present' ? 'rgba(74,222,128,0.15)' : 'rgba(251,191,36,0.15)' }
@@ -1240,7 +1256,7 @@ function AppContent() {
                     >
                       <Ionicons name="calendar-outline" size={16} color="#E16167" style={{ marginRight: 6 }} />
                       <Text style={styles.datePickerBtnText}>
-                        {leaveStartDate}
+                        {formatDisplayDate(leaveStartDate)}
                       </Text>
                     </TouchableOpacity>
                   </View>
@@ -1253,7 +1269,7 @@ function AppContent() {
                     >
                       <Ionicons name="calendar-outline" size={16} color="#E16167" style={{ marginRight: 6 }} />
                       <Text style={styles.datePickerBtnText}>
-                        {leaveEndDate}
+                        {formatDisplayDate(leaveEndDate)}
                       </Text>
                     </TouchableOpacity>
                   </View>
@@ -1322,7 +1338,7 @@ function AppContent() {
                       <View style={styles.recordCardTop}>
                         <View style={{ flexDirection: 'column', gap: 4 }}>
                           <Text style={styles.recordDate}>
-                            {sDate} to {eDate}
+                            {formatDisplayDate(l.startDate)} to {formatDisplayDate(l.endDate)}
                           </Text>
                           <View style={{ flexDirection: 'row', gap: 6, alignItems: 'center' }}>
                             <View style={[styles.recordTypeBadge, { backgroundColor: 'rgba(225, 97, 103, 0.15)' }]}>
@@ -1456,7 +1472,7 @@ function AppContent() {
                     >
                       <Ionicons name="calendar-outline" size={16} color="#E16167" style={{ marginRight: 6 }} />
                       <Text style={styles.datePickerBtnText}>
-                        {swapDate}
+                        {formatDisplayDate(swapDate)}
                       </Text>
                     </TouchableOpacity>
                   </View>
@@ -1602,7 +1618,7 @@ function AppContent() {
                     >
                       <Ionicons name="calendar-outline" size={16} color="#E16167" style={{ marginRight: 6 }} />
                       <Text style={styles.datePickerBtnText}>
-                        {leaveStartDate}
+                        {formatDisplayDate(leaveStartDate)}
                       </Text>
                     </TouchableOpacity>
                   </View>
@@ -1615,7 +1631,7 @@ function AppContent() {
                     >
                       <Ionicons name="calendar-outline" size={16} color="#E16167" style={{ marginRight: 6 }} />
                       <Text style={styles.datePickerBtnText}>
-                        {leaveEndDate}
+                        {formatDisplayDate(leaveEndDate)}
                       </Text>
                     </TouchableOpacity>
                   </View>
@@ -1684,7 +1700,7 @@ function AppContent() {
                       <View style={styles.recordCardTop}>
                         <View style={{ flexDirection: 'column', gap: 4 }}>
                           <Text style={styles.recordDate}>
-                            {sDate} to {eDate}
+                            {formatDisplayDate(l.startDate)} to {formatDisplayDate(l.endDate)}
                           </Text>
                           <View style={{ flexDirection: 'row', gap: 6, alignItems: 'center' }}>
                             <View style={[styles.recordTypeBadge, { backgroundColor: 'rgba(56, 189, 248, 0.15)' }]}>

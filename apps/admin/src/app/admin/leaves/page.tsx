@@ -18,6 +18,7 @@ import {
   ChevronUp
 } from 'lucide-react';
 import { showConfirm, showError, showSuccess } from '@/lib/swal';
+import { formatDisplayDate } from '@/lib/dateFormatter';
 
 interface UserDetail {
   _id: string;
@@ -40,16 +41,11 @@ interface LeaveRequest {
 }
 
 const formatDBDate = (isoStr: string) => {
-  if (!isoStr) return '';
-  const datePart = isoStr.split('T')[0]; // "YYYY-MM-DD"
-  const [y, m, d] = datePart.split('-');
-  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-  return `${months[parseInt(m) - 1]} ${parseInt(d)}, ${y}`;
+  return formatDisplayDate(isoStr);
 };
 
 const formatAppliedDate = (dateStr: string) => {
-  if (!dateStr) return '';
-  return new Date(dateStr).toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' });
+  return formatDisplayDate(dateStr);
 };
 
 const getDaysDiff = (startIso: string, endIso: string) => {
