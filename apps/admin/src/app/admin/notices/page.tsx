@@ -25,6 +25,7 @@ export default function NoticeBoardAdminPage() {
   const [loading, setLoading] = useState(true);
   const [publishing, setPublishing] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
+  const [user, setUser] = useState<{ id: string; role: string; name: string; email: string } | null>(null);
 
   // Form states
   const [title, setTitle] = useState('');
@@ -54,8 +55,34 @@ export default function NoticeBoardAdminPage() {
   };
 
   useEffect(() => {
+    const storedUser = localStorage.getItem('user');
+    if (storedUser) {
+      setUser(JSON.parse(storedUser));
+    }
     fetchNotices();
   }, []);
+
+  const handleAcknowledgeNotice = async (noticeId: string) => {
+    try {
+      setActionLoading(true);
+      const res = await fetch(`/api/notices/${noticeId}/acknowledge`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' }
+      });
+      const data = await res.json();
+      if (res.ok) {
+        showSuccess('Notice Acknowledged', 'Notice has been marked as read.');
+        fetchNotices();
+      } else {
+        showError('Error', data.error || 'Failed to acknowledge notice.');
+      }
+    } catch (err) {
+      console.error(err);
+      showError('Error', 'An unexpected error occurred.');
+    } finally {
+      setActionLoading(false);
+    }
+  };
 
   const handlePublish = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -122,81 +149,94 @@ export default function NoticeBoardAdminPage() {
     }
   };
 
+  const isAdmin = user?.role === 'Admin';
+
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 max-w-6xl">
-      {/* Col 1: Form */}
-      <div className="lg:col-span-1 space-y-6">
-        <div>
-          <h1 className="text-3xl font-extrabold tracking-tight bg-gradient-to-r from-slate-900 via-odizo-grey to-slate-900 dark:from-white dark:via-odizo-grey dark:to-white bg-clip-text text-transparent">
-            Notice Board
-          </h1>
-          <p className="text-sm text-odizo-grey mt-1">Publish alerts and announcements</p>
-        </div>
-
-        <form onSubmit={handlePublish} className="glass-card p-6 floating-shadow border-black/5 dark:border-white/5 space-y-4">
-          <div className="flex items-center gap-2 border-b border-black/5 dark:border-white/5 pb-3">
-            <Megaphone size={16} className="text-odizo-red" />
-            <h3 className="font-bold text-slate-900 dark:text-white">Broadcast Announcement</h3>
+    <div className={`grid grid-cols-1 ${isAdmin ? 'lg:grid-cols-3' : 'max-w-4xl'} gap-6`}>
+      {/* Col 1: Form (Admin Only) */}
+      {isAdmin && (
+        <div className="lg:col-span-1 space-y-6">
+          <div>
+            <h1 className="text-3xl font-extrabold tracking-tight bg-gradient-to-r from-slate-900 via-odizo-grey to-slate-900 dark:from-white dark:via-odizo-grey dark:to-white bg-clip-text text-transparent">
+              Notice Board
+            </h1>
+            <p className="text-sm text-odizo-grey mt-1">Publish alerts and announcements</p>
           </div>
 
-          <div className="space-y-1.5">
-            <label className="block text-xs font-semibold uppercase tracking-wider text-odizo-grey">Notice Title</label>
-            <input
-              type="text"
-              required
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder="e.g. Office Closed (Holiday)"
-              className="w-full bg-black/5 dark:bg-white/3 border border-black/10 dark:border-white/10 rounded-xl px-4 py-2.5 text-sm text-slate-900 dark:text-white placeholder-odizo-grey focus:border-odizo-red focus:outline-none transition-colors"
-            />
-          </div>
+          <form onSubmit={handlePublish} className="glass-card p-6 floating-shadow border-black/5 dark:border-white/5 space-y-4">
+            <div className="flex items-center gap-2 border-b border-black/5 dark:border-white/5 pb-3">
+              <Megaphone size={16} className="text-odizo-red" />
+              <h3 className="font-bold text-slate-900 dark:text-white">Broadcast Announcement</h3>
+            </div>
 
-          <div className="space-y-1.5">
-            <label className="block text-xs font-semibold uppercase tracking-wider text-odizo-grey">Alert Type</label>
-            <select
-              value={type}
-              onChange={(e) => setType(e.target.value as any)}
-              className="w-full bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-xl px-4 py-2.5 text-sm text-slate-900 dark:text-white focus:border-odizo-red focus:outline-none"
+            <div className="space-y-1.5">
+              <label className="block text-xs font-semibold uppercase tracking-wider text-odizo-grey">Notice Title</label>
+              <input
+                type="text"
+                required
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                placeholder="e.g. Office Closed (Holiday)"
+                className="w-full bg-black/5 dark:bg-white/3 border border-black/10 dark:border-white/10 rounded-xl px-4 py-2.5 text-sm text-slate-900 dark:text-white placeholder-odizo-grey focus:border-odizo-red focus:outline-none transition-colors"
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="block text-xs font-semibold uppercase tracking-wider text-odizo-grey">Alert Type</label>
+              <select
+                value={type}
+                onChange={(e) => setType(e.target.value as any)}
+                className="w-full bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-xl px-4 py-2.5 text-sm text-slate-900 dark:text-white focus:border-odizo-red focus:outline-none"
+              >
+                <option value="Info" className="bg-black text-slate-900 dark:text-white">Info (Blue alert)</option>
+                <option value="Warning" className="bg-black text-slate-900 dark:text-white">Warning (Red alert)</option>
+                <option value="Holiday" className="bg-black text-slate-900 dark:text-white">Holiday (Green alert)</option>
+              </select>
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="block text-xs font-semibold uppercase tracking-wider text-odizo-grey">Announcement Details</label>
+              <textarea
+                required
+                rows={4}
+                value={content}
+                onChange={(e) => setContent(e.target.value)}
+                placeholder="Type message content here..."
+                className="w-full bg-black/5 dark:bg-white/3 border border-black/10 dark:border-white/10 rounded-xl px-4 py-3 text-sm text-slate-900 dark:text-white placeholder-odizo-grey focus:border-odizo-red focus:outline-none transition-colors"
+              />
+            </div>
+
+            <button
+              type="submit"
+              disabled={publishing}
+              className="w-full flex items-center justify-center gap-2 py-3 bg-odizo-red hover:bg-odizo-red/80 text-slate-900 dark:text-white rounded-xl text-sm font-bold transition-all disabled:opacity-50 cursor-pointer shadow-lg shadow-red-900/25"
             >
-              <option value="Info" className="bg-black text-slate-900 dark:text-white">Info (Blue alert)</option>
-              <option value="Warning" className="bg-black text-slate-900 dark:text-white">Warning (Red alert)</option>
-              <option value="Holiday" className="bg-black text-slate-900 dark:text-white">Holiday (Green alert)</option>
-            </select>
-          </div>
-
-          <div className="space-y-1.5">
-            <label className="block text-xs font-semibold uppercase tracking-wider text-odizo-grey">Announcement Details</label>
-            <textarea
-              required
-              rows={4}
-              value={content}
-              onChange={(e) => setContent(e.target.value)}
-              placeholder="Type message content here..."
-              className="w-full bg-black/5 dark:bg-white/3 border border-black/10 dark:border-white/10 rounded-xl px-4 py-3 text-sm text-slate-900 dark:text-white placeholder-odizo-grey focus:border-odizo-red focus:outline-none transition-colors"
-            />
-          </div>
-
-          <button
-            type="submit"
-            disabled={publishing}
-            className="w-full flex items-center justify-center gap-2 py-3 bg-odizo-red hover:bg-odizo-red/80 text-slate-900 dark:text-white rounded-xl text-sm font-bold transition-all disabled:opacity-50 cursor-pointer shadow-lg shadow-red-900/25"
-          >
-            {publishing ? (
-              <div className="h-5 w-5 animate-spin rounded-full border-2 border-white border-t-transparent"></div>
-            ) : (
-              <>
-                <Send size={16} />
-                <span>Send Broadcast</span>
-              </>
-            )}
-          </button>
-        </form>
-      </div>
+              {publishing ? (
+                <div className="h-5 w-5 animate-spin rounded-full border-2 border-white border-t-transparent"></div>
+              ) : (
+                <>
+                  <Send size={16} />
+                  <span>Send Broadcast</span>
+                </>
+              )}
+            </button>
+          </form>
+        </div>
+      )}
 
       {/* Col 2 & 3: Board Feed */}
-      <div className="lg:col-span-2 space-y-4">
+      <div className={isAdmin ? 'lg:col-span-2 space-y-4' : 'space-y-4'}>
+        {!isAdmin && (
+          <div className="mb-2">
+            <h1 className="text-3xl font-extrabold tracking-tight bg-gradient-to-r from-slate-900 via-odizo-grey to-slate-900 dark:from-white dark:via-odizo-grey dark:to-white bg-clip-text text-transparent">
+              Notice Board
+            </h1>
+            <p className="text-sm text-odizo-grey mt-1">Announcements and broadcast alerts from administrators</p>
+          </div>
+        )}
+
         <h2 className="text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
-          <span>Active Broadcast History</span>
+          <span>{isAdmin ? 'Active Broadcast History' : 'Announcements'}</span>
           <span className="text-xs font-normal text-odizo-grey bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-full px-2.5 py-0.5">
             {notices.length} Total
           </span>
@@ -211,7 +251,7 @@ export default function NoticeBoardAdminPage() {
           <div className="text-center py-20 border border-dashed border-black/10 dark:border-white/10 rounded-2xl">
             <Megaphone size={40} className="mx-auto text-odizo-grey/40 mb-3" />
             <p className="text-sm font-semibold text-slate-900 dark:text-white">No active notices broadcasted</p>
-            <p className="text-xs text-odizo-grey mt-1">Use the panel on the left to issue notice alerts.</p>
+            <p className="text-xs text-odizo-grey mt-1">{isAdmin ? 'Use the panel on the left to issue notice alerts.' : 'You are all caught up!'}</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 gap-4">
@@ -245,25 +285,45 @@ export default function NoticeBoardAdminPage() {
                     </span>
                   </div>
 
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => handleViewAcks(notice)}
-                      className="flex items-center gap-1 px-2.5 py-1 bg-black/5 dark:bg-white/5 hover:bg-black/5 dark:bg-white/10 border border-black/10 dark:border-white/10 rounded-lg text-[10px] text-odizo-grey hover:text-slate-900 dark:text-white transition-colors cursor-pointer"
-                    >
-                      <Users size={12} />
-                      <span>{notice.acknowledgedBy.length} Acknowledged</span>
-                      <Eye size={10} style={{ marginLeft: 2 }} />
-                    </button>
-                    <button
-                      disabled={actionLoading}
-                      onClick={() => handleDeleteNotice(notice._id)}
-                      className="flex items-center gap-1 px-2.5 py-1 bg-odizo-red/10 hover:bg-odizo-red/20 border border-odizo-red/20 hover:border-odizo-red/40 rounded-lg text-[10px] text-odizo-red transition-all cursor-pointer disabled:opacity-50 animate-fade-in"
-                      title="Delete Announcement"
-                    >
-                      <Trash2 size={12} />
-                      <span>Delete</span>
-                    </button>
-                  </div>
+                  {isAdmin ? (
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => handleViewAcks(notice)}
+                        className="flex items-center gap-1 px-2.5 py-1 bg-black/5 dark:bg-white/5 hover:bg-black/5 dark:bg-white/10 border border-black/10 dark:border-white/10 rounded-lg text-[10px] text-odizo-grey hover:text-slate-900 dark:text-white transition-colors cursor-pointer"
+                      >
+                        <Users size={12} />
+                        <span>{notice.acknowledgedBy.length} Acknowledged</span>
+                        <Eye size={10} style={{ marginLeft: 2 }} />
+                      </button>
+                      <button
+                        disabled={actionLoading}
+                        onClick={() => handleDeleteNotice(notice._id)}
+                        className="flex items-center gap-1 px-2.5 py-1 bg-odizo-red/10 hover:bg-odizo-red/20 border border-odizo-red/20 hover:border-odizo-red/40 rounded-lg text-[10px] text-odizo-red transition-all cursor-pointer disabled:opacity-50 animate-fade-in"
+                        title="Delete Announcement"
+                      >
+                        <Trash2 size={12} />
+                        <span>Delete</span>
+                      </button>
+                    </div>
+                  ) : (
+                    <div>
+                      {notice.acknowledgedBy.some((u: any) => u._id === user?.id) ? (
+                        <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 rounded-lg text-[10px] font-bold">
+                          <CheckCircle2 size={12} />
+                          <span>Acknowledged</span>
+                        </span>
+                      ) : (
+                        <button
+                          disabled={actionLoading}
+                          onClick={() => handleAcknowledgeNotice(notice._id)}
+                          className="flex items-center gap-1 px-3 py-1 bg-odizo-red hover:bg-odizo-red/80 text-slate-900 dark:text-white rounded-lg text-[10px] font-bold transition-colors cursor-pointer disabled:opacity-50"
+                        >
+                          <Send size={10} />
+                          <span>Acknowledge Notice</span>
+                        </button>
+                      )}
+                    </div>
+                  )}
                 </div>
 
                 <h3 className="font-bold text-slate-900 dark:text-white text-base mb-2">{notice.title}</h3>
