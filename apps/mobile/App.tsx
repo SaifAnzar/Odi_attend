@@ -458,7 +458,7 @@ function AppContent() {
   // Auth Form
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [apiUrl, setApiUrl] = useState('https://YOUR-LIVE-VERCEL-SUBDOMAIN.vercel.app'); // Replace with your live Vercel URL
+  const [apiUrl, setApiUrl] = useState('https://odi-attend-admin.vercel.app');
   const [showSettings, setShowSettings] = useState(false);
 
   // Punch UI
