@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { connectToDatabase } from '@/lib/db';
 import { verifyAuth } from '@/lib/auth';
 import { LeaveRequest } from '@odi_attend/shared';
+import { sendPushNotification } from '@/lib/notifications';
 
 // PATCH /api/leaves/[id]/review - Review (Approve/Reject) a leave request
 export async function PATCH(
@@ -39,6 +40,15 @@ export async function PATCH(
     }
 
     await leaveRequest.save();
+
+    // Trigger push notification to the requester (fire-and-forget)
+    const requesterId = leaveRequest.userId.toString();
+    const notificationTitle = `${leaveRequest.type} Request ${status}`;
+    const notificationBody = `Your ${leaveRequest.type.toLowerCase()} request for ${leaveRequest.startDate} to ${leaveRequest.endDate} was ${status.toLowerCase()} by the Admin.`;
+    
+    sendPushNotification([requesterId], notificationTitle, notificationBody).catch(err => {
+      console.error('Failed to trigger push notification:', err);
+    });
 
     return NextResponse.json({ success: true, leaveRequest });
   } catch (error: any) {

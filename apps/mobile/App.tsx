@@ -25,6 +25,19 @@ import { colors } from './constants/colors';
 import * as Location from 'expo-location';
 import { Ionicons } from '@expo/vector-icons';
 import NetInfo from '@react-native-community/netinfo';
+import * as Notifications from 'expo-notifications';
+import * as Device from 'expo-device';
+import Constants from 'expo-constants';
+
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldShowAlert: true,
+    shouldPlaySound: true,
+    shouldSetBadge: false,
+    shouldShowBanner: true,
+    shouldShowList: true,
+  }),
+});
 
 NetInfo.configure({
   shouldFetchWiFiSSID: true,
@@ -355,6 +368,44 @@ function CustomAlertProvider({ children }: { children: React.ReactNode }) {
   );
 }
 
+async function registerForPushNotificationsAsync() {
+  let token;
+
+  if (Platform.OS === 'android') {
+    await Notifications.setNotificationChannelAsync('default', {
+      name: 'default',
+      importance: Notifications.AndroidImportance.MAX,
+      vibrationPattern: [0, 250, 250, 250],
+      lightColor: '#FF231F7C',
+    });
+  }
+
+  if (Device.isDevice) {
+    const existingStatus = (await Notifications.getPermissionsAsync()) as any;
+    let finalGranted = existingStatus?.granted || existingStatus?.status === 'granted';
+    if (!finalGranted) {
+      const askStatus = (await Notifications.requestPermissionsAsync()) as any;
+      finalGranted = askStatus?.granted || askStatus?.status === 'granted';
+    }
+    if (!finalGranted) {
+      console.warn('Failed to get push token for push notification!');
+      return null;
+    }
+    
+    try {
+      const projectId = Constants?.expoConfig?.extra?.eas?.projectId;
+      token = (await Notifications.getExpoPushTokenAsync({ projectId })).data;
+      console.log('Expo Push Token:', token);
+    } catch (e) {
+      console.error('Failed to fetch push token:', e);
+    }
+  } else {
+    console.log('Must use physical device for Push Notifications');
+  }
+
+  return token;
+}
+
 export default function App() {
   return (
     <AppThemeProvider>
@@ -459,6 +510,53 @@ function AppContent() {
       if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
     };
   }, [isAuthenticated]);
+
+  // Push Notification listeners
+  useEffect(() => {
+    // Foreground notification listener
+    const subscription = Notifications.addNotificationReceivedListener(notification => {
+      console.log('Notification received in foreground:', notification);
+      const { title, body } = notification.request.content;
+      if (title && body) {
+        showAlert(title, body, 'success');
+      }
+    });
+
+    // Notification response listener (when user taps the notification)
+    const responseSubscription = Notifications.addNotificationResponseReceivedListener(response => {
+      console.log('Notification tapped:', response);
+    });
+
+    return () => {
+      subscription.remove();
+      responseSubscription.remove();
+    };
+  }, []);
+
+  // Register push notifications when authenticated
+  useEffect(() => {
+    if (isAuthenticated && token) {
+      const registerPush = async () => {
+        try {
+          const pushToken = await registerForPushNotificationsAsync();
+          if (pushToken) {
+            console.log('Sending push token to server:', pushToken);
+            await fetch(`${apiUrl}/api/users/push-token`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+              },
+              body: JSON.stringify({ token: pushToken })
+            });
+          }
+        } catch (e) {
+          console.error('Failed to register push token on server:', e);
+        }
+      };
+      registerPush();
+    }
+  }, [isAuthenticated, token, apiUrl]);
 
   const formatDate = (isoStr: string) => {
     return formatDisplayDate(isoStr);

@@ -46,7 +46,8 @@ const UserSchema = new mongoose_1.Schema({
     passwordHash: { type: String, required: true },
     role: { type: String, required: true, enum: ['Admin', 'Employee', 'Intern'], default: 'Employee' },
     status: { type: String, required: true, enum: ['Active', 'Inactive'], default: 'Active' },
-    shift: { type: ShiftSchema, required: true, default: () => ({ name: 'Standard Shift', startTime: '09:00', endTime: '18:00' }) }
+    shift: { type: ShiftSchema, required: true, default: () => ({ name: 'Standard Shift', startTime: '09:00', endTime: '18:00' }) },
+    expoPushToken: { type: String, default: null }
 }, {
     timestamps: true
 });

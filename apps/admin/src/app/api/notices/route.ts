@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { connectToDatabase } from '@/lib/db';
 import { verifyAuth } from '@/lib/auth';
-import { Notice } from '@odi_attend/shared';
+import { Notice, User } from '@odi_attend/shared';
+import { sendPushNotification } from '@/lib/notifications';
 
 export async function GET(request: NextRequest) {
   try {
@@ -49,6 +50,30 @@ export async function POST(request: NextRequest) {
     });
 
     await newNotice.save();
+
+    // Broadcast push notification to all active Employee and Intern users
+    try {
+      const activeEmployees = await User.find({
+        role: { $in: ['Employee', 'Intern'] },
+        status: 'Active',
+        expoPushToken: { $ne: null }
+      }).select('_id');
+
+      const employeeIds = activeEmployees.map(emp => emp._id.toString());
+      if (employeeIds.length > 0) {
+        // Truncate content preview for the push message
+        const preview = content.length > 80 ? content.substring(0, 80) + '...' : content;
+        sendPushNotification(
+          employeeIds, 
+          `ODIZO Announcement: ${title}`, 
+          preview
+        ).catch(err => {
+          console.error('Failed to broadcast notice push:', err);
+        });
+      }
+    } catch (pushErr) {
+      console.error('Error fetching push tokens for notice broadcast:', pushErr);
+    }
 
     return NextResponse.json({ success: true, notice: newNotice }, { status: 201 });
   } catch (error: any) {

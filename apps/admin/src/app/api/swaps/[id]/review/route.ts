@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { connectToDatabase } from '@/lib/db';
 import { verifyAuth } from '@/lib/auth';
 import { ShiftSwapRequest } from '@odi_attend/shared';
+import { sendPushNotification } from '@/lib/notifications';
 
 export async function PATCH(
   request: NextRequest,
@@ -46,8 +47,27 @@ export async function PATCH(
         return NextResponse.json({ error: 'Only administrators can finalize and approve swap requests.' }, { status: 403 });
       }
 
-      swapRequest.status = status; // either 'Pending Admin' (Accepted) or 'Rejected' (Declined)
+      swapRequest.status = status; // 'Pending Admin' (Accepted) or 'Rejected' (Declined)
       await swapRequest.save();
+
+      // Notify the requester about their colleague's action
+      const requester = swapRequest.requesterId as any;
+      const target = swapRequest.targetUserId as any;
+      const dateStr = new Date(swapRequest.swapDate).toISOString().split('T')[0];
+
+      if (status === 'Pending Admin') {
+        sendPushNotification(
+          [requester._id.toString()],
+          'Swap Request Accepted',
+          `${target.name} accepted your shift swap request for ${dateStr}. Now pending Admin approval.`
+        ).catch(err => console.error('Failed to notify requester:', err));
+      } else if (status === 'Rejected') {
+        sendPushNotification(
+          [requester._id.toString()],
+          'Swap Request Declined',
+          `${target.name} declined your shift swap request for ${dateStr}.`
+        ).catch(err => console.error('Failed to notify requester:', err));
+      }
 
       return NextResponse.json({ success: true, swap: swapRequest });
     }
@@ -58,21 +78,27 @@ export async function PATCH(
         return NextResponse.json({ error: 'Cannot transition back to Pending Admin status.' }, { status: 400 });
       }
 
-      swapRequest.status = status; // either 'Approved' or 'Rejected'
+      swapRequest.status = status; // 'Approved' or 'Rejected'
       if (adminRemarks !== undefined) {
         swapRequest.adminRemarks = adminRemarks;
       }
       await swapRequest.save();
 
-      // Trigger a simulated push notification to both users
-      if (status === 'Approved') {
-        const requester = swapRequest.requesterId as any;
-        const target = swapRequest.targetUserId as any;
-        const dateStr = new Date(swapRequest.swapDate).toISOString().split('T')[0];
+      // Trigger real push notifications to both users
+      const requester = swapRequest.requesterId as any;
+      const target = swapRequest.targetUserId as any;
+      const dateStr = new Date(swapRequest.swapDate).toISOString().split('T')[0];
 
-        console.log(`[PUSH NOTIFICATION] Sending to requester ${requester.name} (${requester._id}): Your shift swap request with ${target.name} for ${dateStr} was APPROVED by the Admin.`);
-        console.log(`[PUSH NOTIFICATION] Sending to target ${target.name} (${target._id}): Your shift swap request with ${requester.name} for ${dateStr} was APPROVED by the Admin.`);
-      }
+      const requesterMsg = `Your shift swap request with ${target.name} for ${dateStr} was ${status.toLowerCase()} by the Admin.`;
+      const targetMsg = `The shift swap request with ${requester.name} for ${dateStr} was ${status.toLowerCase()} by the Admin.`;
+
+      sendPushNotification([requester._id.toString()], `Shift Swap ${status}`, requesterMsg).catch(err => {
+        console.error('Failed to send push to requester:', err);
+      });
+
+      sendPushNotification([target._id.toString()], `Shift Swap ${status}`, targetMsg).catch(err => {
+        console.error('Failed to send push to target:', err);
+      });
 
       return NextResponse.json({ success: true, swap: swapRequest });
     }

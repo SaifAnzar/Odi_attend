@@ -11,6 +11,7 @@ export interface IUser extends Document {
     role: 'Admin' | 'Employee' | 'Intern';
     status: 'Active' | 'Inactive';
     shift: IShift;
+    expoPushToken?: string | null;
     createdAt: Date;
     updatedAt: Date;
 }
