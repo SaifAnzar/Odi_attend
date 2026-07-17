@@ -1,3 +1,9 @@
 {
-  "css.lint.unknownAtRules": "ignore"
+  "css.lint.unknownAtRules": "ignore",
+  "json.schemas": [
+    {
+      "fileMatch": ["app.json"],
+      "url": "https://expo.dev/schemas/v54.0.0/app.json"
+    }
+  ]
 }

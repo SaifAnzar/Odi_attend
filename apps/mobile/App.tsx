@@ -407,7 +407,7 @@ function AppContent() {
   // Auth Form
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [apiUrl, setApiUrl] = useState('http://10.217.44.114:3000'); // Default local dev API URL
+  const [apiUrl, setApiUrl] = useState('https://YOUR-LIVE-VERCEL-SUBDOMAIN.vercel.app'); // Replace with your live Vercel URL
   const [showSettings, setShowSettings] = useState(false);
 
   // Punch UI
