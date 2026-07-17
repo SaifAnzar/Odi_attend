@@ -43,8 +43,8 @@ export async function PATCH(
 
     // Trigger push notification to the requester (fire-and-forget)
     const requesterId = leaveRequest.userId.toString();
-    const notificationTitle = `${leaveRequest.type} Request ${status}`;
-    const notificationBody = `Your ${leaveRequest.type.toLowerCase()} request for ${leaveRequest.startDate} to ${leaveRequest.endDate} was ${status.toLowerCase()} by the Admin.`;
+    const notificationTitle = `${leaveRequest.requestType} Request ${status}`;
+    const notificationBody = `Your ${leaveRequest.requestType.toLowerCase()} request for ${leaveRequest.startDate} to ${leaveRequest.endDate} was ${status.toLowerCase()} by the Admin.`;
     
     sendPushNotification([requesterId], notificationTitle, notificationBody).catch(err => {
       console.error('Failed to trigger push notification:', err);
