@@ -17,7 +17,7 @@ export function Logo({ className = '', size = 'md' }: LogoProps) {
   return (
     <div className={`flex items-center justify-center select-none ${className}`}>
       <img
-        src="/logo.png"
+        src="/odizo_logo_full.png"
         alt="ODIZO Logo"
         style={{
           width,
@@ -29,4 +29,5 @@ export function Logo({ className = '', size = 'md' }: LogoProps) {
     </div>
   );
 }
+
 export default Logo;
