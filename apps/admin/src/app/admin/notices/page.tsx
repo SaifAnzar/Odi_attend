@@ -337,7 +337,7 @@ export default function NoticeBoardAdminPage() {
       {/* Reader Acknowledgements Modal */}
       {showAckModal && selectedNotice && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fade-in">
-          <div className="w-full max-w-md glass-card p-6 floating-shadow border-black/10 dark:border-white/10 space-y-4">
+          <div className="w-full max-w-md bg-white/95 dark:bg-zinc-950/90 border border-slate-200 dark:border-white/10 rounded-2xl floating-shadow p-6 space-y-4 text-slate-900 dark:text-white">
             <div className="flex items-center justify-between border-b border-black/5 dark:border-white/5 pb-3">
               <div className="flex items-center gap-2 text-slate-900 dark:text-white font-bold text-sm">
                 <Users size={18} className="text-odizo-red" />

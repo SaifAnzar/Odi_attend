@@ -9,7 +9,7 @@ const customSwal = MySwal.mixin({
     title: 'text-xl font-bold text-white mb-2',
     htmlContainer: 'text-sm text-odizo-grey mb-4',
     confirmButton: 'px-5 py-2.5 bg-odizo-red hover:bg-odizo-red/90 text-white rounded-xl font-semibold transition-all duration-300 cursor-pointer text-sm shadow-[0_0_15px_rgba(225,97,103,0.2)] focus:outline-none outline-none border border-transparent',
-    cancelButton: 'px-5 py-2.5 bg-white/5 border border-white/10 hover:bg-white/10 text-white rounded-xl font-semibold transition-all duration-300 cursor-pointer text-sm focus:outline-none outline-none ml-3',
+    cancelButton: 'px-5 py-2.5 bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 hover:bg-slate-200 dark:hover:bg-white/10 text-slate-700 dark:text-white rounded-xl font-semibold transition-all duration-300 cursor-pointer text-sm focus:outline-none outline-none ml-3',
     actions: 'flex gap-3 justify-center mt-6 w-full'
   },
   buttonsStyling: false

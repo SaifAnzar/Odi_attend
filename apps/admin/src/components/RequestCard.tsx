@@ -86,17 +86,16 @@ export function RequestCard({
     <motion.div
       whileHover={{
         y: -5,
-        border: '1px solid rgba(255, 255, 255, 0.2)',
-        boxShadow: '0 20px 40px rgba(0, 0, 0, 0.4), 0 0 15px rgba(225, 97, 103, 0.1)',
+        boxShadow: '0 20px 40px rgba(0, 0, 0, 0.1), 0 0 15px rgba(225, 97, 103, 0.05)',
       }}
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -10 }}
       transition={{ duration: 0.3 }}
-      className="glass-card p-5 bg-slate-900/40 dark:bg-black/40 border border-white/10 flex flex-col justify-between h-full relative overflow-hidden text-left"
+      className="p-5 bg-white/90 dark:bg-zinc-950/60 backdrop-blur-md border border-slate-200/80 dark:border-white/10 hover:border-slate-300 dark:hover:border-white/20 flex flex-col justify-between h-full relative overflow-hidden text-left rounded-2xl shadow-sm transition-all duration-300"
     >
       {/* Glow Effects */}
-      <div className="absolute top-0 right-0 w-24 h-24 bg-white/[0.02] rounded-full blur-2xl pointer-events-none" />
+      <div className="absolute top-0 right-0 w-24 h-24 bg-black/[0.01] dark:bg-white/[0.02] rounded-full blur-2xl pointer-events-none" />
       {type === 'Leave' && (
         <div className="absolute -bottom-8 -left-8 w-24 h-24 bg-odizo-red/[0.03] rounded-full blur-2xl pointer-events-none" />
       )}
@@ -112,11 +111,11 @@ export function RequestCard({
         <div className="flex justify-between items-start gap-3 mb-4">
           <div className="flex items-center gap-3">
             {/* Beautiful Gradient Avatar */}
-            <div className="h-10 w-10 rounded-full bg-gradient-to-tr from-slate-800 to-slate-700 dark:from-zinc-900 dark:to-zinc-800 border border-white/15 flex items-center justify-center text-xs font-bold text-white shadow-inner">
+            <div className="h-10 w-10 rounded-full bg-gradient-to-tr from-slate-100 to-slate-200 dark:from-zinc-900 dark:to-zinc-800 border border-slate-200/80 dark:border-white/15 flex items-center justify-center text-xs font-bold text-slate-700 dark:text-white shadow-inner">
               {getInitials(employeeName)}
             </div>
             <div className="min-w-0">
-              <h4 className="text-sm font-bold text-white truncate max-w-[130px] leading-tight">
+              <h4 className="text-sm font-bold text-slate-900 dark:text-white truncate max-w-[130px] leading-tight">
                 {employeeName}
               </h4>
               <p className="text-[10px] text-odizo-grey mt-0.5 uppercase tracking-wider font-semibold">
@@ -134,8 +133,8 @@ export function RequestCard({
         </div>
 
         {/* Date Display */}
-        <div className="bg-white/[0.02] dark:bg-black/25 border border-white/5 rounded-xl p-3 mb-4">
-          <div className="flex items-center gap-2 text-xs font-semibold text-white">
+        <div className="bg-slate-50/80 dark:bg-black/25 border border-slate-100 dark:border-white/5 rounded-xl p-3 mb-4">
+          <div className="flex items-center gap-2 text-xs font-semibold text-slate-800 dark:text-white">
             <Calendar size={14} className="text-odizo-red" />
             <span>{formatDisplayDate(startDate)}</span>
             {endDate && (
@@ -148,7 +147,7 @@ export function RequestCard({
           {startDate && endDate && (
             <div className="text-[10px] text-odizo-grey mt-1">
               Duration:{' '}
-              <strong className="text-white font-medium">
+              <strong className="text-slate-800 dark:text-white font-medium">
                 {(() => {
                   const s = new Date(startDate.split('T')[0]);
                   const e = new Date(endDate.split('T')[0]);
@@ -168,7 +167,7 @@ export function RequestCard({
 
         {/* Details & Reason */}
         {details && (
-          <div className="text-xs text-blue-300 bg-blue-500/5 border border-blue-500/10 rounded-xl p-2.5 mb-3 font-medium">
+          <div className="text-xs text-blue-600 dark:text-blue-300 bg-blue-50/80 dark:bg-blue-500/5 border border-blue-100 dark:border-blue-500/10 rounded-xl p-2.5 mb-3 font-medium">
             {details}
           </div>
         )}
@@ -178,7 +177,7 @@ export function RequestCard({
             <p className="text-[10px] text-odizo-grey uppercase tracking-wider font-bold mb-1">
               Reason
             </p>
-            <p className="text-xs text-gray-300 bg-white/[0.01] border border-white/5 p-2.5 rounded-xl line-clamp-2 hover:line-clamp-none transition-all duration-300">
+            <p className="text-xs text-slate-600 dark:text-zinc-300 bg-slate-50/50 dark:bg-white/[0.01] border border-slate-100 dark:border-white/5 p-2.5 rounded-xl line-clamp-2 hover:line-clamp-none transition-all duration-300">
               {reason}
             </p>
           </div>
@@ -186,7 +185,7 @@ export function RequestCard({
       </div>
 
       {/* Footer: Status & Action Buttons */}
-      <div className="flex items-center justify-between gap-4 mt-auto pt-3 border-t border-white/5">
+      <div className="flex items-center justify-between gap-4 mt-auto pt-3 border-t border-slate-100 dark:border-white/5">
         <span
           className={`inline-flex px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${statusBadgeClass}`}
         >

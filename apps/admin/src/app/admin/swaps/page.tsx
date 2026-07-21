@@ -381,11 +381,11 @@ export default function ShiftSwapsAdminPage() {
                   required
                   value={targetColleagueId}
                   onChange={(e) => setTargetColleagueId(e.target.value)}
-                  className="w-full bg-black border border-black/10 dark:border-white/10 rounded-xl px-4 py-3 text-sm text-slate-900 dark:text-white focus:border-odizo-red focus:outline-none transition-colors"
+                  className="w-full bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-xl px-4 py-3 text-sm text-slate-900 dark:text-white focus:border-odizo-red focus:outline-none transition-colors"
                 >
-                  <option value="">-- Choose a colleague --</option>
+                  <option value="" className="bg-white dark:bg-zinc-900 text-slate-900 dark:text-white">-- Choose a colleague --</option>
                   {colleagues.map((c) => (
-                    <option key={c._id} value={c._id}>
+                    <option key={c._id} value={c._id} className="bg-white dark:bg-zinc-900 text-slate-900 dark:text-white">
                       {c.name} ({c.email}) - {c.shift?.name} ({c.shift?.startTime || '00:00'}-{c.shift?.endTime || '00:00'})
                     </option>
                   ))}
@@ -401,7 +401,7 @@ export default function ShiftSwapsAdminPage() {
                   required
                   value={swapDate}
                   onChange={(e) => setSwapDate(e.target.value)}
-                  className="w-full bg-black border border-black/10 dark:border-white/10 rounded-xl px-4 py-3 text-sm text-slate-900 dark:text-white focus:border-odizo-red focus:outline-none transition-colors"
+                  className="w-full bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-xl px-4 py-3 text-sm text-slate-900 dark:text-white focus:border-odizo-red focus:outline-none transition-colors"
                 />
               </div>
 
@@ -516,7 +516,7 @@ export default function ShiftSwapsAdminPage() {
       {/* Rejection Remarks Modal */}
       {showRejectModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fade-in">
-          <div className="w-full max-w-md glass-card p-6 floating-shadow border-black/10 dark:border-white/10 space-y-4">
+          <div className="w-full max-w-md bg-white/95 dark:bg-zinc-950/90 border border-slate-200 dark:border-white/10 rounded-2xl floating-shadow p-6 space-y-4 text-slate-900 dark:text-white">
             <div className="flex items-center justify-between border-b border-black/5 dark:border-white/5 pb-3">
               <div className="flex items-center gap-2 text-odizo-red">
                 <AlertCircle size={18} />

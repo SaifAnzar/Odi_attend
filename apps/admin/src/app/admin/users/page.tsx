@@ -296,7 +296,7 @@ export default function UserManagement() {
       {/* Custom Sliding Glass Modal */}
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-md px-4">
-          <div className="w-full max-w-lg glass-card border-black/10 dark:border-white/10 floating-shadow-red p-6 animate-float">
+          <div className="w-full max-w-lg bg-white/95 dark:bg-zinc-950/90 border border-slate-200 dark:border-white/10 rounded-2xl floating-shadow-red p-6 animate-float text-slate-900 dark:text-white">
             <div className="flex items-center justify-between border-b border-black/5 dark:border-white/5 pb-4 mb-5">
               <h2 className="text-xl font-bold">
                 {modalMode === 'create' ? 'Create User Profile' : 'Edit User Profile'}
@@ -383,9 +383,9 @@ export default function UserManagement() {
                     onChange={(e) => setRole(e.target.value as any)}
                     className="w-full bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-xl px-4 py-2.5 text-sm text-slate-900 dark:text-white focus:border-odizo-red focus:outline-none"
                   >
-                    <option value="Employee" className="bg-black text-slate-900 dark:text-white">Employee</option>
-                    <option value="Intern" className="bg-black text-slate-900 dark:text-white">Intern</option>
-                    <option value="Admin" className="bg-black text-slate-900 dark:text-white">Admin</option>
+                    <option value="Employee" className="bg-white dark:bg-zinc-900 text-slate-900 dark:text-white">Employee</option>
+                    <option value="Intern" className="bg-white dark:bg-zinc-900 text-slate-900 dark:text-white">Intern</option>
+                    <option value="Admin" className="bg-white dark:bg-zinc-900 text-slate-900 dark:text-white">Admin</option>
                   </select>
                 </div>
                 <div>
@@ -395,8 +395,8 @@ export default function UserManagement() {
                     onChange={(e) => setStatus(e.target.value as any)}
                     className="w-full bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-xl px-4 py-2.5 text-sm text-slate-900 dark:text-white focus:border-odizo-red focus:outline-none"
                   >
-                    <option value="Active" className="bg-black text-slate-900 dark:text-white">Active</option>
-                    <option value="Inactive" className="bg-black text-slate-900 dark:text-white">Inactive</option>
+                    <option value="Active" className="bg-white dark:bg-zinc-900 text-slate-900 dark:text-white">Active</option>
+                    <option value="Inactive" className="bg-white dark:bg-zinc-900 text-slate-900 dark:text-white">Inactive</option>
                   </select>
                 </div>
               </div>

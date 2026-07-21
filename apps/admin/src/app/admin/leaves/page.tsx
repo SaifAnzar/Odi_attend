@@ -503,7 +503,7 @@ export default function LeaveRequestsPage() {
       {/* Custom sliding glass reject modal */}
       {showRejectModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-md px-4">
-          <div className="w-full max-w-md glass-card border-black/10 dark:border-white/10 floating-shadow-red p-6 animate-float">
+          <div className="w-full max-w-md bg-white/95 dark:bg-zinc-950/90 border border-slate-200 dark:border-white/10 rounded-2xl floating-shadow-red p-6 animate-float text-slate-900 dark:text-white">
             <div className="flex items-center justify-between border-b border-black/5 dark:border-white/5 pb-4 mb-5">
               <h2 className="text-xl font-bold text-slate-900 dark:text-white">Reject Leave Request</h2>
               <button 

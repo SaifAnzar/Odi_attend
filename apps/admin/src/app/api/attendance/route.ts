@@ -79,16 +79,18 @@ export async function POST(request: NextRequest) {
     const todayStr = getLocalDateString(now);
     const todayDate = new Date(todayStr); // UTC midnight representation of today
 
-    // Check if user has an active and approved WFH request for today
-    const wfhRequest = await LeaveRequest.findOne({
+    // Check if user has an active and approved WFH request for today (comparing local date strings to prevent timezone offset mismatches)
+    const approvedWfhRequests = await LeaveRequest.find({
       userId: user._id,
       requestType: 'WFH',
-      status: 'Approved',
-      startDate: { $lte: todayDate },
-      endDate: { $gte: todayDate }
+      status: 'Approved'
     });
 
-    const isWfhActive = !!wfhRequest;
+    const isWfhActive = approvedWfhRequests.some(req => {
+      const startStr = getLocalDateString(new Date(req.startDate));
+      const endStr = getLocalDateString(new Date(req.endDate));
+      return todayStr >= startStr && todayStr <= endStr;
+    });
 
     // Check for approved shift swap for this user on todayDate
     let activeShift = {
@@ -145,7 +147,6 @@ export async function POST(request: NextRequest) {
     // Find or create daily attendance record
     let record = await AttendanceRecord.findOne({ userId: user._id, date: todayStr });
     console.log(`[API POST /api/attendance] Record found:`, record ? `YES (ID: ${record._id})` : 'NO (null)');
-
     if (type === 'Check-In') {
       if (!record) {
         // First punch of the day: create new record with shift snapshot
@@ -232,7 +233,7 @@ export async function POST(request: NextRequest) {
       activeSession.checkOutDevice = deviceInfo || 'Mobile Application';
 
       // Update total working minutes
-      const sessionDurationMinutes = Math.round((now.getTime() - activeSession.checkIn.getTime()) / 60000);
+      const sessionDurationMinutes = Math.round((now.getTime() - new Date(activeSession.checkIn).getTime()) / 60000);
       record.totalMinutesWorked += sessionDurationMinutes;
 
       // If this check-out is flagged, propagate it to the daily record

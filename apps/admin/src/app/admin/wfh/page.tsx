@@ -518,7 +518,7 @@ export default function WFHRequestsPage() {
       {/* Admin Rejection Modal */}
       {showRejectModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-          <div className="glass-card w-full max-w-md p-6 space-y-4 floating-shadow border-black/5 dark:border-white/5 animate-float-in">
+          <div className="w-full max-w-md bg-white/95 dark:bg-zinc-950/90 border border-slate-200 dark:border-white/10 rounded-2xl floating-shadow p-6 space-y-4 animate-float-in text-slate-900 dark:text-white">
             <div className="flex justify-between items-center border-b border-black/5 dark:border-white/5 pb-3">
               <h3 className="text-base font-bold text-slate-900 dark:text-white uppercase tracking-wider">Reject WFH Request</h3>
               <button 

@@ -407,9 +407,9 @@ export default function Dashboard() {
       customClass: {
         popup: 'glass-card border border-white/10 p-6 rounded-2xl bg-[#0f0f13] backdrop-blur-md floating-shadow-red text-white text-center select-none',
         title: 'text-xl font-bold text-white mb-2',
-        input: 'w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-sm text-white focus:border-odizo-red focus:outline-none mt-4',
+        input: 'w-full bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl px-4 py-2 text-sm text-slate-900 dark:text-white focus:border-odizo-red focus:outline-none mt-4',
         confirmButton: 'px-5 py-2.5 bg-odizo-red hover:bg-odizo-red/90 text-white rounded-xl font-semibold cursor-pointer text-sm shadow-[0_0_15px_rgba(225,97,103,0.2)] focus:outline-none outline-none border border-transparent',
-        cancelButton: 'px-5 py-2.5 bg-white/5 border border-white/10 hover:bg-white/10 text-white rounded-xl font-semibold cursor-pointer text-sm focus:outline-none outline-none ml-3'
+        cancelButton: 'px-5 py-2.5 bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 hover:bg-slate-200 dark:hover:bg-white/10 text-slate-700 dark:text-white rounded-xl font-semibold cursor-pointer text-sm focus:outline-none outline-none ml-3'
       },
       buttonsStyling: false
     });
@@ -483,9 +483,9 @@ export default function Dashboard() {
       customClass: {
         popup: 'glass-card border border-white/10 p-6 rounded-2xl bg-[#0f0f13] backdrop-blur-md floating-shadow-red text-white text-center select-none',
         title: 'text-xl font-bold text-white mb-2',
-        input: 'w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-sm text-white focus:border-odizo-red focus:outline-none mt-4',
+        input: 'w-full bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl px-4 py-2 text-sm text-slate-900 dark:text-white focus:border-odizo-red focus:outline-none mt-4',
         confirmButton: 'px-5 py-2.5 bg-odizo-red hover:bg-odizo-red/90 text-white rounded-xl font-semibold cursor-pointer text-sm shadow-[0_0_15px_rgba(225,97,103,0.2)] focus:outline-none outline-none border border-transparent',
-        cancelButton: 'px-5 py-2.5 bg-white/5 border border-white/10 hover:bg-white/10 text-white rounded-xl font-semibold cursor-pointer text-sm focus:outline-none outline-none ml-3'
+        cancelButton: 'px-5 py-2.5 bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 hover:bg-slate-200 dark:hover:bg-white/10 text-slate-700 dark:text-white rounded-xl font-semibold cursor-pointer text-sm focus:outline-none outline-none ml-3'
       },
       buttonsStyling: false
     });
