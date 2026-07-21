@@ -10,6 +10,72 @@ function getLocalDateString(date: Date = new Date()): string {
   return localTime.toISOString().split('T')[0];
 }
 
+// Automatically check out employees/interns who forgot to check out after their shift ended
+async function performAutoCheckout() {
+  try {
+    // Find all attendance records with an active (open) session
+    const records = await AttendanceRecord.find({
+      "sessions.checkOut": { $exists: false }
+    });
+
+    const now = new Date();
+
+    for (const record of records) {
+      if (!record.shiftSnapshot || !record.shiftSnapshot.endTime || !record.shiftSnapshot.startTime) {
+        continue;
+      }
+
+      let modified = false;
+      const [shiftEndHour, shiftEndMin] = record.shiftSnapshot.endTime.split(':').map(Number);
+      const [shiftStartHour] = record.shiftSnapshot.startTime.split(':').map(Number);
+      const [year, month, day] = record.date.split('-').map(Number);
+
+      // Determine shift end day (adjust by +1 day if it crosses midnight, e.g. Night Shift)
+      let endDay = day;
+      if (shiftEndHour < shiftStartHour) {
+        endDay = day + 1;
+      }
+
+      // Convert shift end time in local IST (+5:30) to UTC for comparison
+      const localShiftEndTime = new Date(Date.UTC(year, month - 1, endDay, shiftEndHour, shiftEndMin));
+      const shiftEndTimeUTC = new Date(localShiftEndTime.getTime() - 5.5 * 3600000);
+
+      // If the current time is past the shift end time, auto check out the user!
+      if (now > shiftEndTimeUTC) {
+        for (const session of record.sessions) {
+          if (!session.checkOut) {
+            session.checkOut = shiftEndTimeUTC; // Set checkout exactly to the shift end time
+            session.checkOutLocation = {
+              latitude: session.checkInLocation.latitude,
+              longitude: session.checkInLocation.longitude,
+              address: session.checkInLocation.address 
+                ? `${session.checkInLocation.address} (Auto Check-Out)` 
+                : 'Auto Check-Out Location'
+            };
+            session.checkOutDevice = 'System (Auto Check-Out)';
+
+            // Calculate session duration and add it to total minutes worked
+            const sessionDurationMinutes = Math.round((shiftEndTimeUTC.getTime() - new Date(session.checkIn).getTime()) / 60000);
+            record.totalMinutesWorked += Math.max(0, sessionDurationMinutes);
+            modified = true;
+          }
+        }
+
+        if (modified) {
+          record.markModified('sessions');
+          record.notes = record.notes 
+            ? `${record.notes} [System: Auto Checked-Out at Shift End]` 
+            : '[System: Auto Checked-Out at Shift End]';
+          await record.save();
+          console.log(`[Auto Check-Out] User ${record.userId} auto checked-out for date ${record.date} at shift end: ${shiftEndTimeUTC.toISOString()}`);
+        }
+      }
+    }
+  } catch (err) {
+    console.error('Error during auto check-out processing:', err);
+  }
+}
+
 export async function GET(request: NextRequest) {
   try {
     const userPayload = await verifyAuth(request);
@@ -18,6 +84,10 @@ export async function GET(request: NextRequest) {
     }
 
     await connectToDatabase();
+    
+    // Scan and auto checkout any open sessions that have passed their shift end time
+    await performAutoCheckout();
+
     const searchParams = request.nextUrl.searchParams;
     const targetUserId = searchParams.get('userId');
     const targetDate = searchParams.get('date'); // YYYY-MM-DD
@@ -58,6 +128,10 @@ export async function POST(request: NextRequest) {
     }
 
     await connectToDatabase();
+
+    // Scan and auto checkout any open sessions that have passed their shift end time before processing the new punch
+    await performAutoCheckout();
+
     const body = await request.json();
     const { type, location, deviceInfo, notes, ssid, completedTasks } = body; // type is 'Check-In' or 'Check-Out'
 
