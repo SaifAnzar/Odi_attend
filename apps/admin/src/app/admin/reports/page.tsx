@@ -371,9 +371,16 @@ export default function Reports() {
                     <td className="py-3.5 px-4">
                       <div className="flex flex-col">
                         <span className="font-semibold text-slate-900 dark:text-white font-mono text-[13px]">{getTimingsSummary(record).main}</span>
-                        {getTimingsSummary(record).sub && (
-                          <span className="text-[10px] text-odizo-grey font-medium mt-0.5">{getTimingsSummary(record).sub}</span>
-                        )}
+                        <div className="flex flex-col gap-0.5 mt-0.5">
+                          <span className={`text-[10px] font-medium ${
+                            record.isFlagged ? 'text-rose-500 dark:text-rose-400 font-bold' : 'text-odizo-grey'
+                          }`}>
+                            {record.shiftSnapshot?.name || 'Standard Shift'} ({record.shiftSnapshot?.startTime || '09:00'}-{record.shiftSnapshot?.endTime || '18:00'})
+                          </span>
+                          {getTimingsSummary(record).sub && (
+                            <span className="text-[10px] text-odizo-grey font-medium">{getTimingsSummary(record).sub}</span>
+                          )}
+                        </div>
                       </div>
                     </td>
 

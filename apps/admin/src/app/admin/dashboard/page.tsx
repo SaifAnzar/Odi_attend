@@ -16,7 +16,8 @@ import {
   AlertCircle,
   Calendar,
   Home as HomeIcon,
-  MessageSquare
+  MessageSquare,
+  ShieldAlert
 } from 'lucide-react';
 import Swal from 'sweetalert2';
 import { showError, showSuccess, showConfirm } from '@/lib/swal';
@@ -74,6 +75,8 @@ interface AttendanceRecord {
   sessions: PunchSession[];
   attendanceStatus: 'Present' | 'Absent' | 'Late' | 'Half-Day' | 'Off-Day';
   totalMinutesWorked: number;
+  isFlagged: boolean;
+  flagReason?: string;
 }
 
 // Draggable Widget Wrapper Component
@@ -1184,9 +1187,11 @@ export default function Dashboard() {
                                       </span>
                                     </td>
                                     <td className="py-4 px-4 text-xs">
-                                      <div className="flex flex-col text-odizo-grey">
-                                        <span className="font-medium text-slate-900 dark:text-white">{record.shiftSnapshot?.name}</span>
-                                        <span>{record.shiftSnapshot?.startTime} - {record.shiftSnapshot?.endTime}</span>
+                                      <div className="flex flex-col">
+                                        <span className={`font-semibold ${
+                                          record.isFlagged ? 'text-rose-500 dark:text-rose-400 font-bold' : 'text-slate-900 dark:text-white'
+                                        }`}>{record.shiftSnapshot?.name || 'Standard Shift'}</span>
+                                        <span className="text-odizo-grey">{record.shiftSnapshot?.startTime} - {record.shiftSnapshot?.endTime}</span>
                                       </div>
                                     </td>
                                     <td className="py-4 px-4 text-xs font-medium text-slate-900 dark:text-white">
@@ -1218,15 +1223,26 @@ export default function Dashboard() {
                                           : '0m'}
                                     </td>
                                     <td className="py-4 px-4">
-                                      <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-bold ${
-                                        record.attendanceStatus === 'Present' 
-                                          ? 'bg-green-500/15 text-green-400' 
-                                          : record.attendanceStatus === 'Late'
-                                            ? 'bg-amber-500/15 text-amber-400'
-                                            : 'bg-red-500/15 text-red-400'
-                                      }`}>
-                                        {record.attendanceStatus}
-                                      </span>
+                                      <div className="flex flex-wrap items-center gap-1.5">
+                                        <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-bold ${
+                                          record.attendanceStatus === 'Present' 
+                                            ? 'bg-green-500/15 text-green-400' 
+                                            : record.attendanceStatus === 'Late'
+                                              ? 'bg-amber-500/15 text-amber-400'
+                                              : 'bg-red-500/15 text-red-400'
+                                        }`}>
+                                          {record.attendanceStatus}
+                                        </span>
+                                        {record.isFlagged && (
+                                          <span 
+                                            className="inline-flex items-center gap-0.5 px-2 py-0.5 rounded-full text-[10px] font-bold border bg-rose-500/10 text-rose-400 border-rose-500/30 uppercase tracking-wider animate-pulse"
+                                            title={record.flagReason}
+                                          >
+                                            <ShieldAlert size={10} />
+                                            Flagged
+                                          </span>
+                                        )}
+                                      </div>
                                     </td>
                                   </tr>
                                 );
