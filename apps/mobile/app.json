@@ -32,6 +32,12 @@
         "projectId": "ce783afb-514d-4aeb-b73a-64edfaf411fc"
       }
     },
-    "owner": "saifanzar"
+    "owner": "saifanzar",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/ce783afb-514d-4aeb-b73a-64edfaf411fc"
+    }
   }
 }

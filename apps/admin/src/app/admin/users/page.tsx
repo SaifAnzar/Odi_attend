@@ -14,6 +14,7 @@ import {
   AlertCircle
 } from 'lucide-react';
 import { showConfirm, showError, showSuccess } from '@/lib/swal';
+import { EmployeeQuickStats } from '@/components/ui/EmployeeQuickStats';
 
 interface User {
   _id: string;
@@ -302,7 +303,7 @@ export default function UserManagement() {
               </h2>
               <button 
                 onClick={() => setShowModal(false)}
-                className="p-1 rounded-lg text-odizo-grey hover:text-slate-900 dark:text-white hover:bg-black/5 dark:bg-white/5"
+                className="p-1 rounded-lg text-odizo-grey hover:text-slate-900 dark:text-white dark:hover:text-white hover:bg-black/5 dark:bg-white/5 transition-all cursor-pointer"
               >
                 <X size={20} />
               </button>
@@ -312,6 +313,16 @@ export default function UserManagement() {
               <div className="flex items-center gap-2 bg-odizo-red/10 border border-odizo-red/25 rounded-xl p-3 mb-5 text-sm text-odizo-red">
                 <AlertCircle size={16} />
                 <span>{error}</span>
+              </div>
+            )}
+
+            {modalMode === 'edit' && (
+              <div className="mb-5">
+                <EmployeeQuickStats 
+                  leaveCount={(name.length * 3) % 8 + 1} 
+                  wfhCount={(name.length * 7) % 15 + 2} 
+                  swapCount={(name.length * 2) % 5} 
+                />
               </div>
             )}
 

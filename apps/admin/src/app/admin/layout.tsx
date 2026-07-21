@@ -38,7 +38,7 @@ function SidebarItem({ href, icon, label, active, badgeCount, onClick }: Sidebar
       className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-300 w-full ${
         active 
           ? 'bg-odizo-red/10 border border-odizo-red/20 text-odizo-red font-medium shadow-[0_0_15px_rgba(225,97,103,0.1)]' 
-          : 'text-odizo-grey hover:text-slate-900 dark:hover:text-slate-900 dark:text-white hover:bg-black/5 dark:hover:bg-black/5 dark:bg-white/5 border border-transparent'
+          : 'text-odizo-grey hover:text-slate-900 dark:hover:text-white dark:text-white hover:bg-black/5 dark:hover:bg-white/10 dark:bg-white/5 border border-transparent'
       }`}
     >
       <div className="flex items-center gap-3 flex-1">
@@ -182,7 +182,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
               <Logo size="sm" />
               <button 
                 onClick={() => setSidebarOpen(false)}
-                className="p-1 rounded-lg text-odizo-grey hover:text-slate-900 dark:hover:text-slate-900 dark:text-white"
+                className="p-1 rounded-lg text-odizo-grey hover:text-slate-900 dark:hover:text-white dark:text-white hover:bg-black/5 dark:hover:bg-white/5 transition-colors cursor-pointer"
               >
                 <X size={20} />
               </button>
@@ -222,7 +222,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         <header className="flex items-center justify-between md:justify-end px-6 py-4 glass-card m-4 mb-0 border-black/5 dark:border-white/5">
           <button
             onClick={() => setSidebarOpen(true)}
-            className="md:hidden p-2 rounded-lg text-odizo-grey hover:text-slate-900 dark:hover:text-slate-900 dark:text-white hover:bg-black/5 dark:hover:bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10"
+            className="md:hidden p-2 rounded-lg text-odizo-grey hover:text-slate-900 dark:hover:text-white dark:text-white hover:bg-black/5 dark:hover:bg-white/10 dark:bg-white/5 border border-black/10 dark:border-white/10"
           >
             <Menu size={20} />
           </button>

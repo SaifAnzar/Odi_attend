@@ -50,24 +50,18 @@ export default function Login() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-slate-50 dark:bg-black px-4 py-12 relative overflow-hidden transition-colors duration-300">
-      {/* Background glow orb */}
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-odizo-red/5 rounded-full blur-[100px] -z-10 pointer-events-none"></div>
+    <div className="flex min-h-screen items-center justify-center bg-black px-4 py-12 relative overflow-hidden transition-colors duration-300">
+      <div className="w-full max-w-md">
+        {/* Dark theme login card */}
+        <div className="bg-[#0a0a0a] border border-zinc-900 rounded-2xl p-8 shadow-2xl relative">
+          {/* Logo at the top of the card */}
+          <div className="flex flex-col items-center text-center mt-2 mb-6">
+            <Logo size="md" variant="dark" />
+            <h2 className="text-2xl font-bold tracking-tight text-white mt-6">
+              Admin Access
+            </h2>
+          </div>
 
-      <div className="w-full max-w-md space-y-8 animate-float">
-        {/* Logo and title */}
-        <div className="flex flex-col items-center text-center">
-          <Logo size="lg" className="mb-2" />
-          <h2 className="text-xl font-bold tracking-tight text-slate-900 dark:text-white mt-4">
-            Attendance Portal
-          </h2>
-          <p className="text-xs text-odizo-grey mt-1">
-            Secure admin access panel
-          </p>
-        </div>
-
-        {/* Glassmorphic Card */}
-        <div className="glass-card p-8 border-black/10 dark:border-white/10 floating-shadow-red">
           {error && (
             <div className="flex items-center gap-2 bg-odizo-red/10 border border-odizo-red/25 rounded-xl p-3 mb-6 text-xs text-odizo-red">
               <AlertCircle size={16} className="shrink-0" />
@@ -80,61 +74,50 @@ export default function Login() {
             <div>
               <label 
                 htmlFor="email" 
-                className="block text-xs font-semibold uppercase tracking-wider text-odizo-grey mb-1.5"
+                className="block text-xs font-semibold uppercase tracking-wider text-zinc-400 mb-2"
               >
                 Email Address
               </label>
-              <div className="relative">
-                <input
-                  id="email"
-                  type="email"
-                  required
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="name@odizo.in"
-                  className="w-full bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-xl px-4 py-3 pl-10 text-sm text-slate-900 dark:text-white placeholder-odizo-grey focus:border-odizo-red focus:outline-none focus:ring-0 transition-colors"
-                />
-                <Mail className="absolute left-3.5 top-3.5 text-odizo-grey" size={16} />
-              </div>
+              <input
+                id="email"
+                type="email"
+                required
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="admin@odizo.in"
+                className="w-full bg-[#030303] border border-zinc-800/80 rounded-xl px-4 py-3 text-sm text-white placeholder-zinc-700 focus:border-odizo-red focus:outline-none transition-colors"
+              />
             </div>
 
             {/* Password Field */}
             <div>
               <label 
                 htmlFor="password" 
-                className="block text-xs font-semibold uppercase tracking-wider text-odizo-grey mb-1.5"
+                className="block text-xs font-semibold uppercase tracking-wider text-zinc-400 mb-2"
               >
                 Password
               </label>
-              <div className="relative">
-                <input
-                  id="password"
-                  type="password"
-                  required
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="••••••••"
-                  className="w-full bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-xl px-4 py-3 pl-10 text-sm text-slate-900 dark:text-white placeholder-odizo-grey focus:border-odizo-red focus:outline-none focus:ring-0 transition-colors"
-                />
-                <Lock className="absolute left-3.5 top-3.5 text-odizo-grey" size={16} />
-              </div>
+              <input
+                id="password"
+                type="password"
+                required
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="••••••••"
+                className="w-full bg-[#030303] border border-zinc-800/80 rounded-xl px-4 py-3 text-sm text-white placeholder-zinc-700 focus:border-odizo-red focus:outline-none transition-colors"
+              />
             </div>
 
-            {/* Submit Button */}
+            {/* Submit Button with Red Gradient */}
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-odizo-red text-slate-900 dark:text-white py-3 rounded-full text-sm font-bold hover:bg-opacity-95 hover:shadow-[0_0_20px_rgba(225,97,103,0.3)] transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+              className="w-full bg-gradient-to-r from-[#e16167] to-[#e10b14] text-white py-3.5 rounded-xl text-sm font-bold hover:opacity-95 hover:shadow-[0_0_20px_rgba(225,97,103,0.3)] transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
             >
               {loading ? 'Authenticating...' : 'Sign In'}
             </button>
           </form>
         </div>
-
-        {/* Footer info */}
-        <p className="text-center text-[10px] text-odizo-grey">
-          © {new Date().getFullYear()} ODIZO. All rights reserved.
-        </p>
       </div>
     </div>
   );

@@ -289,7 +289,7 @@ export default function NoticeBoardAdminPage() {
                     <div className="flex gap-2">
                       <button
                         onClick={() => handleViewAcks(notice)}
-                        className="flex items-center gap-1 px-2.5 py-1 bg-black/5 dark:bg-white/5 hover:bg-black/5 dark:bg-white/10 border border-black/10 dark:border-white/10 rounded-lg text-[10px] text-odizo-grey hover:text-slate-900 dark:text-white transition-colors cursor-pointer"
+                        className="flex items-center gap-1 px-2.5 py-1 bg-black/5 dark:bg-white/5 hover:bg-black/5 dark:bg-white/10 border border-black/10 dark:border-white/10 rounded-lg text-[10px] text-odizo-grey hover:text-slate-900 dark:text-white dark:hover:text-white transition-colors cursor-pointer"
                       >
                         <Users size={12} />
                         <span>{notice.acknowledgedBy.length} Acknowledged</span>
@@ -345,7 +345,7 @@ export default function NoticeBoardAdminPage() {
               </div>
               <button 
                 onClick={() => setShowAckModal(false)}
-                className="text-odizo-grey hover:text-slate-900 dark:text-white transition-colors"
+                className="p-1 rounded-lg text-odizo-grey hover:text-slate-900 dark:text-white dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 transition-all cursor-pointer"
               >
                 <X size={18} />
               </button>

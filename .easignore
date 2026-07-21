@@ -1,0 +1,17 @@
+# Ignore node_modules
+node_modules/
+**/node_modules/
+
+# Ignore Next.js build outputs and admin app
+apps/admin/
+packages/
+.next/
+**/build/
+**/dist/
+apps/mobile/dist/
+
+# Ignore development files
+.git/
+.expo/
+.vscode/
+*.log

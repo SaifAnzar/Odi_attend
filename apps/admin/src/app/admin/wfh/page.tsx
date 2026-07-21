@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import { showConfirm, showError, showSuccess } from '@/lib/swal';
 import { formatDisplayDate } from '@/lib/dateFormatter';
+import { RequestCard } from '@/components/RequestCard';
 
 interface UserDetail {
   _id: string;
@@ -316,7 +317,7 @@ export default function WFHRequestsPage() {
                   className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all duration-300 cursor-pointer ${
                     statusFilter === status
                       ? 'bg-odizo-red text-slate-900 dark:text-white shadow-[0_0_10px_rgba(225,97,103,0.3)]'
-                      : 'text-odizo-grey hover:text-slate-900 dark:text-white'
+                      : 'text-odizo-grey hover:text-slate-900 dark:text-white dark:hover:text-white'
                   }`}
                 >
                   {status}
@@ -352,154 +353,27 @@ export default function WFHRequestsPage() {
               <p className="text-sm text-odizo-grey max-w-sm mt-1">There are no WFH requests matching criteria.</p>
             </div>
           ) : (
-            <div className="w-full overflow-hidden rounded-xl border border-black/10 dark:border-white/10 bg-white/70 dark:bg-[#0f0f13] backdrop-blur-md">
-              <div className="w-full overflow-x-auto">
-                <table className="w-full min-w-[1000px] border-collapse text-left">
-                  <thead>
-                    <tr className="border-b border-black/10 dark:border-white/10 bg-black/5 dark:bg-white/3">
-                      <th className="px-6 py-4 text-xs font-semibold tracking-wider uppercase text-slate-500 dark:text-gray-400">Employee Info</th>
-                      <th className="px-6 py-4 text-xs font-semibold tracking-wider uppercase text-slate-500 dark:text-gray-400">WFH Duration</th>
-                      <th className="px-6 py-4 text-xs font-semibold tracking-wider uppercase text-slate-500 dark:text-gray-400">Reason</th>
-                      <th className="px-6 py-4 text-xs font-semibold tracking-wider uppercase text-slate-500 dark:text-gray-400">Applied On</th>
-                      <th className="px-6 py-4 text-xs font-semibold tracking-wider uppercase text-slate-500 dark:text-gray-400">Status</th>
-                      <th className="px-6 py-4 text-xs font-semibold tracking-wider uppercase text-slate-500 dark:text-gray-400 w-28 text-center">Actions</th>
-                      <th className="px-6 py-4 text-xs font-semibold tracking-wider uppercase text-slate-500 dark:text-gray-400 w-24 text-center">Details</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-black/10 dark:divide-black/10 dark:divide-white/5">
-                    {filteredRequests.map((req) => {
-                      const diffDays = getDaysDiff(req.startDate, req.endDate);
-                      const isExpanded = !!expandedRequests[req._id];
-
-                      let statusBadgeClass = 'bg-yellow-500/10 border border-yellow-500/25 text-yellow-400 shadow-[0_0_10px_rgba(234,179,8,0.1)]';
-                      if (req.status === 'Approved') {
-                        statusBadgeClass = 'bg-green-500/10 border-green-500/25 text-green-400 shadow-[0_0_10px_rgba(34,197,94,0.1)]';
-                      } else if (req.status === 'Rejected') {
-                        statusBadgeClass = 'bg-odizo-red/10 border-odizo-red/25 text-odizo-red shadow-[0_0_10px_rgba(225,97,103,0.1)]';
-                      }
-
-                      return (
-                        <React.Fragment key={req._id}>
-                          <tr 
-                            onClick={() => toggleExpand(req._id)}
-                            className="hover:bg-black/5 dark:bg-white/5 transition-all duration-200 cursor-pointer"
-                          >
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <div className="flex items-center gap-3">
-                                <div className="h-8 w-8 rounded-full border border-black/10 dark:border-white/10 bg-black/5 dark:bg-white/5 flex items-center justify-center text-slate-900 dark:text-white">
-                                  <User size={14} />
-                                </div>
-                                <div className="min-w-0">
-                                  <p className="text-sm font-bold text-slate-900 dark:text-white leading-tight truncate max-w-[150px]">{req.userId?.name || 'Unknown User'}</p>
-                                  <div className="flex items-center gap-1.5 mt-0.5">
-                                    <span className="text-[10px] text-odizo-grey font-medium uppercase tracking-wider">{req.userId?.role || 'Employee'}</span>
-                                  </div>
-                                </div>
-                              </div>
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <div className="flex flex-col text-slate-900 dark:text-white">
-                                <div className="flex items-center gap-1.5 text-sm font-semibold">
-                                  <Home size={14} className="text-odizo-red" />
-                                  <span>{formatDBDate(req.startDate)}</span>
-                                  <span className="text-odizo-grey">➔</span>
-                                  <span>{formatDBDate(req.endDate)}</span>
-                                </div>
-                                <span className="text-[10px] text-odizo-grey mt-0.5">Duration: <strong className="text-slate-900 dark:text-white font-medium">{diffDays} {diffDays === 1 ? 'day' : 'days'}</strong></span>
-                              </div>
-                            </td>
-                            <td className="px-6 py-4 max-w-xs">
-                              <p 
-                                title={req.reason}
-                                className="text-xs text-slate-600 dark:text-gray-300 truncate"
-                              >
-                                {req.reason}
-                              </p>
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <span className="text-xs text-odizo-grey">
-                                {formatAppliedDate(req.appliedOn)}
-                              </span>
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <span className={`inline-flex px-2.5 py-1 rounded-full text-xs font-bold border ${statusBadgeClass}`}>
-                                {req.status}
-                              </span>
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-center">
-                              {req.status === 'Pending' ? (
-                                <div className="flex justify-center gap-2" onClick={(e) => e.stopPropagation()}>
-                                  <button
-                                    onClick={() => handleApprove(req._id)}
-                                    disabled={actionLoading}
-                                    title="Approve"
-                                    className="p-1.5 bg-green-500/10 hover:bg-green-500/20 border border-green-500/20 hover:border-green-500/40 text-green-400 rounded-lg transition-colors cursor-pointer disabled:opacity-50"
-                                  >
-                                    <Check size={14} />
-                                  </button>
-                                  <button
-                                    onClick={() => handleOpenRejectModal(req._id)}
-                                    disabled={actionLoading}
-                                    title="Reject"
-                                    className="p-1.5 bg-odizo-red/10 hover:bg-odizo-red/20 border border-odizo-red/20 hover:border-odizo-red/40 text-odizo-red rounded-lg transition-colors cursor-pointer disabled:opacity-50"
-                                  >
-                                    <X size={14} />
-                                  </button>
-                                </div>
-                              ) : (
-                                <span className="text-xs text-gray-500">-</span>
-                              )}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-center">
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  toggleExpand(req._id);
-                                }}
-                                className="inline-flex items-center gap-1 px-2.5 py-1 text-[10px] font-semibold text-odizo-grey hover:text-slate-900 dark:text-white bg-black/5 dark:bg-white/5 hover:bg-black/5 dark:bg-white/10 border border-black/5 dark:border-white/5 rounded-lg transition-colors"
-                              >
-                                <span>{isExpanded ? 'Hide' : 'View'}</span>
-                                {isExpanded ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
-                              </button>
-                            </td>
-                          </tr>
-                          {isExpanded && (
-                            <tr className="bg-white/[0.01]">
-                              <td colSpan={7} className="px-6 py-5 border-t border-black/5 dark:border-white/5">
-                                <div className="space-y-4 animate-fade-in text-left">
-                                  <div className="flex items-center justify-between border-b border-black/5 dark:border-white/5 pb-2">
-                                    <span className="text-xs font-bold text-slate-600 dark:text-gray-300 uppercase tracking-wider">
-                                      Request Details
-                                    </span>
-                                    <span className="text-[10px] text-odizo-grey">
-                                      Employee Email: <strong className="text-slate-900 dark:text-white font-medium">{req.userId?.email || 'N/A'}</strong>
-                                    </span>
-                                  </div>
-                                  <div>
-                                    <h4 className="text-xs font-bold text-odizo-grey uppercase tracking-wider mb-1">Full Reason</h4>
-                                    <p className="text-xs text-slate-900 dark:text-white bg-black/5 dark:bg-white/3 p-3 rounded-xl border border-black/5 dark:border-white/5 whitespace-pre-wrap leading-relaxed">
-                                      {req.reason}
-                                    </p>
-                                  </div>
-                                  {req.adminRemarks && (
-                                    <div className="bg-black/5 dark:bg-white/5 border border-white/15 p-3 rounded-xl">
-                                      <div className="flex items-center gap-1.5 text-xs font-bold text-odizo-red uppercase tracking-wider mb-1">
-                                        <MessageSquare size={12} />
-                                        <span>Admin Remarks</span>
-                                      </div>
-                                      <p className="text-xs text-odizo-grey italic">"{req.adminRemarks}"</p>
-                                    </div>
-                                  )}
-                                </div>
-                              </td>
-                            </tr>
-                          )}
-                        </React.Fragment>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {filteredRequests.map((req) => (
+                <RequestCard
+                  key={req._id}
+                  id={req._id}
+                  type="WFH"
+                  employeeName={req.userId?.name || 'Unknown User'}
+                  employeeRole={req.userId?.role || 'Employee'}
+                  employeeEmail={req.userId?.email}
+                  startDate={req.startDate}
+                  endDate={req.endDate}
+                  reason={req.reason}
+                  status={req.status}
+                  appliedOn={req.appliedOn}
+                  details={req.adminRemarks ? `Admin Remarks: "${req.adminRemarks}"` : undefined}
+                  showActions={true}
+                  actionLoading={actionLoading}
+                  onApprove={() => handleApprove(req._id)}
+                  onReject={() => handleOpenRejectModal(req._id)}
+                />
+              ))}
             </div>
           )}
         </div>
@@ -590,7 +464,7 @@ export default function WFHRequestsPage() {
                     className={`px-3 py-1 rounded-lg text-[10px] font-bold transition-all duration-300 cursor-pointer ${
                       statusFilter === status
                         ? 'bg-odizo-red text-slate-900 dark:text-white shadow-[0_0_8px_rgba(225,97,103,0.3)]'
-                        : 'text-odizo-grey hover:text-slate-900 dark:text-white'
+                        : 'text-odizo-grey hover:text-slate-900 dark:text-white dark:hover:text-white'
                     }`}
                   >
                     {status}
@@ -617,119 +491,24 @@ export default function WFHRequestsPage() {
                 <p className="text-sm text-odizo-grey mt-1">You haven't submitted any WFH requests matching this filter.</p>
               </div>
             ) : (
-              <div className="w-full overflow-hidden rounded-xl border border-black/10 dark:border-white/10 bg-white/70 dark:bg-[#0f0f13] backdrop-blur-md">
-                <div className="w-full overflow-x-auto">
-                  <table className="w-full min-w-[700px] border-collapse text-left">
-                    <thead>
-                      <tr className="border-b border-black/10 dark:border-white/10 bg-black/5 dark:bg-white/3">
-                        <th className="px-6 py-4 text-xs font-semibold tracking-wider uppercase text-slate-500 dark:text-gray-400">Request ID</th>
-                        <th className="px-6 py-4 text-xs font-semibold tracking-wider uppercase text-slate-500 dark:text-gray-400">WFH Duration</th>
-                        <th className="px-6 py-4 text-xs font-semibold tracking-wider uppercase text-slate-500 dark:text-gray-400">Reason</th>
-                        <th className="px-6 py-4 text-xs font-semibold tracking-wider uppercase text-slate-500 dark:text-gray-400">Applied On</th>
-                        <th className="px-6 py-4 text-xs font-semibold tracking-wider uppercase text-slate-500 dark:text-gray-400">Status</th>
-                        <th className="px-6 py-4 text-xs font-semibold tracking-wider uppercase text-slate-500 dark:text-gray-400 w-24 text-center">Details</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-black/10 dark:divide-black/10 dark:divide-white/5">
-                      {filteredRequests.map((req) => {
-                        const diffDays = getDaysDiff(req.startDate, req.endDate);
-                        const isExpanded = !!expandedRequests[req._id];
-                        
-                        let statusBadgeClass = 'bg-yellow-500/10 border border-yellow-500/25 text-yellow-400 shadow-[0_0_10px_rgba(234,179,8,0.1)]';
-                        if (req.status === 'Approved') {
-                          statusBadgeClass = 'bg-green-500/10 border-green-500/25 text-green-400 shadow-[0_0_10px_rgba(34,197,94,0.1)]';
-                        } else if (req.status === 'Rejected') {
-                          statusBadgeClass = 'bg-odizo-red/10 border-odizo-red/25 text-odizo-red shadow-[0_0_10px_rgba(225,97,103,0.1)]';
-                        }
-
-                        return (
-                          <React.Fragment key={req._id}>
-                            <tr 
-                              onClick={() => toggleExpand(req._id)}
-                              className="hover:bg-black/5 dark:bg-white/5 transition-all duration-200 cursor-pointer"
-                            >
-                              <td className="px-6 py-4 whitespace-nowrap text-xs font-bold text-odizo-grey">
-                                Request #{req._id.slice(-6).toUpperCase()}
-                              </td>
-                              <td className="px-6 py-4 whitespace-nowrap">
-                                <div className="flex flex-col text-slate-900 dark:text-white">
-                                  <div className="flex items-center gap-1.5 text-sm font-semibold">
-                                    <Home size={14} className="text-odizo-red" />
-                                    <span>{formatDBDate(req.startDate)}</span>
-                                    <span className="text-odizo-grey">➔</span>
-                                    <span>{formatDBDate(req.endDate)}</span>
-                                  </div>
-                                  <span className="text-[10px] text-odizo-grey mt-0.5">Duration: <strong className="text-slate-900 dark:text-white font-medium">{diffDays} {diffDays === 1 ? 'day' : 'days'}</strong></span>
-                                </div>
-                              </td>
-                              <td className="px-6 py-4 max-w-xs">
-                                <p 
-                                  title={req.reason}
-                                  className="text-xs text-slate-600 dark:text-gray-300 truncate"
-                                >
-                                  {req.reason}
-                                </p>
-                              </td>
-                              <td className="px-6 py-4 whitespace-nowrap">
-                                <span className="text-xs text-odizo-grey">
-                                  {formatAppliedDate(req.appliedOn)}
-                                </span>
-                              </td>
-                              <td className="px-6 py-4 whitespace-nowrap">
-                                <span className={`inline-flex px-2.5 py-1 rounded-full text-xs font-bold border ${statusBadgeClass}`}>
-                                  {req.status}
-                                </span>
-                              </td>
-                              <td className="px-6 py-4 whitespace-nowrap text-center">
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    toggleExpand(req._id);
-                                  }}
-                                  className="inline-flex items-center gap-1 px-2.5 py-1 text-[10px] font-semibold text-odizo-grey hover:text-slate-900 dark:text-white bg-black/5 dark:bg-white/5 hover:bg-black/5 dark:bg-white/10 border border-black/5 dark:border-white/5 rounded-lg transition-colors"
-                                >
-                                  <span>{isExpanded ? 'Hide' : 'View'}</span>
-                                  {isExpanded ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
-                                </button>
-                              </td>
-                            </tr>
-                            {isExpanded && (
-                              <tr className="bg-white/[0.01]">
-                                <td colSpan={6} className="px-6 py-5 border-t border-black/5 dark:border-white/5">
-                                  <div className="space-y-4 animate-fade-in text-left">
-                                    <div className="flex items-center justify-between border-b border-black/5 dark:border-white/5 pb-2">
-                                      <span className="text-xs font-bold text-slate-600 dark:text-gray-300 uppercase tracking-wider">
-                                        Request Details
-                                      </span>
-                                      <span className="text-xs text-slate-900 dark:text-white">
-                                        Duration: <strong className="text-odizo-red">{diffDays} {diffDays === 1 ? 'day' : 'days'}</strong>
-                                      </span>
-                                    </div>
-                                    <div>
-                                      <h4 className="text-xs font-bold text-odizo-grey uppercase tracking-wider mb-1">Your Full Reason</h4>
-                                      <p className="text-xs text-slate-900 dark:text-white bg-black/5 dark:bg-white/3 p-3 rounded-xl border border-black/5 dark:border-white/5 whitespace-pre-wrap leading-relaxed font-sans">
-                                        {req.reason}
-                                      </p>
-                                    </div>
-                                    {req.adminRemarks && (
-                                      <div className="bg-black/5 dark:bg-white/5 border border-white/15 p-3 rounded-xl">
-                                        <div className="flex items-center gap-1.5 text-xs font-bold text-odizo-red uppercase tracking-wider mb-1">
-                                          <MessageSquare size={12} />
-                                          <span>Admin Remarks</span>
-                                        </div>
-                                        <p className="text-xs text-odizo-grey italic">"{req.adminRemarks}"</p>
-                                      </div>
-                                    )}
-                                  </div>
-                                </td>
-                              </tr>
-                            )}
-                          </React.Fragment>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {filteredRequests.map((req) => (
+                  <RequestCard
+                    key={req._id}
+                    id={req._id}
+                    type="WFH"
+                    employeeName={currentUser?.name || 'Me'}
+                    employeeRole={currentUser?.role || 'Employee'}
+                    employeeEmail={currentUser?.email}
+                    startDate={req.startDate}
+                    endDate={req.endDate}
+                    reason={req.reason}
+                    status={req.status}
+                    appliedOn={req.appliedOn}
+                    details={req.adminRemarks ? `Admin Remarks: "${req.adminRemarks}"` : undefined}
+                    showActions={false}
+                  />
+                ))}
               </div>
             )}
           </div>
@@ -744,7 +523,7 @@ export default function WFHRequestsPage() {
               <h3 className="text-base font-bold text-slate-900 dark:text-white uppercase tracking-wider">Reject WFH Request</h3>
               <button 
                 onClick={() => setShowRejectModal(false)}
-                className="p-1 rounded-lg text-odizo-grey hover:text-slate-900 dark:text-white"
+                className="p-1 rounded-lg text-odizo-grey hover:text-slate-900 dark:text-white dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 transition-all cursor-pointer"
               >
                 <X size={18} />
               </button>

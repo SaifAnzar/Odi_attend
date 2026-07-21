@@ -183,7 +183,7 @@ export default function Shifts() {
                               e.stopPropagation();
                               toggleExpand(key);
                             }}
-                            className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold text-odizo-grey hover:text-slate-900 dark:text-white bg-black/5 dark:bg-white/5 hover:bg-black/5 dark:bg-white/10 border border-black/5 dark:border-white/5 rounded-lg transition-colors"
+                            className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold text-odizo-grey hover:text-slate-900 dark:text-white dark:hover:text-white bg-black/5 dark:bg-white/5 hover:bg-black/5 dark:bg-white/10 border border-black/5 dark:border-white/5 rounded-lg transition-colors cursor-pointer"
                           >
                             <span>{isExpanded ? 'Hide' : 'Details'}</span>
                             {isExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}

@@ -276,7 +276,7 @@ export default function Reports() {
                       e.preventDefault();
                       setSelectedDate('');
                     }}
-                    className="p-0.5 hover:bg-black/5 dark:bg-white/10 rounded text-odizo-grey hover:text-slate-900 dark:text-white transition-colors cursor-pointer z-20"
+                    className="p-0.5 hover:bg-black/5 dark:bg-white/10 rounded text-odizo-grey hover:text-slate-900 dark:text-white dark:hover:text-white transition-colors cursor-pointer z-20"
                     title="Clear date"
                   >
                     <X size={14} />

@@ -8,7 +8,6 @@ import {
   ScrollView,
   ActivityIndicator,
   Alert,
-  SafeAreaView,
   KeyboardAvoidingView,
   Platform,
   Dimensions,
@@ -18,6 +17,7 @@ import {
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { LinearGradient } from 'expo-linear-gradient';
+import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { ThemeProvider as AppThemeProvider, useAppTheme } from './contexts/ThemeContext';
 import { colors } from './constants/colors';
@@ -44,6 +44,7 @@ NetInfo.configure({
 });
 
 const { width } = Dimensions.get('window');
+const apiUrl = 'https://odi-attend-admin.vercel.app';
 
 interface User {
   _id: string;
@@ -408,11 +409,13 @@ async function registerForPushNotificationsAsync() {
 
 export default function App() {
   return (
-    <AppThemeProvider>
-      <CustomAlertProvider>
-        <AppContent />
-      </CustomAlertProvider>
-    </AppThemeProvider>
+    <SafeAreaProvider>
+      <AppThemeProvider>
+        <CustomAlertProvider>
+          <AppContent />
+        </CustomAlertProvider>
+      </AppThemeProvider>
+    </SafeAreaProvider>
   );
 }
 
@@ -458,8 +461,6 @@ function AppContent() {
   // Auth Form
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [apiUrl, setApiUrl] = useState('https://odi-attend-admin.vercel.app');
-  const [showSettings, setShowSettings] = useState(false);
 
   // Punch UI
   const [punchLoading, setPunchLoading] = useState(false);
@@ -475,9 +476,6 @@ function AppContent() {
   useEffect(() => {
     const loadSession = async () => {
       try {
-        const savedApi = await AsyncStorage.getItem('apiUrl');
-        if (savedApi) setApiUrl(savedApi);
-
         const savedToken = await AsyncStorage.getItem('token');
         const savedUser = await AsyncStorage.getItem('user');
 
@@ -556,7 +554,7 @@ function AppContent() {
       };
       registerPush();
     }
-  }, [isAuthenticated, token, apiUrl]);
+  }, [isAuthenticated, token]);
 
   const formatDate = (isoStr: string) => {
     return formatDisplayDate(isoStr);
@@ -855,9 +853,6 @@ function AppContent() {
 
     setLoading(true);
     try {
-      // Save API URL preference
-      await AsyncStorage.setItem('apiUrl', apiUrl);
-
       const res = await fetch(`${apiUrl}/api/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -1010,12 +1005,42 @@ function AppContent() {
       }
     );
   };
-
   // ----------------- RENDER LOGIN INTERFACE -----------------
   if (!isAuthenticated) {
     return (
       <SafeAreaView style={styles.darkBackground}>
         <StatusBar style={theme === 'light' ? 'dark' : 'light'} />
+        
+        {/* Top-Right Theme Toggle */}
+        <TouchableOpacity 
+          onPress={toggleTheme} 
+          style={{
+            position: 'absolute',
+            top: Platform.OS === 'ios' ? 12 : 20,
+            right: 20,
+            zIndex: 10,
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: 6,
+            backgroundColor: theme === 'dark' ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)',
+            paddingVertical: 6,
+            paddingHorizontal: 12,
+            borderRadius: 20,
+            borderWidth: 1,
+            borderColor: theme === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)',
+          }}
+          activeOpacity={0.7}
+        >
+          <Ionicons 
+            name={theme === 'light' ? 'moon-outline' : 'sunny-outline'} 
+            size={14} 
+            color={colors[theme].text} 
+          />
+          <Text style={{ fontSize: 11, color: colors[theme].text, fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: 0.5 }}>
+            {theme === 'dark' ? 'Dark' : 'Light'}
+          </Text>
+        </TouchableOpacity>
+
         <KeyboardAvoidingView
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
           style={styles.keyboardContainer}
@@ -1038,7 +1063,7 @@ function AppContent() {
               <View style={styles.inputWrapper}>
                 <Ionicons name="mail-outline" size={18} color={colors[theme].textMuted} style={styles.inputIcon} />
                 <TextInput
-                  placeholder="name@odizo.in"
+                  placeholder="Email"
                   placeholderTextColor={colors[theme].textMuted}
                   value={email}
                   onChangeText={setEmail}
@@ -1073,54 +1098,6 @@ function AppContent() {
                 )}
               </TouchableOpacity>
             </View>
-
-            {/* Server Settings Panel */}
-            <TouchableOpacity 
-              onPress={() => setShowSettings(!showSettings)} 
-              style={styles.settingsToggle}
-            >
-              <Ionicons name="cog-outline" size={16} color={colors[theme].textMuted} />
-              <Text style={styles.settingsToggleText}>API Connections Settings</Text>
-            </TouchableOpacity>
-
-            {showSettings && (
-              <View style={styles.settingsPanel}>
-                <Text style={styles.settingsTitle}>Server Endpoint URL</Text>
-                <TextInput
-                  value={apiUrl}
-                  onChangeText={setApiUrl}
-                  placeholder="http://192.168.X.X:3000"
-                  placeholderTextColor={colors[theme].textMuted}
-                  autoCapitalize="none"
-                  style={styles.settingsInput}
-                />
-                <Text style={styles.settingsInfo}>
-                  Enter the computer local IP hosting the Next.js API portal.
-                </Text>
-                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 12, paddingTop: 12, borderTopWidth: 1, borderTopColor: colors[theme].border }}>
-                  <Text style={[styles.settingsTitle, { marginBottom: 0 }]}>Dark Mode Theme</Text>
-                  <TouchableOpacity 
-                    onPress={toggleTheme}
-                    style={{
-                      width: 48,
-                      height: 26,
-                      borderRadius: 13,
-                      backgroundColor: theme === 'dark' ? '#E16167' : '#D1D5DB',
-                      justifyContent: 'center',
-                      paddingHorizontal: 3
-                    }}
-                  >
-                    <View style={{
-                      width: 20,
-                      height: 20,
-                      borderRadius: 10,
-                      backgroundColor: '#FFFFFF',
-                      alignSelf: theme === 'dark' ? 'flex-end' : 'flex-start'
-                    }} />
-                  </TouchableOpacity>
-                </View>
-              </View>
-            )}
 
             <Text style={styles.footerCopyright}>
               © {new Date().getFullYear()} ODIZO. All rights reserved.
@@ -1212,7 +1189,13 @@ function AppContent() {
                   {isCheckedIn ? 'ON-SHIFT' : 'OFF-SHIFT'}
                 </Text>
               </View>
-              <Text style={styles.shiftValue}>{user?.shift.name}</Text>
+              <Text 
+                style={styles.shiftValue}
+                adjustsFontSizeToFit={true}
+                numberOfLines={1}
+              >
+                {user?.shift.name}
+              </Text>
               <Text style={styles.shiftTime}>
                 Hours: {user?.shift.startTime} - {user?.shift.endTime}
               </Text>
@@ -1221,7 +1204,13 @@ function AppContent() {
             {/* Live Ticking Timer display */}
             <View style={styles.timerWrapper}>
               <Text style={styles.timerTitle}>Active Clock-In Duration</Text>
-              <Text style={styles.timerValue}>{liveTimer}</Text>
+              <Text 
+                style={styles.timerValue}
+                adjustsFontSizeToFit={true}
+                numberOfLines={1}
+              >
+                {liveTimer}
+              </Text>
             </View>
 
             {/* Glowing Action Button Container */}
@@ -1265,11 +1254,21 @@ function AppContent() {
               <View style={styles.infoRow}>
                 <Ionicons name="pin" size={16} color="#E16167" />
                 {gpsCoords ? (
-                  <Text style={styles.infoRowText}>
+                  <Text 
+                    style={styles.infoRowText}
+                    adjustsFontSizeToFit={true}
+                    numberOfLines={1}
+                  >
                     GPS Locked: {gpsCoords.lat.toFixed(4)}, {gpsCoords.lng.toFixed(4)}
                   </Text>
                 ) : (
-                  <Text style={styles.infoRowText}>Searching for GPS satellite signal...</Text>
+                  <Text 
+                    style={styles.infoRowText}
+                    adjustsFontSizeToFit={true}
+                    numberOfLines={1}
+                  >
+                    Searching for GPS satellite signal...
+                  </Text>
                 )}
               </View>
 
@@ -2043,6 +2042,8 @@ function AppContent() {
 // ----------------- PREMIUM GLASSMORPHIC STYLING -----------------
 const getStyles = (theme: 'light' | 'dark') => {
   const themeColors = colors[theme];
+  const screenWidth = Dimensions.get('window').width;
+  const punchBtnSize = screenWidth * 0.5;
   return StyleSheet.create({
   // Alert Modal Styles
   alertModalOverlay: {
@@ -2130,7 +2131,6 @@ const getStyles = (theme: 'light' | 'dark') => {
   darkBackground: {
     flex: 1,
     backgroundColor: themeColors.background,
-    paddingTop: Platform.OS === 'android' ? RNStatusBar.currentHeight : 0,
   },
   keyboardContainer: {
     flex: 1,
@@ -2219,49 +2219,7 @@ const getStyles = (theme: 'light' | 'dark') => {
     fontWeight: 'bold',
     letterSpacing: 0.5,
   },
-  settingsToggle: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    marginTop: 24,
-    paddingVertical: 8,
-  },
-  settingsToggleText: {
-    color: themeColors.textMuted,
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  settingsPanel: {
-    width: '100%',
-    backgroundColor: themeColors.cardBackground,
-    borderColor: themeColors.border,
-    borderWidth: 1,
-    borderRadius: 16,
-    padding: 16,
-    marginTop: 16,
-  },
-  settingsTitle: {
-    color: themeColors.text,
-    fontSize: 12,
-    fontWeight: 'bold',
-    marginBottom: 8,
-  },
-  settingsInput: {
-    backgroundColor: 'rgba(255, 255, 255, 0.04)',
-    borderColor: themeColors.border,
-    borderWidth: 1,
-    borderRadius: 12,
-    color: themeColors.text,
-    fontSize: 12,
-    paddingHorizontal: 12,
-    height: 40,
-  },
-  settingsInfo: {
-    color: themeColors.textMuted,
-    fontSize: 10,
-    marginTop: 6,
-    lineHeight: 14,
-  },
+
   footerCopyright: {
     color: '#6E6E70',
     fontSize: 10,
@@ -2304,8 +2262,10 @@ const getStyles = (theme: 'light' | 'dark') => {
     flex: 1,
   },
   tabScroll: {
+    flexGrow: 1,
     padding: 20,
-    paddingBottom: 40,
+    paddingBottom: 20,
+    justifyContent: 'space-between',
   },
   shiftCard: {
     backgroundColor: themeColors.cardBackground,
@@ -2374,9 +2334,9 @@ const getStyles = (theme: 'light' | 'dark') => {
     marginVertical: 24,
   },
   punchCircleBtn: {
-    width: 200,
-    height: 200,
-    borderRadius: 100,
+    width: punchBtnSize,
+    height: punchBtnSize,
+    borderRadius: punchBtnSize / 2,
     overflow: 'hidden',
     borderWidth: 8,
     borderColor: 'rgba(255, 255, 255, 0.04)',
