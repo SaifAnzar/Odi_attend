@@ -14,13 +14,11 @@ import {
   Search, 
   FileText, 
   RefreshCw,
-  Send,
-  ChevronDown,
-  ChevronUp
+  Send
 } from 'lucide-react';
 import { showConfirm, showError, showSuccess } from '@/lib/swal';
-import { formatDisplayDate } from '@/lib/dateFormatter';
-import { RequestCard } from '@/components/RequestCard';
+import { RequestTable } from '@/components/RequestTable';
+import { RequestDetailsModal, RequestItem } from '@/components/RequestDetailsModal';
 
 interface UserDetail {
   _id: string;
@@ -42,27 +40,6 @@ interface LeaveRequest {
   appliedOn: string;
 }
 
-const formatDBDate = (isoStr: string) => {
-  return formatDisplayDate(isoStr);
-};
-
-const formatAppliedDate = (dateStr: string) => {
-  return formatDisplayDate(dateStr);
-};
-
-const getDaysDiff = (startIso: string, endIso: string) => {
-  if (!startIso || !endIso) return 0;
-  const sDatePart = startIso.split('T')[0];
-  const eDatePart = endIso.split('T')[0];
-  const [sy, sm, sd] = sDatePart.split('-').map(Number);
-  const [ey, em, ed] = eDatePart.split('-').map(Number);
-  
-  const sUTC = Date.UTC(sy, sm - 1, sd);
-  const eUTC = Date.UTC(ey, em - 1, ed);
-  const diffTime = Math.abs(eUTC - sUTC);
-  return Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
-};
-
 export default function WFHRequestsPage() {
   const [currentUser, setCurrentUser] = useState<UserDetail | null>(null);
   const [requests, setRequests] = useState<LeaveRequest[]>([]);
@@ -70,8 +47,11 @@ export default function WFHRequestsPage() {
   const [error, setError] = useState('');
   const [statusFilter, setStatusFilter] = useState<'All' | 'Pending' | 'Approved' | 'Rejected'>('All');
   const [searchQuery, setSearchQuery] = useState('');
-  const [expandedRequests, setExpandedRequests] = useState<{ [key: string]: boolean }>({});
   
+  // Details Modal state
+  const [showDetailModal, setShowDetailModal] = useState(false);
+  const [selectedDetailRequest, setSelectedDetailRequest] = useState<RequestItem | null>(null);
+
   // Rejection Modal states (Admin)
   const [showRejectModal, setShowRejectModal] = useState(false);
   const [selectedRequestId, setSelectedRequestId] = useState('');
@@ -130,14 +110,14 @@ export default function WFHRequestsPage() {
   };
 
   useEffect(() => {
-    fetchRequests();
+    if (currentUser) {
+      fetchRequests();
+    }
   }, [currentUser, statusFilter]);
 
-  const toggleExpand = (id: string) => {
-    setExpandedRequests((prev) => ({
-      ...prev,
-      [id]: !prev[id],
-    }));
+  const handleOpenDetails = (req: RequestItem) => {
+    setSelectedDetailRequest(req);
+    setShowDetailModal(true);
   };
 
   const handleApprove = async (id: string) => {
@@ -289,7 +269,7 @@ export default function WFHRequestsPage() {
         <button 
           onClick={fetchRequests}
           disabled={loading}
-          className="flex items-center justify-center gap-2 px-4 py-2 border border-black/10 dark:border-white/10 hover:border-white/20 bg-black/5 dark:bg-white/3 hover:bg-black/5 dark:bg-white/5 text-xs text-slate-900 dark:text-white rounded-xl font-semibold transition-all duration-300 cursor-pointer disabled:opacity-50"
+          className="flex items-center justify-center gap-2 px-4 py-2 border border-black/10 dark:border-white/10 hover:border-white/20 bg-black/5 dark:bg-white/5 text-xs text-slate-900 dark:text-white rounded-xl font-semibold transition-all duration-300 cursor-pointer disabled:opacity-50"
         >
           <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
           <span>Refresh</span>
@@ -309,7 +289,7 @@ export default function WFHRequestsPage() {
           {/* Filters & Search Row */}
           <div className="flex flex-col md:flex-row gap-4 justify-between items-stretch">
             {/* Status Filter Tabs */}
-            <div className="flex bg-black/5 dark:bg-white/3 border border-black/5 dark:border-white/5 rounded-xl p-1 gap-1 self-start">
+            <div className="flex bg-black/5 dark:bg-white/5 border border-black/5 dark:border-white/5 rounded-xl p-1 gap-1 self-start">
               {(['All', 'Pending', 'Approved', 'Rejected'] as const).map((status) => (
                 <button
                   key={status}
@@ -317,7 +297,7 @@ export default function WFHRequestsPage() {
                   className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all duration-300 cursor-pointer ${
                     statusFilter === status
                       ? 'bg-odizo-red text-slate-900 dark:text-white shadow-[0_0_10px_rgba(225,97,103,0.3)]'
-                      : 'text-odizo-grey hover:text-slate-900 dark:text-white dark:hover:text-white'
+                      : 'text-odizo-grey hover:text-slate-900 dark:hover:text-white'
                   }`}
                 >
                   {status}
@@ -335,46 +315,27 @@ export default function WFHRequestsPage() {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search staff or reason..."
-                className="w-full bg-black/5 dark:bg-white/3 border border-black/5 dark:border-white/5 focus:border-white/15 rounded-xl pl-10 pr-4 py-2 text-xs text-slate-900 dark:text-white placeholder-odizo-grey focus:outline-none transition-all"
+                className="w-full bg-black/5 dark:bg-white/5 border border-black/5 dark:border-white/5 focus:border-white/15 rounded-xl pl-10 pr-4 py-2 text-xs text-slate-900 dark:text-white placeholder-odizo-grey focus:outline-none transition-all"
               />
             </div>
           </div>
 
-          {/* Main Table */}
+          {/* List / Table View */}
           {loading && filteredRequests.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-20">
               <div className="h-10 w-10 animate-spin rounded-full border-2 border-odizo-red border-t-transparent"></div>
               <p className="mt-4 text-sm text-odizo-grey">Fetching WFH records...</p>
             </div>
-          ) : filteredRequests.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-20 text-center glass-card border-black/5 dark:border-white/5 p-8">
-              <FileText className="text-odizo-grey/40 mb-4" size={48} />
-              <h3 className="text-lg font-bold">No WFH Requests</h3>
-              <p className="text-sm text-odizo-grey max-w-sm mt-1">There are no WFH requests matching criteria.</p>
-            </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {filteredRequests.map((req) => (
-                <RequestCard
-                  key={req._id}
-                  id={req._id}
-                  type="WFH"
-                  employeeName={req.userId?.name || 'Unknown User'}
-                  employeeRole={req.userId?.role || 'Employee'}
-                  employeeEmail={req.userId?.email}
-                  startDate={req.startDate}
-                  endDate={req.endDate}
-                  reason={req.reason}
-                  status={req.status}
-                  appliedOn={req.appliedOn}
-                  details={req.adminRemarks ? `Admin Remarks: "${req.adminRemarks}"` : undefined}
-                  showActions={true}
-                  actionLoading={actionLoading}
-                  onApprove={() => handleApprove(req._id)}
-                  onReject={() => handleOpenRejectModal(req._id)}
-                />
-              ))}
-            </div>
+            <RequestTable
+              requests={filteredRequests.map(r => ({ ...r, requestType: 'WFH' }))}
+              defaultType="WFH"
+              isAdmin={true}
+              onViewDetails={handleOpenDetails}
+              onApprove={handleApprove}
+              onReject={handleOpenRejectModal}
+              actionLoading={actionLoading}
+            />
           )}
         </div>
       ) : (
@@ -450,13 +411,13 @@ export default function WFHRequestsPage() {
           {/* Column 2 & 3: WFH History List */}
           <div className="lg:col-span-2 space-y-6">
             {/* Filter */}
-            <div className="flex justify-between items-center bg-black/5 dark:bg-white/3 border border-black/5 dark:border-white/5 p-4 rounded-2xl">
+            <div className="flex justify-between items-center bg-black/5 dark:bg-white/5 border border-black/5 dark:border-white/5 p-4 rounded-2xl">
               <h3 className="font-bold text-sm text-slate-900 dark:text-white flex items-center gap-2">
                 <FileText size={16} className="text-odizo-red" />
                 <span>WFH Request History</span>
               </h3>
 
-              <div className="flex bg-black/5 dark:bg-white/3 border border-black/5 dark:border-white/5 rounded-xl p-1 gap-1">
+              <div className="flex bg-black/5 dark:bg-white/5 border border-black/5 dark:border-white/5 rounded-xl p-1 gap-1">
                 {(['All', 'Pending', 'Approved', 'Rejected'] as const).map((status) => (
                   <button
                     key={status}
@@ -464,7 +425,7 @@ export default function WFHRequestsPage() {
                     className={`px-3 py-1 rounded-lg text-[10px] font-bold transition-all duration-300 cursor-pointer ${
                       statusFilter === status
                         ? 'bg-odizo-red text-slate-900 dark:text-white shadow-[0_0_8px_rgba(225,97,103,0.3)]'
-                        : 'text-odizo-grey hover:text-slate-900 dark:text-white dark:hover:text-white'
+                        : 'text-odizo-grey hover:text-slate-900 dark:hover:text-white'
                     }`}
                   >
                     {status}
@@ -473,7 +434,7 @@ export default function WFHRequestsPage() {
               </div>
             </div>
 
-            {/* Table List */}
+            {/* List / Table View */}
             {loading && requests.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-20 gap-3">
                 <RefreshCw className="animate-spin text-odizo-red" size={32} />
@@ -484,36 +445,32 @@ export default function WFHRequestsPage() {
                 <AlertCircle size={20} />
                 <span className="text-sm font-medium">{error}</span>
               </div>
-            ) : filteredRequests.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-20 text-center glass-card border-black/5 dark:border-white/5 p-8">
-                <FileText className="text-odizo-grey/40 mb-4" size={48} />
-                <h3 className="text-lg font-bold">No WFH Requests Found</h3>
-                <p className="text-sm text-odizo-grey mt-1">You haven't submitted any WFH requests matching this filter.</p>
-              </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {filteredRequests.map((req) => (
-                  <RequestCard
-                    key={req._id}
-                    id={req._id}
-                    type="WFH"
-                    employeeName={currentUser?.name || 'Me'}
-                    employeeRole={currentUser?.role || 'Employee'}
-                    employeeEmail={currentUser?.email}
-                    startDate={req.startDate}
-                    endDate={req.endDate}
-                    reason={req.reason}
-                    status={req.status}
-                    appliedOn={req.appliedOn}
-                    details={req.adminRemarks ? `Admin Remarks: "${req.adminRemarks}"` : undefined}
-                    showActions={false}
-                  />
-                ))}
-              </div>
+              <RequestTable
+                requests={filteredRequests.map(r => ({ 
+                  ...r, 
+                  requestType: 'WFH',
+                  userId: r.userId || { name: currentUser?.name, role: currentUser?.role, email: currentUser?.email } 
+                }))}
+                defaultType="WFH"
+                isAdmin={false}
+                onViewDetails={handleOpenDetails}
+              />
             )}
           </div>
         </div>
       )}
+
+      {/* Details View Modal */}
+      <RequestDetailsModal
+        isOpen={showDetailModal}
+        onClose={() => setShowDetailModal(false)}
+        request={selectedDetailRequest}
+        isAdmin={isAdmin}
+        onApprove={handleApprove}
+        onReject={handleOpenRejectModal}
+        actionLoading={actionLoading}
+      />
 
       {/* Admin Rejection Modal */}
       {showRejectModal && (
@@ -523,7 +480,7 @@ export default function WFHRequestsPage() {
               <h3 className="text-base font-bold text-slate-900 dark:text-white uppercase tracking-wider">Reject WFH Request</h3>
               <button 
                 onClick={() => setShowRejectModal(false)}
-                className="p-1 rounded-lg text-odizo-grey hover:text-slate-900 dark:text-white dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 transition-all cursor-pointer"
+                className="p-1 rounded-lg text-odizo-grey hover:text-slate-900 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 transition-all cursor-pointer"
               >
                 <X size={18} />
               </button>
@@ -546,7 +503,7 @@ export default function WFHRequestsPage() {
                 <button
                   type="button"
                   onClick={() => setShowRejectModal(false)}
-                  className="px-4 py-2 border border-black/10 dark:border-white/10 hover:border-white/20 bg-black/5 dark:bg-white/3 hover:bg-black/5 dark:bg-white/5 text-xs text-slate-900 dark:text-white rounded-xl font-semibold transition-all duration-300 cursor-pointer"
+                  className="px-4 py-2 border border-black/10 dark:border-white/10 hover:border-white/20 bg-black/5 dark:bg-white/5 text-xs text-slate-900 dark:text-white rounded-xl font-semibold transition-all duration-300 cursor-pointer"
                 >
                   Cancel
                 </button>

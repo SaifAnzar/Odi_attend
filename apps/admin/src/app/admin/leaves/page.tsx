@@ -13,13 +13,11 @@ import {
   Search, 
   FileText, 
   RefreshCw,
-  Send,
-  ChevronDown,
-  ChevronUp
+  Send
 } from 'lucide-react';
 import { showConfirm, showError, showSuccess } from '@/lib/swal';
-import { formatDisplayDate } from '@/lib/dateFormatter';
-import { RequestCard } from '@/components/RequestCard';
+import { RequestTable } from '@/components/RequestTable';
+import { RequestDetailsModal, RequestItem } from '@/components/RequestDetailsModal';
 
 interface UserDetail {
   _id: string;
@@ -41,27 +39,6 @@ interface LeaveRequest {
   appliedOn: string;
 }
 
-const formatDBDate = (isoStr: string) => {
-  return formatDisplayDate(isoStr);
-};
-
-const formatAppliedDate = (dateStr: string) => {
-  return formatDisplayDate(dateStr);
-};
-
-const getDaysDiff = (startIso: string, endIso: string) => {
-  if (!startIso || !endIso) return 0;
-  const sDatePart = startIso.split('T')[0];
-  const eDatePart = endIso.split('T')[0];
-  const [sy, sm, sd] = sDatePart.split('-').map(Number);
-  const [ey, em, ed] = eDatePart.split('-').map(Number);
-  
-  const sUTC = Date.UTC(sy, sm - 1, sd);
-  const eUTC = Date.UTC(ey, em - 1, ed);
-  const diffTime = Math.abs(eUTC - sUTC);
-  return Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
-};
-
 export default function LeaveRequestsPage() {
   const [currentUser, setCurrentUser] = useState<UserDetail | null>(null);
   const [leaves, setLeaves] = useState<LeaveRequest[]>([]);
@@ -69,8 +46,11 @@ export default function LeaveRequestsPage() {
   const [error, setError] = useState('');
   const [statusFilter, setStatusFilter] = useState<'All' | 'Pending' | 'Approved' | 'Rejected'>('All');
   const [searchQuery, setSearchQuery] = useState('');
-  const [expandedLeaves, setExpandedLeaves] = useState<{ [key: string]: boolean }>({});
   
+  // Details Modal state
+  const [showDetailModal, setShowDetailModal] = useState(false);
+  const [selectedDetailRequest, setSelectedDetailRequest] = useState<RequestItem | null>(null);
+
   // Rejection Modal states (Admin)
   const [showRejectModal, setShowRejectModal] = useState(false);
   const [selectedLeaveId, setSelectedLeaveId] = useState('');
@@ -92,13 +72,6 @@ export default function LeaveRequestsPage() {
       setCurrentUser(JSON.parse(storedUser));
     }
   }, []);
-
-  const toggleExpand = (id: string) => {
-    setExpandedLeaves((prev) => ({
-      ...prev,
-      [id]: !prev[id],
-    }));
-  };
 
   const fetchLeaves = async () => {
     if (!currentUser) return;
@@ -140,6 +113,11 @@ export default function LeaveRequestsPage() {
       fetchLeaves();
     }
   }, [currentUser, statusFilter]);
+
+  const handleOpenDetails = (item: RequestItem) => {
+    setSelectedDetailRequest(item);
+    setShowDetailModal(true);
+  };
 
   const handleApprove = async (id: string) => {
     const confirmed = await showConfirm('Approve Leave', 'Are you sure you want to APPROVE this leave request?');
@@ -264,6 +242,8 @@ export default function LeaveRequestsPage() {
     return employeeName.includes(query) || email.includes(query);
   });
 
+  const isAdmin = currentUser?.role === 'Admin';
+
   return (
     <div className="space-y-6">
       {/* Upper header */}
@@ -271,21 +251,22 @@ export default function LeaveRequestsPage() {
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Leave Management</h1>
           <p className="text-sm text-odizo-grey">
-            {currentUser?.role === 'Admin'
+            {isAdmin
               ? 'Review, Approve or Reject ODIZO team time-off requests.'
               : 'Apply for leaves and track your approval status.'}
           </p>
         </div>
         <button 
           onClick={fetchLeaves}
-          className="flex items-center gap-2 px-4 py-2 bg-black/5 dark:bg-white/5 hover:bg-black/5 dark:bg-white/10 border border-black/10 dark:border-white/10 rounded-xl text-sm font-semibold transition-all duration-300 cursor-pointer"
+          disabled={loading}
+          className="flex items-center gap-2 px-4 py-2 bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 border border-black/10 dark:border-white/10 rounded-xl text-xs font-semibold text-slate-900 dark:text-white transition-all duration-300 cursor-pointer disabled:opacity-50"
         >
           <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
           <span>Refresh</span>
         </button>
       </div>
 
-      {currentUser?.role === 'Admin' ? (
+      {isAdmin ? (
         /* ==================== ADMIN DASHBOARD ==================== */
         <div className="space-y-6">
           {/* Filter and Search Bar */}
@@ -299,7 +280,7 @@ export default function LeaveRequestsPage() {
                   className={`px-4 py-2 rounded-xl text-xs font-bold transition-all duration-300 cursor-pointer ${
                     statusFilter === filter
                       ? 'bg-odizo-red border border-odizo-red/20 text-slate-900 dark:text-white shadow-[0_0_15px_rgba(225,97,103,0.3)]'
-                      : 'bg-black/5 dark:bg-white/5 text-odizo-grey hover:text-slate-900 dark:text-white dark:hover:text-white border border-transparent hover:bg-black/5 dark:bg-white/10'
+                      : 'bg-black/5 dark:bg-white/5 text-odizo-grey hover:text-slate-900 dark:hover:text-white border border-transparent'
                   }`}
                 >
                   {filter}
@@ -320,8 +301,8 @@ export default function LeaveRequestsPage() {
             </div>
           </div>
 
-          {/* Main Table */}
-          {loading ? (
+          {/* List / Table View */}
+          {loading && filteredLeaves.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-20 gap-3">
               <RefreshCw className="animate-spin text-odizo-red" size={32} />
               <span className="text-odizo-grey text-sm">Loading leave data...</span>
@@ -331,35 +312,16 @@ export default function LeaveRequestsPage() {
               <AlertCircle size={20} />
               <span className="text-sm font-medium">{error}</span>
             </div>
-          ) : filteredLeaves.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-20 text-center glass-card border-black/5 dark:border-white/5 p-8">
-              <FileText className="text-odizo-grey/40 mb-4" size={48} />
-              <h3 className="text-lg font-bold">No Leave Requests</h3>
-              <p className="text-sm text-odizo-grey max-w-sm mt-1">There are no leave requests matching criteria.</p>
-            </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {filteredLeaves.map((leave) => (
-                <RequestCard
-                  key={leave._id}
-                  id={leave._id}
-                  type="Leave"
-                  employeeName={leave.userId?.name || 'Unknown User'}
-                  employeeRole={leave.userId?.role || 'Employee'}
-                  employeeEmail={leave.userId?.email}
-                  startDate={leave.startDate}
-                  endDate={leave.endDate}
-                  reason={leave.reason}
-                  status={leave.status}
-                  appliedOn={leave.appliedOn}
-                  details={leave.adminRemarks ? `Admin Remarks: "${leave.adminRemarks}"` : undefined}
-                  showActions={true}
-                  actionLoading={actionLoading}
-                  onApprove={() => handleApprove(leave._id)}
-                  onReject={() => handleOpenRejectModal(leave._id)}
-                />
-              ))}
-            </div>
+            <RequestTable
+              requests={filteredLeaves.map(l => ({ ...l, requestType: 'Leave' }))}
+              defaultType="Leave"
+              isAdmin={true}
+              onViewDetails={handleOpenDetails}
+              onApprove={handleApprove}
+              onReject={handleOpenRejectModal}
+              actionLoading={actionLoading}
+            />
           )}
         </div>
       ) : (
@@ -435,13 +397,13 @@ export default function LeaveRequestsPage() {
           {/* Column 2 & 3: Leave History List */}
           <div className="lg:col-span-2 space-y-6">
             {/* Filter */}
-            <div className="flex justify-between items-center bg-black/5 dark:bg-white/3 border border-black/5 dark:border-white/5 p-4 rounded-2xl">
+            <div className="flex justify-between items-center bg-black/5 dark:bg-white/5 border border-black/5 dark:border-white/5 p-4 rounded-2xl">
               <h3 className="font-bold text-sm text-slate-900 dark:text-white flex items-center gap-2">
                 <FileText size={16} className="text-odizo-red" />
                 <span>Leave Request History</span>
               </h3>
 
-              <div className="flex bg-black/5 dark:bg-white/3 border border-black/5 dark:border-white/5 rounded-xl p-1 gap-1">
+              <div className="flex bg-black/5 dark:bg-white/5 border border-black/5 dark:border-white/5 rounded-xl p-1 gap-1">
                 {(['All', 'Pending', 'Approved', 'Rejected'] as const).map((filter) => (
                   <button
                     key={filter}
@@ -449,7 +411,7 @@ export default function LeaveRequestsPage() {
                     className={`px-3 py-1 rounded-lg text-[10px] font-bold transition-all duration-300 cursor-pointer ${
                       statusFilter === filter
                         ? 'bg-odizo-red text-slate-900 dark:text-white shadow-[0_0_8px_rgba(225,97,103,0.3)]'
-                        : 'text-odizo-grey hover:text-slate-900 dark:text-white dark:hover:text-white'
+                        : 'text-odizo-grey hover:text-slate-900 dark:hover:text-white'
                     }`}
                   >
                     {filter}
@@ -458,7 +420,7 @@ export default function LeaveRequestsPage() {
               </div>
             </div>
 
-            {/* Table List */}
+            {/* List / Table View */}
             {loading && leaves.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-20 gap-3">
                 <RefreshCw className="animate-spin text-odizo-red" size={32} />
@@ -469,36 +431,32 @@ export default function LeaveRequestsPage() {
                 <AlertCircle size={20} />
                 <span className="text-sm font-medium">{error}</span>
               </div>
-            ) : filteredLeaves.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-20 text-center glass-card border-black/5 dark:border-white/5 p-8">
-                <FileText className="text-odizo-grey/40 mb-4" size={48} />
-                <h3 className="text-lg font-bold">No Leave Requests Found</h3>
-                <p className="text-sm text-odizo-grey mt-1">You haven't submitted any leave requests matching this filter.</p>
-              </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {filteredLeaves.map((leave) => (
-                  <RequestCard
-                    key={leave._id}
-                    id={leave._id}
-                    type="Leave"
-                    employeeName={currentUser?.name || 'Me'}
-                    employeeRole={currentUser?.role || 'Employee'}
-                    employeeEmail={currentUser?.email}
-                    startDate={leave.startDate}
-                    endDate={leave.endDate}
-                    reason={leave.reason}
-                    status={leave.status}
-                    appliedOn={leave.appliedOn}
-                    details={leave.adminRemarks ? `Admin Remarks: "${leave.adminRemarks}"` : undefined}
-                    showActions={false}
-                  />
-                ))}
-              </div>
+              <RequestTable
+                requests={filteredLeaves.map(l => ({ 
+                  ...l, 
+                  requestType: 'Leave',
+                  userId: l.userId || { name: currentUser?.name, role: currentUser?.role, email: currentUser?.email } 
+                }))}
+                defaultType="Leave"
+                isAdmin={false}
+                onViewDetails={handleOpenDetails}
+              />
             )}
           </div>
         </div>
       )}
+
+      {/* Details Modal */}
+      <RequestDetailsModal
+        isOpen={showDetailModal}
+        onClose={() => setShowDetailModal(false)}
+        request={selectedDetailRequest}
+        isAdmin={isAdmin}
+        onApprove={handleApprove}
+        onReject={handleOpenRejectModal}
+        actionLoading={actionLoading}
+      />
 
       {/* Custom sliding glass reject modal */}
       {showRejectModal && (
@@ -508,7 +466,7 @@ export default function LeaveRequestsPage() {
               <h2 className="text-xl font-bold text-slate-900 dark:text-white">Reject Leave Request</h2>
               <button 
                 onClick={() => setShowRejectModal(false)}
-                className="p-1 rounded-lg text-odizo-grey hover:text-slate-900 dark:text-white dark:hover:text-white hover:bg-black/5 dark:bg-white/5 transition-all cursor-pointer"
+                className="p-1 rounded-lg text-odizo-grey hover:text-slate-900 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 transition-all cursor-pointer"
               >
                 <X size={20} />
               </button>
@@ -533,7 +491,7 @@ export default function LeaveRequestsPage() {
                 <button
                   type="button"
                   onClick={() => setShowRejectModal(false)}
-                  className="flex-1 py-2.5 border border-black/10 dark:border-white/10 text-slate-900 dark:text-white hover:bg-black/5 dark:bg-white/5 text-sm font-semibold rounded-xl transition-all duration-300 cursor-pointer"
+                  className="flex-1 py-2.5 border border-black/10 dark:border-white/10 text-slate-900 dark:text-white hover:bg-black/5 dark:hover:bg-white/5 text-sm font-semibold rounded-xl transition-all duration-300 cursor-pointer"
                 >
                   Cancel
                 </button>

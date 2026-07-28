@@ -150,7 +150,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           <Logo size="md" />
         </div>
 
-        <nav className="flex-1 space-y-2">
+        <nav className="flex-1 space-y-2 overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-black/10 dark:scrollbar-thumb-white/10">
           {navItems.map((item) => (
             <SidebarItem
               key={item.href}
@@ -188,7 +188,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
               </button>
             </div>
 
-            <nav className="flex-1 space-y-2">
+            <nav className="flex-1 space-y-2 overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-black/10 dark:scrollbar-thumb-white/10">
               {navItems.map((item) => (
                 <SidebarItem
                   key={item.href}
