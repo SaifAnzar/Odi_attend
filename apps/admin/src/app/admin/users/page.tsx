@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { showConfirm, showError, showSuccess } from '@/lib/swal';
 import { EmployeeQuickStats } from '@/components/ui/EmployeeQuickStats';
+import { normalizeTimeToHHMM } from '@/lib/shiftUtils';
 
 interface User {
   _id: string;
@@ -164,9 +165,9 @@ export default function UserManagement() {
         baseSalary: Number(baseSalary),
         status,
         shift: {
-          name: shiftName,
-          startTime: shiftStart,
-          endTime: shiftEnd
+          name: shiftName.trim() || 'Standard Shift',
+          startTime: normalizeTimeToHHMM(shiftStart, '09:00'),
+          endTime: normalizeTimeToHHMM(shiftEnd, '18:00')
         }
       };
 

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { connectToDatabase } from '@/lib/db';
 import { verifyAuth } from '@/lib/auth';
 import { User, AttendanceRecord, AppConfig, LeaveRequest, ShiftSwapRequest } from '@odi_attend/shared';
+import { calculateShiftEndTimeUTC, getLocalDateStringIST, normalizeTimeToHHMM, parseTimeTo24Hours } from '@/lib/shiftUtils';
 
 // Helper to calculate exact distance in meters between two GPS coordinates using Haversine formula
 function calculateDistanceInMeters(lat1: number, lon1: number, lat2: number, lon2: number): number {
@@ -20,52 +21,41 @@ function calculateDistanceInMeters(lat1: number, lon1: number, lat2: number, lon
   return R * c; // Distance in meters
 }
 
-// Helper to get local date string YYYY-MM-DD (defaults to IST timezone UTC+5:30)
-function getLocalDateString(date: Date = new Date()): string {
-  const utcOffset = 5.5; // IST offset
-  const localTime = new Date(date.getTime() + utcOffset * 3600000);
-  return localTime.toISOString().split('T')[0];
-}
-
-// Automatically check out employees/interns who forgot to check out after their shift ended
-async function performAutoCheckout() {
+// Automatically check out employees/interns whose shift has ended
+export async function performAutoCheckout() {
   try {
-    // Find all attendance records with an active (open) session
+    // Find all attendance records with AT LEAST ONE open session (no checkOut)
     const records = await AttendanceRecord.find({
-      "sessions.checkOut": { $exists: false }
-    });
+      sessions: {
+        $elemMatch: {
+          $or: [
+            { checkOut: { $exists: false } },
+            { checkOut: null }
+          ]
+        }
+      }
+    }).populate('userId', 'name email role status shift workMode');
 
     const now = new Date();
 
     for (const record of records) {
-      if (!record.shiftSnapshot || !record.shiftSnapshot.endTime || !record.shiftSnapshot.startTime) {
-        continue;
-      }
+      const user = record.userId as any;
+      const startTimeStr = record.shiftSnapshot?.startTime || user?.shift?.startTime || '09:00';
+      const endTimeStr = record.shiftSnapshot?.endTime || user?.shift?.endTime || '18:00';
 
-      let modified = false;
-      const [shiftEndHour, shiftEndMin] = record.shiftSnapshot.endTime.split(':').map(Number);
-      const [shiftStartHour] = record.shiftSnapshot.startTime.split(':').map(Number);
-      const [year, month, day] = record.date.split('-').map(Number);
-
-      // Determine shift end day (adjust by +1 day if it crosses midnight, e.g. Night Shift)
-      let endDay = day;
-      if (shiftEndHour < shiftStartHour) {
-        endDay = day + 1;
-      }
-
-      // Convert shift end time in local IST (+5:30) to UTC for comparison
-      const localShiftEndTime = new Date(Date.UTC(year, month - 1, endDay, shiftEndHour, shiftEndMin));
-      const shiftEndTimeUTC = new Date(localShiftEndTime.getTime() - 5.5 * 3600000);
+      const shiftEndTimeUTC = calculateShiftEndTimeUTC(record.date, startTimeStr, endTimeStr);
 
       // If the current time is past the shift end time, auto check out the user!
       if (now > shiftEndTimeUTC) {
+        let modified = false;
+
         for (const session of record.sessions) {
           if (!session.checkOut) {
-            session.checkOut = shiftEndTimeUTC; // Set checkout exactly to the shift end time
+            session.checkOut = shiftEndTimeUTC; // Set checkout to shift end time
             session.checkOutLocation = {
-              latitude: session.checkInLocation.latitude,
-              longitude: session.checkInLocation.longitude,
-              address: session.checkInLocation.address 
+              latitude: session.checkInLocation?.latitude || 0,
+              longitude: session.checkInLocation?.longitude || 0,
+              address: session.checkInLocation?.address 
                 ? `${session.checkInLocation.address} (Auto Check-Out)` 
                 : 'Auto Check-Out Location'
             };
@@ -73,18 +63,19 @@ async function performAutoCheckout() {
 
             // Calculate session duration and add it to total minutes worked
             const sessionDurationMinutes = Math.round((shiftEndTimeUTC.getTime() - new Date(session.checkIn).getTime()) / 60000);
-            record.totalMinutesWorked += Math.max(0, sessionDurationMinutes);
+            record.totalMinutesWorked = (record.totalMinutesWorked || 0) + Math.max(0, sessionDurationMinutes);
             modified = true;
           }
         }
 
         if (modified) {
           record.markModified('sessions');
-          record.notes = record.notes 
-            ? `${record.notes} [System: Auto Checked-Out at Shift End]` 
-            : '[System: Auto Checked-Out at Shift End]';
+          const noteText = '[System: Auto Checked-Out at Shift End]';
+          if (!record.notes || !record.notes.includes(noteText)) {
+            record.notes = record.notes ? `${record.notes} ${noteText}` : noteText;
+          }
           await record.save();
-          console.log(`[Auto Check-Out] User ${record.userId} auto checked-out for date ${record.date} at shift end: ${shiftEndTimeUTC.toISOString()}`);
+          console.log(`[Auto Check-Out] User ${user?.name || record.userId} auto checked-out for date ${record.date} at shift end: ${shiftEndTimeUTC.toISOString()}`);
         }
       }
     }
@@ -108,6 +99,8 @@ export async function GET(request: NextRequest) {
     const searchParams = request.nextUrl.searchParams;
     const targetUserId = searchParams.get('userId');
     const targetDate = searchParams.get('date'); // YYYY-MM-DD
+    const startDate = searchParams.get('startDate');
+    const endDate = searchParams.get('endDate');
 
     // Admin can view any logs. Employees/Interns can only view their own logs.
     let userId = userPayload.id;
@@ -123,6 +116,12 @@ export async function GET(request: NextRequest) {
     }
     if (targetDate) {
       query.date = targetDate;
+    } else if (startDate && endDate) {
+      query.date = { $gte: startDate, $lte: endDate };
+    } else if (startDate) {
+      query.date = { $gte: startDate };
+    } else if (endDate) {
+      query.date = { $lte: endDate };
     }
 
     // Populate user details for Admins
@@ -167,7 +166,7 @@ export async function POST(request: NextRequest) {
     }
 
     const now = new Date();
-    const todayStr = getLocalDateString(now);
+    const todayStr = getLocalDateStringIST(now);
     const todayDate = new Date(todayStr); // UTC midnight representation of today
 
     // Check if user is a permanent Remote worker OR has an active and approved WFH request for today
@@ -180,8 +179,8 @@ export async function POST(request: NextRequest) {
     });
 
     const isTemporaryWfhActive = approvedWfhRequests.some(req => {
-      const startStr = getLocalDateString(new Date(req.startDate));
-      const endStr = getLocalDateString(new Date(req.endDate));
+      const startStr = getLocalDateStringIST(new Date(req.startDate));
+      const endStr = getLocalDateStringIST(new Date(req.endDate));
       return todayStr >= startStr && todayStr <= endStr;
     });
 
@@ -190,9 +189,9 @@ export async function POST(request: NextRequest) {
 
     // Check for approved shift swap for this user on todayDate
     let activeShift = {
-      name: user.shift.name,
-      startTime: user.shift.startTime,
-      endTime: user.shift.endTime
+      name: user.shift?.name || 'Standard Shift',
+      startTime: normalizeTimeToHHMM(user.shift?.startTime, '09:00'),
+      endTime: normalizeTimeToHHMM(user.shift?.endTime, '18:00')
     };
 
     const swapRequest = await ShiftSwapRequest.findOne({
@@ -207,15 +206,15 @@ export async function POST(request: NextRequest) {
       if (requester && target) {
         if (requester._id.toString() === user._id.toString()) {
           activeShift = {
-            name: `${target.shift.name} (Swapped)`,
-            startTime: target.shift.startTime,
-            endTime: target.shift.endTime
+            name: `${target.shift?.name || 'Shift'} (Swapped)`,
+            startTime: normalizeTimeToHHMM(target.shift?.startTime, '09:00'),
+            endTime: normalizeTimeToHHMM(target.shift?.endTime, '18:00')
           };
         } else {
           activeShift = {
-            name: `${requester.shift.name} (Swapped)`,
-            startTime: requester.shift.startTime,
-            endTime: requester.shift.endTime
+            name: `${requester.shift?.name || 'Shift'} (Swapped)`,
+            startTime: normalizeTimeToHHMM(requester.shift?.startTime, '09:00'),
+            endTime: normalizeTimeToHHMM(requester.shift?.endTime, '18:00')
           };
         }
       }
@@ -286,6 +285,7 @@ export async function POST(request: NextRequest) {
     // Find or create daily attendance record
     let record = await AttendanceRecord.findOne({ userId: user._id, date: todayStr });
     console.log(`[API POST /api/attendance] Record found:`, record ? `YES (ID: ${record._id})` : 'NO (null)');
+
     if (type === 'Check-In') {
       if (!record) {
         // First punch of the day: create new record with shift snapshot
@@ -310,7 +310,7 @@ export async function POST(request: NextRequest) {
         const checkInMin = localTime.getUTCMinutes();
         const checkInTotalMinutes = checkInHour * 60 + checkInMin;
 
-        const [shiftHour, shiftMin] = activeShift.startTime.split(':').map(Number);
+        const { hour: shiftHour, minute: shiftMin } = parseTimeTo24Hours(activeShift.startTime);
         const shiftStartTotalMinutes = shiftHour * 60 + shiftMin + 15; // 15 min grace period
 
         if (checkInTotalMinutes > shiftStartTotalMinutes) {
@@ -373,7 +373,7 @@ export async function POST(request: NextRequest) {
 
       // Update total working minutes
       const sessionDurationMinutes = Math.round((now.getTime() - new Date(activeSession.checkIn).getTime()) / 60000);
-      record.totalMinutesWorked += sessionDurationMinutes;
+      record.totalMinutesWorked = (record.totalMinutesWorked || 0) + Math.max(0, sessionDurationMinutes);
 
       // If this check-out is flagged, propagate it to the daily record
       if (isFlagged) {

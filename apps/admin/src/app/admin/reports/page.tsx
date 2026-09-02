@@ -17,9 +17,10 @@ import {
   ClipboardList, 
   Eye, 
   ExternalLink,
-  Clock
+  Clock,
+  LogOut
 } from 'lucide-react';
-import { showError, showSuccess } from '@/lib/swal';
+import { showError, showSuccess, showConfirm } from '@/lib/swal';
 import { formatDisplayDate } from '@/lib/dateFormatter';
 
 interface User {
@@ -95,6 +96,36 @@ export default function Reports() {
     } catch (e) {
       console.error(e);
       showError('Network Error', 'Failed to review record.');
+    }
+  };
+
+  const handleForcePunchOut = async (recordId: string, userName: string) => {
+    const confirmed = await showConfirm(
+      'Manual Punch Out',
+      `Are you sure you want to manually punch out ${userName || 'this employee'}?`
+    );
+    if (!confirmed) return;
+
+    try {
+      const res = await fetch('/api/attendance/force-checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ recordId })
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        showSuccess('Punched Out', `${userName || 'Employee'} has been checked out successfully.`);
+        fetchData();
+        if (selectedRecord && selectedRecord._id === recordId) {
+          setIsDrawerOpen(false);
+          setSelectedRecord(null);
+        }
+      } else {
+        showError('Punch Out Failed', data.error || 'Failed to punch out employee.');
+      }
+    } catch (err) {
+      console.error(err);
+      showError('Error', 'An unexpected error occurred.');
     }
   };
 
@@ -489,6 +520,15 @@ export default function Reports() {
                         >
                           <Eye size={14} />
                         </button>
+                        {isAdmin && record.sessions?.some(s => !s.checkOut) && (
+                          <button
+                            onClick={() => handleForcePunchOut(record._id, record.userId?.name)}
+                            className="p-1.5 bg-odizo-red/10 hover:bg-odizo-red/20 border border-odizo-red/25 hover:border-odizo-red/40 text-odizo-red rounded-lg transition-all cursor-pointer"
+                            title="Force Punch Out Employee"
+                          >
+                            <LogOut size={14} />
+                          </button>
+                        )}
                         {isAdmin && record.status === 'Pending Approval' && (
                           <>
                             <button

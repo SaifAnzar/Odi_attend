@@ -2,7 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
 import { connectToDatabase } from '@/lib/db';
 import { verifyAuth } from '@/lib/auth';
-import { User } from '@odi_attend/shared';
+import { User, AttendanceRecord } from '@odi_attend/shared';
+import { normalizeTimeToHHMM, getLocalDateStringIST } from '@/lib/shiftUtils';
+import { performAutoCheckout } from '../../attendance/route';
 
 export async function PUT(
   request: NextRequest,
@@ -49,11 +51,20 @@ export async function PUT(
       user.status = status;
     }
     if (shift) {
-      user.shift = {
-        name: shift.name || user.shift.name,
-        startTime: shift.startTime || user.shift.startTime,
-        endTime: shift.endTime || user.shift.endTime
+      const normalizedShift = {
+        name: shift.name || user.shift?.name || 'Standard Shift',
+        startTime: normalizeTimeToHHMM(shift.startTime || user.shift?.startTime, '09:00'),
+        endTime: normalizeTimeToHHMM(shift.endTime || user.shift?.endTime, '18:00')
       };
+      user.shift = normalizedShift;
+
+      // Update today's attendance record shiftSnapshot if exists
+      const todayStr = getLocalDateStringIST();
+      const todayRecord = await AttendanceRecord.findOne({ userId: user._id, date: todayStr });
+      if (todayRecord) {
+        todayRecord.shiftSnapshot = normalizedShift;
+        await todayRecord.save();
+      }
     }
 
     if (email) {
@@ -73,6 +84,9 @@ export async function PUT(
     }
 
     await user.save();
+
+    // Trigger auto checkout to verify if updated shift has already ended
+    performAutoCheckout().catch(err => console.error('[Auto Checkout after user update error]:', err));
 
     const userResponse = user.toObject();
     delete userResponse.passwordHash;
@@ -102,7 +116,10 @@ export async function DELETE(
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
-    return NextResponse.json({ success: true, message: 'User deleted successfully' });
+    // Delete user's attendance records
+    await AttendanceRecord.deleteMany({ userId: id });
+
+    return NextResponse.json({ success: true, message: 'User and associated records deleted successfully.' });
   } catch (error: any) {
     console.error('Delete user error:', error);
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });

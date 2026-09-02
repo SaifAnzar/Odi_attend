@@ -44,7 +44,7 @@ const UserSchema = new mongoose_1.Schema({
     name: { type: String, required: true },
     email: { type: String, required: true, unique: true, index: true, lowercase: true, trim: true },
     passwordHash: { type: String, required: true },
-    role: { type: String, required: true, enum: ['Admin', 'Employee', 'Intern'], default: 'Employee' },
+    role: { type: String, required: true, enum: ['Admin', 'Employee', 'Intern', 'ADMIN', 'EMPLOYEE', 'INTERN'], default: 'EMPLOYEE' },
     workMode: { type: String, required: true, enum: ['On-Site', 'Remote', 'Hybrid'], default: 'On-Site' },
     status: { type: String, required: true, enum: ['Active', 'Inactive'], default: 'Active' },
     shift: { type: ShiftSchema, required: true, default: () => ({ name: 'Standard Shift', startTime: '09:00', endTime: '18:00' }) },

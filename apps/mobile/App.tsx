@@ -14,7 +14,8 @@ import {
   StatusBar as RNStatusBar,
   Image,
   Modal,
-  LogBox
+  LogBox,
+  AppState
 } from 'react-native';
 
 LogBox.ignoreLogs([
@@ -36,6 +37,7 @@ import { Ionicons } from '@expo/vector-icons';
 import NetInfo from '@react-native-community/netinfo';
 import * as Notifications from 'expo-notifications';
 import * as Device from 'expo-device';
+import * as Updates from 'expo-updates';
 import Constants from 'expo-constants';
 
 Notifications.setNotificationHandler({
@@ -494,10 +496,33 @@ function AppContent() {
   const [gpsCoords, setGpsCoords] = useState<{ lat: number; lng: number } | null>(null);
 
   const timerIntervalRef = useRef<NodeJS.Timeout | null>(null);
-  const todayStr = new Date().toISOString().split('T')[0];
+  
+  const getLocalDateStringIST = (date: Date = new Date()): string => {
+    const utcOffset = 5.5; // IST offset (+5:30)
+    const localTime = new Date(date.getTime() + utcOffset * 3600000);
+    return localTime.toISOString().split('T')[0];
+  };
 
-  // Load saved session on launch
+  const todayStr = getLocalDateStringIST();
+
+  // Load saved session on launch & check OTA updates
   useEffect(() => {
+    // Check and apply OTA update automatically in standalone APK
+    const checkOtaUpdate = async () => {
+      try {
+        if (!__DEV__) {
+          const update = await Updates.checkForUpdateAsync();
+          if (update.isAvailable) {
+            await Updates.fetchUpdateAsync();
+            await Updates.reloadAsync();
+          }
+        }
+      } catch (e) {
+        console.warn('OTA update check failed:', e);
+      }
+    };
+    checkOtaUpdate();
+
     const loadSession = async () => {
       try {
         const savedToken = await AsyncStorage.getItem('token');
@@ -542,18 +567,24 @@ function AppContent() {
       if (title && body) {
         showAlert(title, body, 'success');
       }
+      if (token) {
+        fetchLogs();
+      }
     });
 
     // Notification response listener (when user taps the notification)
     const responseSubscription = Notifications.addNotificationResponseReceivedListener(response => {
       console.log('Notification tapped:', response);
+      if (token) {
+        fetchLogs();
+      }
     });
 
     return () => {
       subscription.remove();
       responseSubscription.remove();
     };
-  }, []);
+  }, [token]);
 
   // Register push notifications when authenticated
   useEffect(() => {
@@ -594,6 +625,27 @@ function AppContent() {
         }
       };
       syncUserProfile();
+
+      // 20s auto sync interval for live auto-checkout & admin punchout detection
+      const syncInterval = setInterval(() => {
+        if (token) {
+          fetchLogs();
+          syncUserProfile();
+        }
+      }, 20000);
+
+      // AppState change listener (when returning to app from background)
+      const appStateSub = AppState.addEventListener('change', nextAppState => {
+        if (nextAppState === 'active' && token) {
+          fetchLogs();
+          syncUserProfile();
+        }
+      });
+
+      return () => {
+        clearInterval(syncInterval);
+        appStateSub.remove();
+      };
     }
   }, [isAuthenticated, token]);
 

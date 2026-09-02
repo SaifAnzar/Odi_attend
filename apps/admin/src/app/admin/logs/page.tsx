@@ -21,6 +21,8 @@ import {
   UserX,
   UserCheck
 } from 'lucide-react';
+import { showConfirm, showSuccess, showError } from '@/lib/swal';
+import { getLocalDateStringIST } from '@/lib/shiftUtils';
 
 interface User {
   _id: string;
@@ -86,6 +88,7 @@ export default function CompanyLogsPage() {
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [punchingOutId, setPunchingOutId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterType, setFilterType] = useState<'all' | 'active' | 'in' | 'out' | 'not_clocked'>('all');
   const [viewMode, setViewMode] = useState<'cards' | 'table'>('cards');
@@ -93,7 +96,7 @@ export default function CompanyLogsPage() {
   const fetchLiveLogs = async () => {
     try {
       setRefreshing(true);
-      const todayStr = new Date().toISOString().split('T')[0];
+      const todayStr = getLocalDateStringIST();
       const [attRes, usersRes] = await Promise.all([
         fetch(`/api/attendance?date=${todayStr}`),
         fetch('/api/users')
@@ -120,6 +123,36 @@ export default function CompanyLogsPage() {
     const interval = setInterval(fetchLiveLogs, 25000); // 25s auto live sync
     return () => clearInterval(interval);
   }, []);
+
+  const handleForcePunchOut = async (userId?: string, userName?: string, recordId?: string) => {
+    const confirmed = await showConfirm(
+      'Manual Punch Out',
+      `Are you sure you want to manually punch out ${userName || 'this employee'}?`
+    );
+    if (!confirmed) return;
+
+    try {
+      setPunchingOutId(userId || recordId || null);
+      const res = await fetch('/api/attendance/force-checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId, recordId })
+      });
+
+      const data = await res.json();
+      if (res.ok && data.success) {
+        showSuccess('Punched Out', `${userName || 'Employee'} has been checked out successfully.`);
+        fetchLiveLogs();
+      } else {
+        showError('Punch Out Failed', data.error || 'Failed to punch out employee.');
+      }
+    } catch (err) {
+      console.error(err);
+      showError('Error', 'An unexpected network error occurred.');
+    } finally {
+      setPunchingOutId(null);
+    }
+  };
 
   // Build sorted chronological list of punch events
   const events: LogEvent[] = records.flatMap((record) => {
@@ -148,6 +181,8 @@ export default function CompanyLogsPage() {
       if (s.checkOut) {
         const checkInTime = new Date(s.checkIn).getTime();
         const checkOutTime = new Date(s.checkOut).getTime();
+        const durationMinutes = Math.max(0, Math.round((checkOutTime - checkInTime) / 60000));
+
         list.push({
           id: `${record._id}-out-${idx}`,
           type: 'OUT',
@@ -159,7 +194,7 @@ export default function CompanyLogsPage() {
           location: s.checkOutLocation,
           device: s.checkOutDevice || 'Mobile App',
           isActive: false,
-          durationMinutes: Math.round((checkOutTime - checkInTime) / 60000),
+          durationMinutes,
           shiftName: record.shiftSnapshot?.name || 'Standard Shift',
           shiftTime: `${record.shiftSnapshot?.startTime || '09:00'} - ${record.shiftSnapshot?.endTime || '18:00'}`,
           isWFH: record.isWFH,
@@ -171,32 +206,40 @@ export default function CompanyLogsPage() {
     return list;
   }).sort((a, b) => b.time.getTime() - a.time.getTime());
 
-  // Helper metrics
-  const activeRecords = records.filter(r => r.sessions.some(s => !s.checkOut));
-  const activeCount = activeRecords.length;
+  // Metrics computation
+  const activeCount = records.filter(r => r.sessions.some(s => !s.checkOut)).length;
   const punchInCount = events.filter(e => e.type === 'IN').length;
   const punchOutCount = events.filter(e => e.type === 'OUT').length;
-  const clockedInUserIds = new Set(records.filter(r => r.sessions.length > 0).map(r => r.userId?._id?.toString()));
-  const notClockedStaff = users.filter(u => !clockedInUserIds.has(u._id?.toString()));
 
-  // Filtered Events
-  const filteredEvents = events.filter(e => {
-    const matchesSearch = 
-      e.user?.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      e.user?.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      e.device?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      e.location?.address?.toLowerCase().includes(searchQuery.toLowerCase());
+  // Not Clocked In staff (Excludes Admins and staff with attendance record today)
+  const clockedUserIds = new Set(records.map(r => r.userId?._id?.toString() || (r.userId as any)?.toString()));
+  const notClockedStaff = users.filter(u => u.role !== 'Admin' && u.status === 'Active' && !clockedUserIds.has(u._id));
 
-    if (!matchesSearch) return false;
-    if (filterType === 'active') return e.type === 'IN' && e.isActive;
-    if (filterType === 'in') return e.type === 'IN';
-    if (filterType === 'out') return e.type === 'OUT';
+  // Filter application
+  const filteredEvents = events.filter((e) => {
+    // Type Filter
+    if (filterType === 'active' && !e.isActive) return false;
+    if (filterType === 'in' && e.type !== 'IN') return false;
+    if (filterType === 'out' && e.type !== 'OUT') return false;
+
+    // Search Query Filter
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase();
+      const nameMatch = e.user?.name?.toLowerCase().includes(q);
+      const emailMatch = e.user?.email?.toLowerCase().includes(q);
+      const deviceMatch = e.device?.toLowerCase().includes(q);
+      const shiftMatch = e.shiftName?.toLowerCase().includes(q);
+      const addressMatch = e.location?.address?.toLowerCase().includes(q);
+      return nameMatch || emailMatch || deviceMatch || shiftMatch || addressMatch;
+    }
+
     return true;
   });
 
-  const filteredNotClocked = notClockedStaff.filter(u => 
-    u.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    u.email?.toLowerCase().includes(searchQuery.toLowerCase())
+  const filteredNotClocked = notClockedStaff.filter(s => 
+    !searchQuery.trim() || 
+    s.name?.toLowerCase().includes(searchQuery.toLowerCase()) || 
+    s.email?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   const renderWorkModeBadge = (user?: User, isWFH?: boolean) => {
@@ -624,10 +667,21 @@ export default function CompanyLogsPage() {
                           {renderWorkModeBadge(evt.user, evt.isWFH)}
                           
                           {evt.isActive ? (
-                            <span className="inline-flex items-center gap-1 text-[10px] px-2.5 py-0.5 rounded-full font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
-                              <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                              ACTIVE ON-SHIFT
-                            </span>
+                            <div className="flex items-center gap-2">
+                              <span className="inline-flex items-center gap-1 text-[10px] px-2.5 py-0.5 rounded-full font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
+                                <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                                ACTIVE ON-SHIFT
+                              </span>
+                              <button
+                                onClick={() => handleForcePunchOut(evt.user?._id, evt.user?.name, evt.recordId)}
+                                disabled={punchingOutId === evt.user?._id}
+                                className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-odizo-red hover:bg-odizo-red/90 text-white text-[11px] font-bold shadow-[0_0_12px_rgba(225,97,103,0.3)] transition-all cursor-pointer disabled:opacity-50"
+                                title={`Manually Punch Out ${evt.user?.name}`}
+                              >
+                                <LogOut size={12} />
+                                <span>{punchingOutId === evt.user?._id ? 'Punching Out...' : 'Punch Out Staff'}</span>
+                              </button>
+                            </div>
                           ) : (
                             <span className="inline-flex items-center gap-1 text-[10px] px-2.5 py-0.5 rounded-full font-medium bg-black/5 dark:bg-white/5 text-odizo-grey">
                               Completed Session
@@ -738,6 +792,7 @@ export default function CompanyLogsPage() {
                   <th className="py-3.5 px-4">Duration</th>
                   <th className="py-3.5 px-4">Location</th>
                   <th className="py-3.5 px-4">Device</th>
+                  <th className="py-3.5 px-4 text-right">Action</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-black/5 dark:divide-white/5">
@@ -807,6 +862,21 @@ export default function CompanyLogsPage() {
                       </td>
                       <td className="py-4 px-4 text-odizo-grey text-[11px] truncate max-w-[100px]">
                         {evt.device}
+                      </td>
+                      <td className="py-4 px-4 text-right">
+                        {evt.isActive ? (
+                          <button
+                            onClick={() => handleForcePunchOut(evt.user?._id, evt.user?.name, evt.recordId)}
+                            disabled={punchingOutId === evt.user?._id}
+                            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-odizo-red hover:bg-odizo-red/90 text-white text-[10px] font-bold shadow-sm transition-all cursor-pointer disabled:opacity-50"
+                            title={`Manually punch out ${evt.user?.name}`}
+                          >
+                            <LogOut size={11} />
+                            <span>{punchingOutId === evt.user?._id ? 'Punching...' : 'Punch Out'}</span>
+                          </button>
+                        ) : (
+                          <span className="text-[10px] text-odizo-grey">Closed</span>
+                        )}
                       </td>
                     </tr>
                   );

@@ -3,6 +3,8 @@ import bcrypt from 'bcryptjs';
 import { connectToDatabase } from '@/lib/db';
 import { verifyAuth } from '@/lib/auth';
 import { User, LeaveRequest, ShiftSwapRequest } from '@odi_attend/shared';
+import { normalizeTimeToHHMM } from '@/lib/shiftUtils';
+import { performAutoCheckout } from '../attendance/route';
 
 export async function GET(request: NextRequest) {
   try {
@@ -12,6 +14,10 @@ export async function GET(request: NextRequest) {
     }
 
     await connectToDatabase();
+    
+    // Auto checkout check in background
+    performAutoCheckout().catch(err => console.error('[Auto Checkout in GET /api/users error]:', err));
+
     // Exclude password hashes from returned user objects
     const users = await User.find({}).select('-passwordHash').sort({ createdAt: -1 });
 
@@ -103,6 +109,12 @@ export async function POST(request: NextRequest) {
     const salt = await bcrypt.genSalt(10);
     const passwordHash = await bcrypt.hash(password, salt);
 
+    const normalizedShift = {
+      name: shift?.name || 'Standard Shift',
+      startTime: normalizeTimeToHHMM(shift?.startTime, '09:00'),
+      endTime: normalizeTimeToHHMM(shift?.endTime, '18:00')
+    };
+
     const newUser = new User({
       name,
       email: normalizedEmail,
@@ -111,7 +123,7 @@ export async function POST(request: NextRequest) {
       workMode: workMode && ['On-Site', 'Remote', 'Hybrid'].includes(workMode) ? workMode : 'On-Site',
       status: status || 'Active',
       baseSalary: baseSalary !== undefined && baseSalary !== null ? Number(baseSalary) : (role === 'Intern' ? 25000 : role === 'Admin' ? 90000 : 65000),
-      shift: shift || { name: 'Standard Shift', startTime: '09:00', endTime: '18:00' }
+      shift: normalizedShift
     });
 
     await newUser.save();

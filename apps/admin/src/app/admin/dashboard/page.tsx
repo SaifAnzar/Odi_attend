@@ -17,11 +17,13 @@ import {
   Calendar,
   Home as HomeIcon,
   MessageSquare,
-  ShieldAlert
+  ShieldAlert,
+  LogOut
 } from 'lucide-react';
 import Swal from 'sweetalert2';
 import { showError, showSuccess, showConfirm } from '@/lib/swal';
 import { RequestCard } from '@/components/RequestCard';
+import { getLocalDateStringIST } from '@/lib/shiftUtils';
 
 // Drag and Drop Kit
 import {
@@ -156,7 +158,8 @@ export default function Dashboard() {
   const [punchTab, setPunchTab] = useState<'active' | 'recent_in' | 'recent_out' | 'not_clocked' | 'all'>('active');
 
   const timerIntervalRef = useRef<NodeJS.Timeout | null>(null);
-  const todayStr = new Date().toISOString().split('T')[0];
+  const todayStr = getLocalDateStringIST();
+  const [punchingOutId, setPunchingOutId] = useState<string | null>(null);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -523,13 +526,43 @@ export default function Dashboard() {
         setSwaps((prev) => prev.filter((s) => s._id !== id));
         fetchRequestsData();
       } else {
-        showError('Rejection Failed', data.error || 'Failed to reject swap.');
+        showError('Rejection Failed', data.error || 'Failed to reject swap request.');
       }
     } catch (err) {
       console.error(err);
       showError('Error', 'An unexpected error occurred.');
     } finally {
       setRequestsLoading(false);
+    }
+  };
+
+  const handleForcePunchOut = async (userId?: string, userName?: string, recordId?: string) => {
+    const confirmed = await showConfirm(
+      'Manual Punch Out',
+      `Are you sure you want to manually punch out ${userName || 'this employee'}?`
+    );
+    if (!confirmed) return;
+
+    try {
+      setPunchingOutId(userId || recordId || null);
+      const res = await fetch('/api/attendance/force-checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId, recordId })
+      });
+
+      const data = await res.json();
+      if (res.ok && data.success) {
+        showSuccess('Punched Out', `${userName || 'Employee'} has been checked out successfully.`);
+        fetchData();
+      } else {
+        showError('Punch Out Failed', data.error || 'Failed to punch out employee.');
+      }
+    } catch (err) {
+      console.error(err);
+      showError('Error', 'An unexpected network error occurred.');
+    } finally {
+      setPunchingOutId(null);
     }
   };
 
@@ -1341,6 +1374,7 @@ export default function Dashboard() {
                                     <th className="py-3 px-4">Assigned Shift</th>
                                     <th className="py-3 px-4">Location</th>
                                     <th className="py-3 px-4">Status</th>
+                                    <th className="py-3 px-4 text-right">Action</th>
                                   </tr>
                                 </thead>
                                 <tbody className="divide-y divide-black/10 dark:divide-white/5">
@@ -1351,6 +1385,7 @@ export default function Dashboard() {
                                     const elapsedHours = Math.floor(elapsedMs / (1000 * 60 * 60));
                                     const elapsedMinutes = Math.floor((elapsedMs % (1000 * 60 * 60)) / (1000 * 60));
                                     const location = activeSession.checkInLocation;
+                                    const staffId = record.userId?._id || record.userId?.id;
 
                                     return (
                                       <tr key={record._id} className="hover:bg-black/5 dark:bg-white/3 transition-colors">
@@ -1406,6 +1441,17 @@ export default function Dashboard() {
                                             <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
                                             ON-SHIFT
                                           </span>
+                                        </td>
+                                        <td className="py-3.5 px-4 text-right">
+                                          <button
+                                            onClick={() => handleForcePunchOut(staffId, record.userId?.name, record._id)}
+                                            disabled={punchingOutId === staffId}
+                                            className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-odizo-red hover:bg-odizo-red/90 text-white text-xs font-bold shadow-sm transition-all cursor-pointer disabled:opacity-50"
+                                            title={`Manually punch out ${record.userId?.name}`}
+                                          >
+                                            <LogOut size={12} />
+                                            <span>{punchingOutId === staffId ? 'Punching...' : 'Punch Out'}</span>
+                                          </button>
                                         </td>
                                       </tr>
                                     );

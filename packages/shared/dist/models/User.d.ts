@@ -4,12 +4,13 @@ export interface IShift {
     startTime: string;
     endTime: string;
 }
+export type UserRole = 'ADMIN' | 'EMPLOYEE' | 'INTERN' | 'Admin' | 'Employee' | 'Intern';
 export type WorkMode = 'On-Site' | 'Remote' | 'Hybrid';
 export interface IUser extends Document {
     name: string;
     email: string;
     passwordHash: string;
-    role: 'Admin' | 'Employee' | 'Intern';
+    role: UserRole;
     workMode: WorkMode;
     status: 'Active' | 'Inactive';
     shift: IShift;

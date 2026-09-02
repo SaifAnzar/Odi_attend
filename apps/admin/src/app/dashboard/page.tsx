@@ -25,6 +25,7 @@ import Logo from '@/components/Logo';
 import ThemeToggle from '@/components/ThemeToggle';
 import { EmployeeQuickStats } from '@/components/ui/EmployeeQuickStats';
 import { showConfirm, showError, showSuccess } from '@/lib/swal';
+import { getLocalDateStringIST } from '@/lib/shiftUtils';
 
 interface PunchSession {
   checkIn: string;
@@ -109,8 +110,8 @@ export default function EmployeeDashboard() {
     if (!user) return;
     try {
       setLoadingRecord(true);
-      const todayStr = new Date().toISOString().split('T')[0];
-      const res = await fetch(`/api/attendance?startDate=${todayStr}&endDate=${todayStr}&userId=${user.id}`);
+      const todayStr = getLocalDateStringIST();
+      const res = await fetch(`/api/attendance?date=${todayStr}&userId=${user.id}`);
       if (res.ok) {
         const data = await res.json();
         if (data.records && data.records.length > 0) {
