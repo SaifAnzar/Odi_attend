@@ -7,6 +7,7 @@ export interface EmployeeQuickStatsProps {
   leaveCount?: number;
   wfhCount?: number;
   swapCount?: number;
+  showWfh?: boolean;
 }
 
 /**
@@ -18,9 +19,11 @@ export function EmployeeQuickStats({
   leaveCount = 0,
   wfhCount = 0,
   swapCount = 0,
+  showWfh = true,
 }: EmployeeQuickStatsProps) {
-  const stats = [
+  const allStats = [
     {
+      id: 'leave',
       label: 'Approved Leaves',
       count: leaveCount,
       unit: 'Days',
@@ -30,6 +33,7 @@ export function EmployeeQuickStats({
       bgCard: 'bg-rose-50/50 dark:bg-rose-950/20 border-rose-200 dark:border-rose-900/40',
     },
     {
+      id: 'wfh',
       label: 'Approved WFH',
       count: wfhCount,
       unit: 'Days',
@@ -39,6 +43,7 @@ export function EmployeeQuickStats({
       bgCard: 'bg-purple-50/50 dark:bg-purple-950/20 border-purple-200 dark:border-purple-900/40',
     },
     {
+      id: 'swap',
       label: 'Shift Swaps',
       count: swapCount,
       unit: 'Completed',
@@ -49,8 +54,10 @@ export function EmployeeQuickStats({
     },
   ];
 
+  const stats = showWfh ? allStats : allStats.filter(s => s.id !== 'wfh');
+
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 w-full">
+    <div className={`grid grid-cols-1 ${stats.length === 2 ? 'sm:grid-cols-2' : 'sm:grid-cols-3'} gap-3 w-full`}>
       {stats.map((stat, index) => {
         const Icon = stat.icon;
         return (

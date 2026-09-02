@@ -360,7 +360,12 @@ export default function EmployeeDashboard() {
             <h2 className="text-xs font-bold uppercase tracking-wider text-odizo-grey">My Approved Balances</h2>
             <span className="text-[11px] text-odizo-grey">Real-time Ground Truth</span>
           </div>
-          <EmployeeQuickStats leaveCount={leaveCount} wfhCount={wfhCount} swapCount={swapCount} />
+          <EmployeeQuickStats 
+            leaveCount={leaveCount} 
+            wfhCount={wfhCount} 
+            swapCount={swapCount} 
+            showWfh={user?.workMode !== 'Remote'}
+          />
         </div>
 
         {/* 3. Today's Sessions Log */}
@@ -450,7 +455,7 @@ export default function EmployeeDashboard() {
         </div>
 
         {/* 4. Quick Portal Navigation Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className={`grid grid-cols-1 sm:grid-cols-2 ${user?.workMode === 'Remote' ? 'lg:grid-cols-4' : 'lg:grid-cols-4'} gap-4`}>
           <Link
             href="/admin/reports"
             className="p-5 rounded-2xl glass-card border-black/5 dark:border-white/5 flex flex-col justify-between hover:border-odizo-red/40 hover:shadow-lg transition-all duration-300 group cursor-pointer"
@@ -483,21 +488,24 @@ export default function EmployeeDashboard() {
             </div>
           </Link>
 
-          <Link
-            href="/admin/wfh"
-            className="p-5 rounded-2xl glass-card border-black/5 dark:border-white/5 flex flex-col justify-between hover:border-odizo-red/40 hover:shadow-lg transition-all duration-300 group cursor-pointer"
-          >
-            <div className="flex items-center justify-between mb-4">
-              <div className="p-3 rounded-xl bg-purple-500/10 text-purple-400 border border-purple-500/20 group-hover:scale-110 transition-transform">
-                <Home size={20} />
+          {/* Only show WFH card if employee is NOT remote */}
+          {user?.workMode !== 'Remote' && (
+            <Link
+              href="/admin/wfh"
+              className="p-5 rounded-2xl glass-card border-black/5 dark:border-white/5 flex flex-col justify-between hover:border-odizo-red/40 hover:shadow-lg transition-all duration-300 group cursor-pointer"
+            >
+              <div className="flex items-center justify-between mb-4">
+                <div className="p-3 rounded-xl bg-purple-500/10 text-purple-400 border border-purple-500/20 group-hover:scale-110 transition-transform">
+                  <Home size={20} />
+                </div>
+                <ArrowRight size={14} className="text-odizo-grey group-hover:text-odizo-red group-hover:translate-x-1 transition-all" />
               </div>
-              <ArrowRight size={14} className="text-odizo-grey group-hover:text-odizo-red group-hover:translate-x-1 transition-all" />
-            </div>
-            <div>
-              <h3 className="text-base font-bold text-slate-900 dark:text-white">Work From Home</h3>
-              <p className="text-xs text-odizo-grey mt-1">Apply for remote WFH approval</p>
-            </div>
-          </Link>
+              <div>
+                <h3 className="text-base font-bold text-slate-900 dark:text-white">Work From Home</h3>
+                <p className="text-xs text-odizo-grey mt-1">Apply for remote WFH approval</p>
+              </div>
+            </Link>
+          )}
 
           <Link
             href="/admin/swaps"
@@ -514,6 +522,25 @@ export default function EmployeeDashboard() {
               <p className="text-xs text-odizo-grey mt-1">Exchange shift timings with peers</p>
             </div>
           </Link>
+
+          {/* Show Notice Board when remote */}
+          {user?.workMode === 'Remote' && (
+            <Link
+              href="/admin/notices"
+              className="p-5 rounded-2xl glass-card border-black/5 dark:border-white/5 flex flex-col justify-between hover:border-odizo-red/40 hover:shadow-lg transition-all duration-300 group cursor-pointer"
+            >
+              <div className="flex items-center justify-between mb-4">
+                <div className="p-3 rounded-xl bg-amber-500/10 text-amber-400 border border-amber-500/20 group-hover:scale-110 transition-transform">
+                  <Megaphone size={20} />
+                </div>
+                <ArrowRight size={14} className="text-odizo-grey group-hover:text-odizo-red group-hover:translate-x-1 transition-all" />
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-slate-900 dark:text-white">Notice Board</h3>
+                <p className="text-xs text-odizo-grey mt-1">View official ODIZO announcements</p>
+              </div>
+            </Link>
+          )}
         </div>
 
       </main>

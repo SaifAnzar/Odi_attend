@@ -826,7 +826,7 @@ function AppContent() {
   }, [currentTab]);
 
   useEffect(() => {
-    if (currentTab === 'leaves') {
+    if (currentTab === 'leaves' || currentTab === 'wfh') {
       fetchMyLeaves();
     }
   }, [currentTab]);
@@ -1994,19 +1994,21 @@ function AppContent() {
           </Text>
         </TouchableOpacity>
 
-        <TouchableOpacity
-          onPress={() => setCurrentTab('wfh')}
-          style={[styles.tabItem, currentTab === 'wfh' && styles.tabActive]}
-        >
-          <Ionicons 
-            name={currentTab === 'wfh' ? 'home' : 'home-outline'} 
-            size={22} 
-            color={currentTab === 'wfh' ? '#E16167' : colors[theme].textMuted} 
-          />
-          <Text style={[styles.tabLabel, { color: currentTab === 'wfh' ? '#E16167' : colors[theme].textMuted }]}>
-            WFH
-          </Text>
-        </TouchableOpacity>
+        {user?.workMode !== 'Remote' && (
+          <TouchableOpacity
+            onPress={() => setCurrentTab('wfh')}
+            style={[styles.tabItem, currentTab === 'wfh' && styles.tabActive]}
+          >
+            <Ionicons 
+              name={currentTab === 'wfh' ? 'home' : 'home-outline'} 
+              size={22} 
+              color={currentTab === 'wfh' ? '#E16167' : colors[theme].textMuted} 
+            />
+            <Text style={[styles.tabLabel, { color: currentTab === 'wfh' ? '#E16167' : colors[theme].textMuted }]}>
+              WFH
+            </Text>
+          </TouchableOpacity>
+        )}
 
         <TouchableOpacity
           onPress={() => setCurrentTab('history')}

@@ -155,7 +155,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     navItems.push(
       { href: '/admin/reports', icon: <FileText size={20} />, label: 'History' },
       { href: '/admin/leaves', icon: <Calendar size={20} />, label: 'Leave Requests', badgeCount: pendingLeaveCount },
-      { href: '/admin/wfh', icon: <Home size={20} />, label: 'WFH Requests', badgeCount: pendingWfhCount },
+      ...(user?.workMode !== 'Remote' ? [{ href: '/admin/wfh', icon: <Home size={20} />, label: 'WFH Requests', badgeCount: pendingWfhCount }] : []),
       { href: '/admin/swaps', icon: <RefreshCw size={20} />, label: 'Shift Swaps', badgeCount: pendingSwapsCount },
       { href: '/admin/notices', icon: <Megaphone size={20} />, label: 'Notice Board' }
     );
