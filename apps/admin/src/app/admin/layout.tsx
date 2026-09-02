@@ -67,7 +67,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const pathname = usePathname();
   const router = useRouter();
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [user, setUser] = useState<{ name: string; role: string; email: string } | null>(null);
+  const [user, setUser] = useState<{ name: string; role: string; email: string; workMode?: string } | null>(null);
   const [pendingLeaveCount, setPendingLeaveCount] = useState(0);
   const [pendingWfhCount, setPendingWfhCount] = useState(0);
   const [pendingSwapsCount, setPendingSwapsCount] = useState(0);
@@ -77,6 +77,17 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     if (storedUser) {
       setUser(JSON.parse(storedUser));
     }
+
+    // Live sync user profile from server to ensure fresh workMode
+    fetch('/api/users/me')
+      .then(res => res.json())
+      .then(data => {
+        if (data.success && data.user) {
+          setUser(data.user);
+          localStorage.setItem('user', JSON.stringify(data.user));
+        }
+      })
+      .catch(err => console.warn('Could not sync user profile in layout:', err));
   }, []);
 
   useEffect(() => {
@@ -152,10 +163,11 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       { href: '/admin/settings', icon: <Settings size={20} />, label: 'Settings' }
     );
   } else {
+    const isRemote = (user?.workMode || '').trim().toLowerCase() === 'remote';
     navItems.push(
       { href: '/admin/reports', icon: <FileText size={20} />, label: 'History' },
       { href: '/admin/leaves', icon: <Calendar size={20} />, label: 'Leave Requests', badgeCount: pendingLeaveCount },
-      ...(user?.workMode !== 'Remote' ? [{ href: '/admin/wfh', icon: <Home size={20} />, label: 'WFH Requests', badgeCount: pendingWfhCount }] : []),
+      ...(!isRemote ? [{ href: '/admin/wfh', icon: <Home size={20} />, label: 'WFH Requests', badgeCount: pendingWfhCount }] : []),
       { href: '/admin/swaps', icon: <RefreshCw size={20} />, label: 'Shift Swaps', badgeCount: pendingSwapsCount },
       { href: '/admin/notices', icon: <Megaphone size={20} />, label: 'Notice Board' }
     );
