@@ -60,13 +60,24 @@ export default function EmployeeDashboard() {
   const [wfhCount, setWfhCount] = useState(0);
   const [swapCount, setSwapCount] = useState(0);
 
-  // Load user
+  // Load user & sync live profile
   useEffect(() => {
     setMounted(true);
     const storedUser = localStorage.getItem('user');
     if (storedUser) {
       setUser(JSON.parse(storedUser));
     }
+
+    // Fetch live user profile directly from server to get accurate workMode
+    fetch('/api/users/me')
+      .then(res => res.json())
+      .then(data => {
+        if (data.success && data.user) {
+          setUser(data.user);
+          localStorage.setItem('user', JSON.stringify(data.user));
+        }
+      })
+      .catch(err => console.warn('Could not sync live user profile:', err));
 
     // Try to get geolocation
     if (typeof window !== 'undefined' && 'geolocation' in navigator) {
@@ -241,6 +252,7 @@ export default function EmployeeDashboard() {
   };
 
   const userRole = user?.role ? user.role.toUpperCase() : 'EMPLOYEE';
+  const isRemoteWorker = String(user?.workMode || '').trim().toLowerCase() === 'remote';
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-black text-slate-900 dark:text-white transition-colors duration-300 flex flex-col">
@@ -364,7 +376,7 @@ export default function EmployeeDashboard() {
             leaveCount={leaveCount} 
             wfhCount={wfhCount} 
             swapCount={swapCount} 
-            showWfh={user?.workMode !== 'Remote'}
+            showWfh={!isRemoteWorker}
           />
         </div>
 
@@ -455,7 +467,7 @@ export default function EmployeeDashboard() {
         </div>
 
         {/* 4. Quick Portal Navigation Cards */}
-        <div className={`grid grid-cols-1 sm:grid-cols-2 ${user?.workMode === 'Remote' ? 'lg:grid-cols-4' : 'lg:grid-cols-4'} gap-4`}>
+        <div className={`grid grid-cols-1 sm:grid-cols-2 ${isRemoteWorker ? 'lg:grid-cols-4' : 'lg:grid-cols-4'} gap-4`}>
           <Link
             href="/admin/reports"
             className="p-5 rounded-2xl glass-card border-black/5 dark:border-white/5 flex flex-col justify-between hover:border-odizo-red/40 hover:shadow-lg transition-all duration-300 group cursor-pointer"
@@ -489,7 +501,7 @@ export default function EmployeeDashboard() {
           </Link>
 
           {/* Only show WFH card if employee is NOT remote */}
-          {user?.workMode !== 'Remote' && (
+          {!isRemoteWorker && (
             <Link
               href="/admin/wfh"
               className="p-5 rounded-2xl glass-card border-black/5 dark:border-white/5 flex flex-col justify-between hover:border-odizo-red/40 hover:shadow-lg transition-all duration-300 group cursor-pointer"
@@ -524,7 +536,7 @@ export default function EmployeeDashboard() {
           </Link>
 
           {/* Show Notice Board when remote */}
-          {user?.workMode === 'Remote' && (
+          {isRemoteWorker && (
             <Link
               href="/admin/notices"
               className="p-5 rounded-2xl glass-card border-black/5 dark:border-white/5 flex flex-col justify-between hover:border-odizo-red/40 hover:shadow-lg transition-all duration-300 group cursor-pointer"

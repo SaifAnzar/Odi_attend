@@ -577,6 +577,23 @@ function AppContent() {
         }
       };
       registerPush();
+
+      // Live sync latest profile to guarantee real-time workMode
+      const syncUserProfile = async () => {
+        try {
+          const res = await fetch(`${apiUrl}/api/users/me`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+          });
+          const data = await res.json();
+          if (res.ok && data.user) {
+            setUser(data.user);
+            await AsyncStorage.setItem('user', JSON.stringify(data.user));
+          }
+        } catch (e) {
+          console.warn('Could not sync live user profile on mobile:', e);
+        }
+      };
+      syncUserProfile();
     }
   }, [isAuthenticated, token]);
 
@@ -1994,7 +2011,7 @@ function AppContent() {
           </Text>
         </TouchableOpacity>
 
-        {user?.workMode !== 'Remote' && (
+        {(user?.workMode || '').trim().toLowerCase() !== 'remote' && (
           <TouchableOpacity
             onPress={() => setCurrentTab('wfh')}
             style={[styles.tabItem, currentTab === 'wfh' && styles.tabActive]}
