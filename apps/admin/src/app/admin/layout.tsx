@@ -113,10 +113,15 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   }, [user, pathname]);
 
   const handleLogout = async () => {
-    // Delete token cookie
-    document.cookie = 'token=; Max-Age=0; path=/;';
+    try {
+      await fetch('/api/auth/logout', { method: 'POST' });
+    } catch (err) {
+      console.error('Logout error:', err);
+    }
+    // Delete client-side cookie and local storage
+    document.cookie = 'token=; Max-Age=0; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT;';
     localStorage.removeItem('user');
-    router.push('/login');
+    window.location.href = '/login';
   };
 
   interface NavItem {

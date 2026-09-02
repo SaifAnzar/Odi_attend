@@ -47,9 +47,20 @@ export async function middleware(request: NextRequest) {
     // RBAC: Check user role
     const role = normalizeRole(userPayload.role);
     
-    // If role === 'EMPLOYEE' or 'INTERN', immediately redirect to /unauthorized
-    if (role === 'EMPLOYEE' || role === 'INTERN') {
-      return NextResponse.redirect(new URL('/unauthorized', request.url));
+    // Admin-only routes that employees and interns cannot access
+    const adminOnlyRoutes = [
+      '/admin/dashboard',
+      '/admin/users',
+      '/admin/logs',
+      '/admin/shifts',
+      '/admin/payroll',
+      '/admin/settings'
+    ];
+
+    const isAdminRoute = adminOnlyRoutes.some(route => pathname.startsWith(route));
+
+    if (isAdminRoute && (role === 'EMPLOYEE' || role === 'INTERN')) {
+      return NextResponse.redirect(new URL('/dashboard', request.url));
     }
   }
 
