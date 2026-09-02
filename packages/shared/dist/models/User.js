@@ -45,11 +45,16 @@ const UserSchema = new mongoose_1.Schema({
     email: { type: String, required: true, unique: true, index: true, lowercase: true, trim: true },
     passwordHash: { type: String, required: true },
     role: { type: String, required: true, enum: ['Admin', 'Employee', 'Intern'], default: 'Employee' },
+    workMode: { type: String, required: true, enum: ['On-Site', 'Remote', 'Hybrid'], default: 'On-Site' },
     status: { type: String, required: true, enum: ['Active', 'Inactive'], default: 'Active' },
     shift: { type: ShiftSchema, required: true, default: () => ({ name: 'Standard Shift', startTime: '09:00', endTime: '18:00' }) },
+    baseSalary: { type: Number, default: 65000 },
     expoPushToken: { type: String, default: null }
 }, {
     timestamps: true
 });
+if (mongoose_1.default.models.User && !mongoose_1.default.models.User.schema.path('workMode')) {
+    delete mongoose_1.default.models.User;
+}
 exports.User = mongoose_1.default.models.User || mongoose_1.default.model('User', UserSchema);
 exports.default = exports.User;

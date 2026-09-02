@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
 import { connectToDatabase } from '@/lib/db';
 import { verifyAuth } from '@/lib/auth';
-import { User } from '@odi_attend/shared';
+import { User, LeaveRequest, ShiftSwapRequest } from '@odi_attend/shared';
 
 export async function GET(request: NextRequest) {
   try {
@@ -15,7 +15,60 @@ export async function GET(request: NextRequest) {
     // Exclude password hashes from returned user objects
     const users = await User.find({}).select('-passwordHash').sort({ createdAt: -1 });
 
-    return NextResponse.json({ users });
+    // Aggregate real approved counts per user
+    const [leaveAgg, wfhAgg, swapReqAgg, swapTargetAgg] = await Promise.all([
+      LeaveRequest.aggregate([
+        { $match: { requestType: 'Leave', status: 'Approved' } },
+        { $group: { _id: '$userId', count: { $sum: 1 } } }
+      ]),
+      LeaveRequest.aggregate([
+        { $match: { requestType: 'WFH', status: 'Approved' } },
+        { $group: { _id: '$userId', count: { $sum: 1 } } }
+      ]),
+      ShiftSwapRequest.aggregate([
+        { $match: { status: 'Approved' } },
+        { $group: { _id: '$requesterId', count: { $sum: 1 } } }
+      ]),
+      ShiftSwapRequest.aggregate([
+        { $match: { status: 'Approved' } },
+        { $group: { _id: '$targetUserId', count: { $sum: 1 } } }
+      ])
+    ]);
+
+    const leaveMap: Record<string, number> = {};
+    leaveAgg.forEach((item: any) => {
+      leaveMap[item._id.toString()] = item.count;
+    });
+
+    const wfhMap: Record<string, number> = {};
+    wfhAgg.forEach((item: any) => {
+      wfhMap[item._id.toString()] = item.count;
+    });
+
+    const swapMap: Record<string, number> = {};
+    swapReqAgg.forEach((item: any) => {
+      const id = item._id.toString();
+      swapMap[id] = (swapMap[id] || 0) + item.count;
+    });
+    swapTargetAgg.forEach((item: any) => {
+      const id = item._id.toString();
+      swapMap[id] = (swapMap[id] || 0) + item.count;
+    });
+
+    const usersWithStats = users.map((user) => {
+      const uObj = user.toObject();
+      const uId = user._id.toString();
+      return {
+        ...uObj,
+        stats: {
+          approvedLeaves: leaveMap[uId] || 0,
+          approvedWfh: wfhMap[uId] || 0,
+          approvedSwaps: swapMap[uId] || 0
+        }
+      };
+    });
+
+    return NextResponse.json({ users: usersWithStats });
   } catch (error: any) {
     console.error('Fetch users error:', error);
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
@@ -30,7 +83,7 @@ export async function POST(request: NextRequest) {
     }
 
     await connectToDatabase();
-    const { name, email, password, role, status, shift } = await request.json();
+    const { name, email, password, role, status, shift, baseSalary, workMode } = await request.json();
 
     if (!name || !email || !password || !role) {
       return NextResponse.json({ error: 'Name, email, password and role are required' }, { status: 400 });
@@ -55,7 +108,9 @@ export async function POST(request: NextRequest) {
       email: normalizedEmail,
       passwordHash,
       role,
+      workMode: workMode && ['On-Site', 'Remote', 'Hybrid'].includes(workMode) ? workMode : 'On-Site',
       status: status || 'Active',
+      baseSalary: baseSalary !== undefined && baseSalary !== null ? Number(baseSalary) : (role === 'Intern' ? 25000 : role === 'Admin' ? 90000 : 65000),
       shift: shift || { name: 'Standard Shift', startTime: '09:00', endTime: '18:00' }
     });
 

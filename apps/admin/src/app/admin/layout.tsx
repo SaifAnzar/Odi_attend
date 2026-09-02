@@ -16,10 +16,13 @@ import {
   Calendar,
   Home,
   Megaphone,
-  RefreshCw
+  RefreshCw,
+  CreditCard,
+  ShieldCheck
 } from 'lucide-react';
 import Logo from '@/components/Logo';
 import ThemeToggle from '@/components/ThemeToggle';
+import { normalizeRole } from '@/lib/auth';
 
 interface SidebarItemProps {
   href: string;
@@ -27,10 +30,11 @@ interface SidebarItemProps {
   label: string;
   active: boolean;
   badgeCount?: number;
+  badgeTag?: string;
   onClick?: () => void;
 }
 
-function SidebarItem({ href, icon, label, active, badgeCount, onClick }: SidebarItemProps) {
+function SidebarItem({ href, icon, label, active, badgeCount, badgeTag, onClick }: SidebarItemProps) {
   return (
     <Link
       href={href}
@@ -45,6 +49,11 @@ function SidebarItem({ href, icon, label, active, badgeCount, onClick }: Sidebar
         {icon}
         <span>{label}</span>
       </div>
+      {badgeTag && (
+        <span className="px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-400 text-[9px] font-bold border border-amber-500/25 uppercase tracking-wider">
+          {badgeTag}
+        </span>
+      )}
       {badgeCount !== undefined && badgeCount > 0 && (
         <span className="flex h-5 min-w-[20px] px-1.5 items-center justify-center rounded-full bg-odizo-red text-slate-900 dark:text-white text-[10px] font-bold border border-black shadow-[0_0_10px_rgba(225,97,103,0.5)]">
           {badgeCount}
@@ -115,24 +124,29 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     icon: React.ReactNode;
     label: string;
     badgeCount?: number;
+    badgeTag?: string;
   }
 
+  const currentUserRole = normalizeRole(user?.role);
+
   const navItems: NavItem[] = [
-    { href: '/admin/dashboard', icon: <LayoutDashboard size={20} />, label: 'Dashboard' },
+    { href: currentUserRole === 'ADMIN' ? '/admin/dashboard' : '/dashboard', icon: <LayoutDashboard size={20} />, label: 'Dashboard' },
   ];
 
-  if (user?.role === 'Admin') {
+  if (currentUserRole === 'ADMIN') {
     navItems.push(
       { href: '/admin/users', icon: <Users size={20} />, label: 'User Management' },
+      { href: '/admin/logs', icon: <ShieldCheck size={20} />, label: 'Company Logs' },
       { href: '/admin/shifts', icon: <Clock size={20} />, label: 'Working Hours' },
       { href: '/admin/reports', icon: <FileText size={20} />, label: 'Reports' },
       { href: '/admin/leaves', icon: <Calendar size={20} />, label: 'Leave Requests', badgeCount: pendingLeaveCount },
       { href: '/admin/wfh', icon: <Home size={20} />, label: 'WFH Requests', badgeCount: pendingWfhCount },
       { href: '/admin/swaps', icon: <RefreshCw size={20} />, label: 'Shift Swaps', badgeCount: pendingSwapsCount },
       { href: '/admin/notices', icon: <Megaphone size={20} />, label: 'Notice Board' },
+      { href: '/admin/payroll', icon: <CreditCard size={20} />, label: 'Payroll', badgeTag: 'Soon' },
       { href: '/admin/settings', icon: <Settings size={20} />, label: 'Settings' }
     );
-  } else if (user?.role === 'Employee' || user?.role === 'Intern') {
+  } else {
     navItems.push(
       { href: '/admin/reports', icon: <FileText size={20} />, label: 'History' },
       { href: '/admin/leaves', icon: <Calendar size={20} />, label: 'Leave Requests', badgeCount: pendingLeaveCount },

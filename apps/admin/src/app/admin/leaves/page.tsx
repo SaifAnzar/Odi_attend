@@ -44,7 +44,7 @@ export default function LeaveRequestsPage() {
   const [leaves, setLeaves] = useState<LeaveRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [statusFilter, setStatusFilter] = useState<'All' | 'Pending' | 'Approved' | 'Rejected'>('All');
+  const [statusFilter, setStatusFilter] = useState<'All' | 'Pending' | 'Approved' | 'Rejected'>('Pending');
   const [searchQuery, setSearchQuery] = useState('');
   
   // Details Modal state
@@ -133,6 +133,8 @@ export default function LeaveRequestsPage() {
       
       if (res.ok) {
         showSuccess('Approved!', 'Leave request has been approved.');
+        // Immediately remove from current pending view
+        setLeaves(prev => prev.filter(l => l._id !== id));
         fetchLeaves();
       } else {
         showError('Approval Failed', data.error || 'Failed to approve request.');
@@ -170,6 +172,8 @@ export default function LeaveRequestsPage() {
       if (res.ok) {
         setShowRejectModal(false);
         showSuccess('Rejected', 'Leave request has been rejected.');
+        // Immediately remove from current pending view
+        setLeaves(prev => prev.filter(l => l._id !== selectedLeaveId));
         fetchLeaves();
       } else {
         showError('Rejection Failed', data.error || 'Failed to reject request.');
@@ -357,7 +361,12 @@ export default function LeaveRequestsPage() {
                   required
                   value={applyStartDate}
                   onChange={(e) => setApplyStartDate(e.target.value)}
-                  className="w-full bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-xl px-4 py-2.5 text-sm text-slate-900 dark:text-white focus:border-odizo-red focus:outline-none focus:ring-0"
+                  onClick={(e) => {
+                    try {
+                      (e.target as any).showPicker?.();
+                    } catch {}
+                  }}
+                  className="w-full bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-xl px-4 py-2.5 text-sm text-slate-900 dark:text-white focus:border-odizo-red focus:outline-none focus:ring-0 cursor-pointer"
                 />
               </div>
 
@@ -368,7 +377,12 @@ export default function LeaveRequestsPage() {
                   required
                   value={applyEndDate}
                   onChange={(e) => setApplyEndDate(e.target.value)}
-                  className="w-full bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-xl px-4 py-2.5 text-sm text-slate-900 dark:text-white focus:border-odizo-red focus:outline-none focus:ring-0"
+                  onClick={(e) => {
+                    try {
+                      (e.target as any).showPicker?.();
+                    } catch {}
+                  }}
+                  className="w-full bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-xl px-4 py-2.5 text-sm text-slate-900 dark:text-white focus:border-odizo-red focus:outline-none focus:ring-0 cursor-pointer"
                 />
               </div>
 
@@ -458,49 +472,49 @@ export default function LeaveRequestsPage() {
         actionLoading={actionLoading}
       />
 
-      {/* Custom sliding glass reject modal */}
+      {/* Custom Clean Stable Reject Modal */}
       {showRejectModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-md px-4">
-          <div className="w-full max-w-md bg-white/95 dark:bg-zinc-950/90 border border-slate-200 dark:border-white/10 rounded-2xl floating-shadow-red p-6 animate-float text-slate-900 dark:text-white">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-md px-4">
+          <div className="w-full max-w-md bg-white dark:bg-[#121217] border border-slate-200 dark:border-white/10 rounded-3xl shadow-2xl p-6 text-slate-900 dark:text-white">
             <div className="flex items-center justify-between border-b border-black/5 dark:border-white/5 pb-4 mb-5">
-              <h2 className="text-xl font-bold text-slate-900 dark:text-white">Reject Leave Request</h2>
+              <h2 className="text-base font-bold text-slate-900 dark:text-white">Reject Leave Request</h2>
               <button 
                 onClick={() => setShowRejectModal(false)}
-                className="p-1 rounded-lg text-odizo-grey hover:text-slate-900 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 transition-all cursor-pointer"
+                className="p-1.5 rounded-xl text-odizo-grey hover:text-slate-900 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/10 transition-colors cursor-pointer"
               >
-                <X size={20} />
+                <X size={18} />
               </button>
             </div>
 
             <form onSubmit={handleRejectSubmit} className="space-y-4">
               <div>
-                <label className="block text-xs font-semibold uppercase tracking-wider text-odizo-grey mb-1.5">
-                  Admin Remarks (Rejection Reason)
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
+                  Admin Remarks (Rejection Reason) <span className="text-odizo-red">*</span>
                 </label>
                 <textarea
                   required
                   rows={4}
                   value={adminRemarks}
                   onChange={(e) => setAdminRemarks(e.target.value)}
-                  placeholder="Provide a reason for rejecting this leave request..."
-                  className="w-full bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-xl px-4 py-2.5 text-sm text-slate-900 dark:text-white focus:border-odizo-red focus:outline-none focus:ring-0 resize-none"
+                  placeholder="Provide a clear reason for rejecting this leave request..."
+                  className="w-full bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl px-4 py-3 text-xs sm:text-sm text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-600 focus:border-odizo-red focus:bg-white dark:focus:bg-black/40 focus:outline-none transition-all resize-none"
                 />
               </div>
 
-              <div className="flex gap-3 pt-3">
+              <div className="flex gap-3 pt-2">
                 <button
                   type="button"
                   onClick={() => setShowRejectModal(false)}
-                  className="flex-1 py-2.5 border border-black/10 dark:border-white/10 text-slate-900 dark:text-white hover:bg-black/5 dark:hover:bg-white/5 text-sm font-semibold rounded-xl transition-all duration-300 cursor-pointer"
+                  className="flex-1 py-2.5 rounded-xl border border-slate-200 dark:border-white/10 hover:bg-slate-100 dark:hover:bg-white/5 text-xs font-semibold text-slate-700 dark:text-slate-300 transition-colors cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={actionLoading}
-                  className="flex-1 py-2.5 bg-odizo-red hover:bg-odizo-red/90 text-slate-900 dark:text-white text-sm font-semibold rounded-xl transition-all duration-300 cursor-pointer"
+                  className="flex-1 py-2.5 bg-odizo-red hover:brightness-110 text-white text-xs font-bold rounded-xl shadow-lg shadow-odizo-red/25 transition-all cursor-pointer disabled:opacity-50"
                 >
-                  Confirm Reject
+                  {actionLoading ? 'Rejecting...' : 'Confirm Reject'}
                 </button>
               </div>
             </form>

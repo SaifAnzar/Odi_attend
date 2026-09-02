@@ -46,6 +46,7 @@ interface User {
   name: string;
   email: string;
   role: 'Admin' | 'Employee' | 'Intern';
+  workMode?: 'On-Site' | 'Remote' | 'Hybrid';
   status: 'Active' | 'Inactive';
   shift: {
     name: string;
@@ -77,6 +78,7 @@ interface AttendanceRecord {
   totalMinutesWorked: number;
   isFlagged: boolean;
   flagReason?: string;
+  isWFH?: boolean;
 }
 
 // Draggable Widget Wrapper Component
@@ -150,6 +152,8 @@ export default function Dashboard() {
     'attendance-feed',
     'device-audits'
   ]);
+
+  const [punchTab, setPunchTab] = useState<'active' | 'recent_in' | 'recent_out' | 'not_clocked' | 'all'>('active');
 
   const timerIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const todayStr = new Date().toISOString().split('T')[0];
@@ -386,6 +390,8 @@ export default function Dashboard() {
       const data = await res.json();
       if (res.ok) {
         showSuccess('Approved!', `${requestType} request approved.`);
+        // Immediately dismiss from pending queue
+        setLeaves((prev) => prev.filter((l) => l._id !== id));
         fetchRequestsData();
       } else {
         showError('Approval Failed', data.error || 'Failed to approve request.');
@@ -433,6 +439,8 @@ export default function Dashboard() {
       const data = await res.json();
       if (res.ok) {
         showSuccess('Rejected', `${requestType} request rejected.`);
+        // Immediately dismiss from pending queue
+        setLeaves((prev) => prev.filter((l) => l._id !== id));
         fetchRequestsData();
       } else {
         showError('Rejection Failed', data.error || 'Failed to reject request.');
@@ -462,6 +470,8 @@ export default function Dashboard() {
       const data = await res.json();
       if (res.ok) {
         showSuccess('Approved!', 'Shift swap request approved.');
+        // Immediately dismiss from pending queue
+        setSwaps((prev) => prev.filter((s) => s._id !== id));
         fetchRequestsData();
       } else {
         showError('Approval Failed', data.error || 'Failed to approve swap.');
@@ -509,6 +519,8 @@ export default function Dashboard() {
       const data = await res.json();
       if (res.ok) {
         showSuccess('Rejected', 'Shift swap request rejected.');
+        // Immediately dismiss from pending queue
+        setSwaps((prev) => prev.filter((s) => s._id !== id));
         fetchRequestsData();
       } else {
         showError('Rejection Failed', data.error || 'Failed to reject swap.');
@@ -540,13 +552,81 @@ export default function Dashboard() {
   const totalInterns = users.filter(u => u.role === 'Intern').length;
   const todayPresent = records.filter(r => ['Present', 'Late', 'Half-Day'].includes(r.attendanceStatus)).length;
   const todayLate = records.filter(r => r.attendanceStatus === 'Late').length;
-  const todayActiveSchedules = records.filter(r => r.sessions.some(s => !s.checkOut)).length;
+  const activeRecords = records.filter(r => r.sessions.some(s => !s.checkOut));
+  const todayActiveSchedules = activeRecords.length;
   const attendanceRate = totalStaff > 0 ? Math.round((todayPresent / totalStaff) * 100) : 0;
+
+  // Flatten and sort punch-in events for today (newest first)
+  const allPunchIns = records.flatMap(record => 
+    record.sessions.map((s, idx) => ({
+      record,
+      session: s,
+      sessionIndex: idx,
+      type: 'IN' as const,
+      time: new Date(s.checkIn),
+      location: s.checkInLocation,
+      device: s.checkInDevice,
+      isActive: !s.checkOut
+    }))
+  ).sort((a, b) => b.time.getTime() - a.time.getTime());
+
+  // Flatten and sort punch-out events for today (newest first)
+  const allPunchOuts = records.flatMap(record => 
+    record.sessions.filter(s => !!s.checkOut).map((s, idx) => ({
+      record,
+      session: s,
+      sessionIndex: idx,
+      type: 'OUT' as const,
+      time: new Date(s.checkOut!),
+      checkInTime: new Date(s.checkIn),
+      location: s.checkOutLocation,
+      device: s.checkOutDevice,
+      durationMinutes: Math.round((new Date(s.checkOut!).getTime() - new Date(s.checkIn).getTime()) / 60000)
+    }))
+  ).sort((a, b) => b.time.getTime() - a.time.getTime());
+
+  // Staff members who have NOT clocked in at all today
+  const clockedInIds = new Set(records.filter(r => r.sessions.length > 0).map(r => r.userId?._id?.toString()));
+  const notClockedStaff = users.filter(u => !clockedInIds.has(u._id?.toString()));
 
   const filteredRecords = records.filter(record => 
     record.userId?.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
     record.userId?.email?.toLowerCase().includes(searchQuery.toLowerCase())
   );
+
+  const renderWorkModeBadge = (user?: User, isWFH?: boolean) => {
+    const mode = user?.workMode;
+    if (mode === 'Remote') {
+      return (
+        <span className="inline-flex items-center gap-1 text-[9px] px-1.5 py-0.5 rounded font-bold border bg-purple-500/10 border-purple-500/20 text-purple-400 uppercase">
+          <HomeIcon size={10} />
+          Remote
+        </span>
+      );
+    }
+    if (mode === 'Hybrid') {
+      return (
+        <span className="inline-flex items-center gap-1 text-[9px] px-1.5 py-0.5 rounded font-bold border bg-amber-500/10 border-amber-500/20 text-amber-400 uppercase">
+          <HomeIcon size={10} />
+          Hybrid {isWFH ? '(WFH)' : '(Office)'}
+        </span>
+      );
+    }
+    if (isWFH) {
+      return (
+        <span className="inline-flex items-center gap-1 text-[9px] px-1.5 py-0.5 rounded font-bold border bg-sky-500/10 border-sky-500/20 text-sky-400 uppercase">
+          <HomeIcon size={10} />
+          WFH
+        </span>
+      );
+    }
+    return (
+      <span className="inline-flex items-center gap-1 text-[9px] px-1.5 py-0.5 rounded font-bold border bg-emerald-500/10 border-emerald-500/20 text-emerald-400 uppercase">
+        <MapPin size={10} />
+        On-Site
+      </span>
+    );
+  };
 
   // Combine Leaves & Shift Swaps for combined pending feed
   const combinedPendingRequests = [
@@ -1114,14 +1194,38 @@ export default function Dashboard() {
               }
 
               if (widgetId === 'attendance-feed') {
+                // Filtered records for current tab & search
+                const filteredActive = activeRecords.filter(r => 
+                  r.userId?.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                  r.userId?.email?.toLowerCase().includes(searchQuery.toLowerCase())
+                );
+                const filteredPunchIns = allPunchIns.filter(p => 
+                  p.record.userId?.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                  p.record.userId?.email?.toLowerCase().includes(searchQuery.toLowerCase())
+                );
+                const filteredPunchOuts = allPunchOuts.filter(p => 
+                  p.record.userId?.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                  p.record.userId?.email?.toLowerCase().includes(searchQuery.toLowerCase())
+                );
+                const filteredNotClocked = notClockedStaff.filter(u => 
+                  u.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                  u.email?.toLowerCase().includes(searchQuery.toLowerCase())
+                );
+
                 return (
                   <SortableWidget key="attendance-feed" id="attendance-feed" className="col-span-1 xl:col-span-2">
-                    {/* Attendance Feed Widget */}
+                    {/* Live Punch Activity & Active Staff Hub */}
                     <div className="glass-card p-6 floating-shadow border-black/5 dark:border-white/5">
-                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
-                        <div>
-                          <h2 className="text-xl font-bold">Live Attendance Feed</h2>
-                          <p className="text-xs text-odizo-grey">Live punch updates for {todayStr}</p>
+                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-5">
+                        <div className="flex items-center gap-3">
+                          <div className="relative flex h-3.5 w-3.5">
+                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                            <span className="relative inline-flex rounded-full h-3.5 w-3.5 bg-emerald-500"></span>
+                          </div>
+                          <div>
+                            <h2 className="text-xl font-bold">Live Punch & Active Staff Hub</h2>
+                            <p className="text-xs text-odizo-grey">Real-time shift tracking & punch activity for today</p>
+                          </div>
                         </div>
                         {/* Search */}
                         <div className="relative">
@@ -1136,119 +1240,479 @@ export default function Dashboard() {
                         </div>
                       </div>
 
+                      {/* Interactive Filter Tabs */}
+                      <div className="flex flex-wrap gap-2 border-b border-black/5 dark:border-white/5 pb-4 mb-4">
+                        <button
+                          type="button"
+                          onClick={() => setPunchTab('active')}
+                          className={`flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                            punchTab === 'active'
+                              ? 'bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 shadow-[0_0_12px_rgba(16,185,129,0.15)]'
+                              : 'bg-black/5 dark:bg-white/5 border border-transparent text-odizo-grey hover:text-slate-900 dark:hover:text-white'
+                          }`}
+                        >
+                          <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+                          <span>Active On-Shift</span>
+                          <span className="bg-emerald-500/20 text-emerald-400 text-[10px] px-1.5 py-0.2 rounded-full font-bold">
+                            {activeRecords.length}
+                          </span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => setPunchTab('recent_in')}
+                          className={`flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                            punchTab === 'recent_in'
+                              ? 'bg-blue-500/15 border border-blue-500/30 text-blue-400 shadow-[0_0_12px_rgba(59,130,246,0.15)]'
+                              : 'bg-black/5 dark:bg-white/5 border border-transparent text-odizo-grey hover:text-slate-900 dark:hover:text-white'
+                          }`}
+                        >
+                          <span>📥 Recent Punch-Ins</span>
+                          <span className="bg-blue-500/20 text-blue-400 text-[10px] px-1.5 py-0.2 rounded-full font-bold">
+                            {allPunchIns.length}
+                          </span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => setPunchTab('recent_out')}
+                          className={`flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                            punchTab === 'recent_out'
+                              ? 'bg-purple-500/15 border border-purple-500/30 text-purple-400 shadow-[0_0_12px_rgba(168,85,247,0.15)]'
+                              : 'bg-black/5 dark:bg-white/5 border border-transparent text-odizo-grey hover:text-slate-900 dark:hover:text-white'
+                          }`}
+                        >
+                          <span>📤 Recent Punch-Outs</span>
+                          <span className="bg-purple-500/20 text-purple-400 text-[10px] px-1.5 py-0.2 rounded-full font-bold">
+                            {allPunchOuts.length}
+                          </span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => setPunchTab('not_clocked')}
+                          className={`flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                            punchTab === 'not_clocked'
+                              ? 'bg-rose-500/15 border border-rose-500/30 text-rose-400 shadow-[0_0_12px_rgba(244,63,94,0.15)]'
+                              : 'bg-black/5 dark:bg-white/5 border border-transparent text-odizo-grey hover:text-slate-900 dark:hover:text-white'
+                          }`}
+                        >
+                          <span>💤 Not Clocked In</span>
+                          <span className="bg-rose-500/20 text-rose-400 text-[10px] px-1.5 py-0.2 rounded-full font-bold">
+                            {notClockedStaff.length}
+                          </span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => setPunchTab('all')}
+                          className={`flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                            punchTab === 'all'
+                              ? 'bg-odizo-red/15 border border-odizo-red/30 text-odizo-red shadow-[0_0_12px_rgba(225,97,103,0.15)]'
+                              : 'bg-black/5 dark:bg-white/5 border border-transparent text-odizo-grey hover:text-slate-900 dark:hover:text-white'
+                          }`}
+                        >
+                          <span>⚡ All Records ({filteredRecords.length})</span>
+                        </button>
+                      </div>
+
                       {loading ? (
                         <div className="flex flex-col items-center justify-center py-20">
                           <div className="h-10 w-10 animate-spin rounded-full border-2 border-odizo-red border-t-transparent"></div>
-                          <p className="mt-4 text-sm text-odizo-grey">Loading today's logs...</p>
-                        </div>
-                      ) : filteredRecords.length === 0 ? (
-                        <div className="text-center py-16 border border-dashed border-black/10 dark:border-white/10 rounded-2xl">
-                          <UserCheck size={40} className="mx-auto text-odizo-grey/50 mb-3" />
-                          <p className="text-sm font-semibold text-slate-900 dark:text-white">No attendance records found</p>
-                          <p className="text-xs text-odizo-grey mt-1">No check-ins have been recorded today yet.</p>
+                          <p className="mt-4 text-sm text-odizo-grey">Loading live pulse feed...</p>
                         </div>
                       ) : (
                         <div className="overflow-x-auto">
-                          <table className="w-full text-left border-collapse text-sm">
-                            <thead>
-                              <tr className="border-b border-black/5 dark:border-white/5 text-odizo-grey font-medium text-xs uppercase">
-                                <th className="py-3 px-4">Name</th>
-                                <th className="py-3 px-4">Role</th>
-                                <th className="py-3 px-4">Shift</th>
-                                <th className="py-3 px-4">Active Punches</th>
-                                <th className="py-3 px-4">Duration</th>
-                                <th className="py-3 px-4">Status</th>
-                              </tr>
-                            </thead>
-                            <tbody className="divide-y divide-black/10 dark:divide-black/10 dark:divide-white/5">
-                              {filteredRecords.map((record) => {
-                                const activeSession = record.sessions.find(s => !s.checkOut);
-                                const lastSession = record.sessions[record.sessions.length - 1];
-                                const punchTime = lastSession 
-                                  ? new Date(lastSession.checkOut || lastSession.checkIn).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-                                  : '';
-                                const location = lastSession?.checkOutLocation || lastSession?.checkInLocation;
+                          {/* TAB 1: ACTIVE ON-SHIFT */}
+                          {punchTab === 'active' && (
+                            filteredActive.length === 0 ? (
+                              <div className="text-center py-16 border border-dashed border-black/10 dark:border-white/10 rounded-2xl">
+                                <Clock size={40} className="mx-auto text-odizo-grey/50 mb-3" />
+                                <p className="text-sm font-semibold text-slate-900 dark:text-white">No Staff Currently On-Shift</p>
+                                <p className="text-xs text-odizo-grey mt-1">There are no active punch sessions running right now.</p>
+                              </div>
+                            ) : (
+                              <table className="w-full text-left border-collapse text-sm">
+                                <thead>
+                                  <tr className="border-b border-black/5 dark:border-white/5 text-odizo-grey font-medium text-xs uppercase">
+                                    <th className="py-3 px-4">Active Staff</th>
+                                    <th className="py-3 px-4">Work Mode</th>
+                                    <th className="py-3 px-4">Clock-In Time</th>
+                                    <th className="py-3 px-4">Assigned Shift</th>
+                                    <th className="py-3 px-4">Location</th>
+                                    <th className="py-3 px-4">Status</th>
+                                  </tr>
+                                </thead>
+                                <tbody className="divide-y divide-black/10 dark:divide-white/5">
+                                  {filteredActive.map((record) => {
+                                    const activeSession = record.sessions.find(s => !s.checkOut);
+                                    if (!activeSession) return null;
+                                    const elapsedMs = Date.now() - new Date(activeSession.checkIn).getTime();
+                                    const elapsedHours = Math.floor(elapsedMs / (1000 * 60 * 60));
+                                    const elapsedMinutes = Math.floor((elapsedMs % (1000 * 60 * 60)) / (1000 * 60));
+                                    const location = activeSession.checkInLocation;
 
-                                return (
-                                  <tr key={record._id} className="hover:bg-black/5 dark:bg-white/3 transition-colors">
-                                    <td className="py-4 px-4 font-semibold text-slate-900 dark:text-white">
-                                      <div className="flex flex-col">
-                                        <span>{record.userId?.name || 'Unknown User'}</span>
-                                        <span className="text-xs text-odizo-grey font-normal">{record.userId?.email}</span>
-                                      </div>
-                                    </td>
-                                    <td className="py-4 px-4">
-                                      <span className={`inline-flex px-2.5 py-0.5 rounded-full text-xs font-semibold ${
-                                        record.userId?.role === 'Employee' 
-                                          ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20' 
-                                          : 'bg-purple-500/10 text-purple-400 border border-purple-500/20'
-                                      }`}>
-                                        {record.userId?.role || 'User'}
-                                      </span>
-                                    </td>
-                                    <td className="py-4 px-4 text-xs">
-                                      <div className="flex flex-col">
-                                        <span className={`font-semibold ${
-                                          record.isFlagged ? 'text-rose-500 dark:text-rose-400 font-bold' : 'text-slate-900 dark:text-white'
-                                        }`}>{record.shiftSnapshot?.name || 'Standard Shift'}</span>
-                                        <span className="text-odizo-grey">{record.shiftSnapshot?.startTime} - {record.shiftSnapshot?.endTime}</span>
-                                      </div>
-                                    </td>
-                                    <td className="py-4 px-4 text-xs font-medium text-slate-900 dark:text-white">
-                                      <div className="flex items-center gap-2">
-                                        <span className={`h-1.5 w-1.5 rounded-full ${activeSession ? 'bg-green-500 animate-pulse' : 'bg-odizo-grey'}`} />
-                                        <span>
-                                          {activeSession 
-                                            ? `In at ${new Date(activeSession.checkIn).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}` 
-                                            : `Out at ${punchTime}`}
-                                        </span>
-                                        {location && (
+                                    return (
+                                      <tr key={record._id} className="hover:bg-black/5 dark:bg-white/3 transition-colors">
+                                        <td className="py-3.5 px-4 font-semibold text-slate-900 dark:text-white">
+                                          <div className="flex items-center gap-3">
+                                            <div className="relative">
+                                              <div className="h-9 w-9 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 flex items-center justify-center font-bold text-xs">
+                                                {record.userId?.name ? record.userId.name.substring(0, 2).toUpperCase() : 'OD'}
+                                              </div>
+                                              <span className="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full bg-emerald-500 border-2 border-zinc-900 animate-pulse" />
+                                            </div>
+                                            <div className="flex flex-col">
+                                              <span>{record.userId?.name || 'Unknown User'}</span>
+                                              <span className="text-xs text-odizo-grey font-normal">{record.userId?.email}</span>
+                                            </div>
+                                          </div>
+                                        </td>
+                                        <td className="py-3.5 px-4">
+                                          {renderWorkModeBadge(record.userId, record.isWFH)}
+                                        </td>
+                                        <td className="py-3.5 px-4">
+                                          <div className="flex flex-col">
+                                            <span className="font-semibold text-emerald-400 font-mono text-xs">
+                                              {new Date(activeSession.checkIn).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                            </span>
+                                            <span className="text-[10px] text-odizo-grey font-medium">
+                                              Active {elapsedHours > 0 ? `${elapsedHours}h ` : ''}{elapsedMinutes}m
+                                            </span>
+                                          </div>
+                                        </td>
+                                        <td className="py-3.5 px-4 text-xs text-odizo-grey">
+                                          <span className="font-semibold text-slate-900 dark:text-white block">{record.shiftSnapshot?.name || 'Standard Shift'}</span>
+                                          <span>{record.shiftSnapshot?.startTime} - {record.shiftSnapshot?.endTime}</span>
+                                        </td>
+                                        <td className="py-3.5 px-4 text-xs text-odizo-grey">
+                                          {location ? (
+                                            <a
+                                              href={`https://www.google.com/maps/search/?api=1&query=${location.latitude},${location.longitude}`}
+                                              target="_blank"
+                                              rel="noopener noreferrer"
+                                              className="text-odizo-red hover:underline flex items-center gap-1 font-medium"
+                                              title={location.address || 'Show Map'}
+                                            >
+                                              <MapPin size={12} />
+                                              <span>{location.address || `${location.latitude.toFixed(3)}, ${location.longitude.toFixed(3)}`}</span>
+                                            </a>
+                                          ) : (
+                                            <span>Location N/A</span>
+                                          )}
+                                        </td>
+                                        <td className="py-3.5 px-4">
+                                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
+                                            <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                                            ON-SHIFT
+                                          </span>
+                                        </td>
+                                      </tr>
+                                    );
+                                  })}
+                                </tbody>
+                              </table>
+                            )
+                          )}
+
+                          {/* TAB 2: RECENT PUNCH-INS */}
+                          {punchTab === 'recent_in' && (
+                            filteredPunchIns.length === 0 ? (
+                              <div className="text-center py-16 border border-dashed border-black/10 dark:border-white/10 rounded-2xl">
+                                <UserCheck size={40} className="mx-auto text-odizo-grey/50 mb-3" />
+                                <p className="text-sm font-semibold text-slate-900 dark:text-white">No Punch-Ins Recorded</p>
+                                <p className="text-xs text-odizo-grey mt-1">No check-ins found for today yet.</p>
+                              </div>
+                            ) : (
+                              <table className="w-full text-left border-collapse text-sm">
+                                <thead>
+                                  <tr className="border-b border-black/5 dark:border-white/5 text-odizo-grey font-medium text-xs uppercase">
+                                    <th className="py-3 px-4">Staff Member</th>
+                                    <th className="py-3 px-4">Work Mode</th>
+                                    <th className="py-3 px-4">Punch In Time</th>
+                                    <th className="py-3 px-4">Location</th>
+                                    <th className="py-3 px-4">Device</th>
+                                    <th className="py-3 px-4">Current Status</th>
+                                  </tr>
+                                </thead>
+                                <tbody className="divide-y divide-black/10 dark:divide-white/5">
+                                  {filteredPunchIns.map((item, idx) => (
+                                    <tr key={`${item.record._id}-in-${idx}`} className="hover:bg-black/5 dark:bg-white/3 transition-colors">
+                                      <td className="py-3.5 px-4 font-semibold text-slate-900 dark:text-white">
+                                        <div className="flex flex-col">
+                                          <span>{item.record.userId?.name || 'Unknown User'}</span>
+                                          <span className="text-xs text-odizo-grey font-normal">{item.record.userId?.email}</span>
+                                        </div>
+                                      </td>
+                                      <td className="py-3.5 px-4">
+                                        {renderWorkModeBadge(item.record.userId, item.record.isWFH)}
+                                      </td>
+                                      <td className="py-3.5 px-4 font-mono font-semibold text-blue-400 text-xs">
+                                        {item.time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                      </td>
+                                      <td className="py-3.5 px-4 text-xs text-odizo-grey">
+                                        {item.location ? (
                                           <a
-                                            href={`https://www.google.com/maps/search/?api=1&query=${location.latitude},${location.longitude}`}
+                                            href={`https://www.google.com/maps/search/?api=1&query=${item.location.latitude},${item.location.longitude}`}
                                             target="_blank"
                                             rel="noopener noreferrer"
-                                            className="text-odizo-red hover:underline flex items-center gap-0.5"
-                                            title={location.address || 'Show Map'}
+                                            className="text-odizo-red hover:underline flex items-center gap-1 font-medium"
                                           >
-                                            <MapPin size={11} />
+                                            <MapPin size={12} />
+                                            <span>{item.location.address || `${item.location.latitude.toFixed(3)}, ${item.location.longitude.toFixed(3)}`}</span>
                                           </a>
+                                        ) : (
+                                          <span>Location N/A</span>
                                         )}
-                                      </div>
-                                    </td>
-                                    <td className="py-4 px-4 font-mono font-medium text-slate-900 dark:text-white">
-                                      {record.totalMinutesWorked > 0
-                                        ? `${Math.floor(record.totalMinutesWorked / 60)}h ${record.totalMinutesWorked % 60}m`
-                                        : activeSession 
-                                          ? 'Active...' 
-                                          : '0m'}
-                                    </td>
-                                    <td className="py-4 px-4">
-                                      <div className="flex flex-wrap items-center gap-1.5">
+                                      </td>
+                                      <td className="py-3.5 px-4 text-xs text-odizo-grey truncate max-w-[120px]">
+                                        {item.device || 'Mobile App'}
+                                      </td>
+                                      <td className="py-3.5 px-4">
                                         <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-bold ${
-                                          record.attendanceStatus === 'Present' 
-                                            ? 'bg-green-500/15 text-green-400' 
-                                            : record.attendanceStatus === 'Late'
-                                              ? 'bg-amber-500/15 text-amber-400'
-                                              : 'bg-red-500/15 text-red-400'
+                                          item.isActive
+                                            ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30'
+                                            : 'bg-black/5 dark:bg-white/5 text-odizo-grey'
                                         }`}>
-                                          {record.attendanceStatus}
+                                          {item.isActive ? '🟢 Active On-Shift' : '⚪ Completed'}
                                         </span>
-                                        {record.isFlagged && (
-                                          <span 
-                                            className="inline-flex items-center gap-0.5 px-2 py-0.5 rounded-full text-[10px] font-bold border bg-rose-500/10 text-rose-400 border-rose-500/30 uppercase tracking-wider animate-pulse"
-                                            title={record.flagReason}
-                                          >
-                                            <ShieldAlert size={10} />
-                                            Flagged
-                                          </span>
-                                        )}
-                                      </div>
-                                    </td>
+                                      </td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                            )
+                          )}
+
+                          {/* TAB 3: RECENT PUNCH-OUTS */}
+                          {punchTab === 'recent_out' && (
+                            filteredPunchOuts.length === 0 ? (
+                              <div className="text-center py-16 border border-dashed border-black/10 dark:border-white/10 rounded-2xl">
+                                <Square size={40} className="mx-auto text-odizo-grey/50 mb-3" />
+                                <p className="text-sm font-semibold text-slate-900 dark:text-white">No Punch-Outs Yet</p>
+                                <p className="text-xs text-odizo-grey mt-1">No check-outs recorded today.</p>
+                              </div>
+                            ) : (
+                              <table className="w-full text-left border-collapse text-sm">
+                                <thead>
+                                  <tr className="border-b border-black/5 dark:border-white/5 text-odizo-grey font-medium text-xs uppercase">
+                                    <th className="py-3 px-4">Staff Member</th>
+                                    <th className="py-3 px-4">Work Mode</th>
+                                    <th className="py-3 px-4">Shift Timings</th>
+                                    <th className="py-3 px-4">Punch Out Time</th>
+                                    <th className="py-3 px-4">Session Duration</th>
+                                    <th className="py-3 px-4">Departure Location</th>
                                   </tr>
-                                );
-                              })}
-                            </tbody>
-                          </table>
+                                </thead>
+                                <tbody className="divide-y divide-black/10 dark:divide-white/5">
+                                  {filteredPunchOuts.map((item, idx) => {
+                                    const hours = Math.floor(item.durationMinutes / 60);
+                                    const mins = item.durationMinutes % 60;
+                                    return (
+                                      <tr key={`${item.record._id}-out-${idx}`} className="hover:bg-black/5 dark:bg-white/3 transition-colors">
+                                        <td className="py-3.5 px-4 font-semibold text-slate-900 dark:text-white">
+                                          <div className="flex flex-col">
+                                            <span>{item.record.userId?.name || 'Unknown User'}</span>
+                                            <span className="text-xs text-odizo-grey font-normal">{item.record.userId?.email}</span>
+                                          </div>
+                                        </td>
+                                        <td className="py-3.5 px-4">
+                                          {renderWorkModeBadge(item.record.userId, item.record.isWFH)}
+                                        </td>
+                                        <td className="py-3.5 px-4 text-xs text-odizo-grey">
+                                          {item.checkInTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} ➔ {item.time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                        </td>
+                                        <td className="py-3.5 px-4 font-mono font-semibold text-purple-400 text-xs">
+                                          {item.time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                        </td>
+                                        <td className="py-3.5 px-4 font-mono font-medium text-slate-900 dark:text-white text-xs">
+                                          {hours > 0 ? `${hours}h ` : ''}{mins}m
+                                        </td>
+                                        <td className="py-3.5 px-4 text-xs text-odizo-grey">
+                                          {item.location ? (
+                                            <a
+                                              href={`https://www.google.com/maps/search/?api=1&query=${item.location.latitude},${item.location.longitude}`}
+                                              target="_blank"
+                                              rel="noopener noreferrer"
+                                              className="text-odizo-red hover:underline flex items-center gap-1 font-medium"
+                                            >
+                                              <MapPin size={12} />
+                                              <span>{item.location.address || `${item.location.latitude.toFixed(3)}, ${item.location.longitude.toFixed(3)}`}</span>
+                                            </a>
+                                          ) : (
+                                            <span>Location N/A</span>
+                                          )}
+                                        </td>
+                                      </tr>
+                                    );
+                                  })}
+                                </tbody>
+                              </table>
+                            )
+                          )}
+
+                          {/* TAB 4: NOT CLOCKED IN */}
+                          {punchTab === 'not_clocked' && (
+                            filteredNotClocked.length === 0 ? (
+                              <div className="text-center py-16 border border-dashed border-emerald-500/20 bg-emerald-500/5 rounded-2xl">
+                                <UserCheck size={40} className="mx-auto text-emerald-400 mb-3" />
+                                <p className="text-sm font-semibold text-emerald-400">100% Attendance Today!</p>
+                                <p className="text-xs text-odizo-grey mt-1">All staff members have recorded a check-in today.</p>
+                              </div>
+                            ) : (
+                              <table className="w-full text-left border-collapse text-sm">
+                                <thead>
+                                  <tr className="border-b border-black/5 dark:border-white/5 text-odizo-grey font-medium text-xs uppercase">
+                                    <th className="py-3 px-4">Staff Member</th>
+                                    <th className="py-3 px-4">Role</th>
+                                    <th className="py-3 px-4">Work Mode</th>
+                                    <th className="py-3 px-4">Scheduled Shift</th>
+                                    <th className="py-3 px-4">Current Status</th>
+                                  </tr>
+                                </thead>
+                                <tbody className="divide-y divide-black/10 dark:divide-white/5">
+                                  {filteredNotClocked.map((staff) => (
+                                    <tr key={staff._id} className="hover:bg-black/5 dark:bg-white/3 transition-colors">
+                                      <td className="py-3.5 px-4 font-semibold text-slate-900 dark:text-white">
+                                        <div className="flex flex-col">
+                                          <span>{staff.name}</span>
+                                          <span className="text-xs text-odizo-grey font-normal">{staff.email}</span>
+                                        </div>
+                                      </td>
+                                      <td className="py-3.5 px-4">
+                                        <span className={`inline-flex px-2.5 py-0.5 rounded-full text-xs font-semibold ${
+                                          staff.role === 'Employee' 
+                                            ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20' 
+                                            : 'bg-purple-500/10 text-purple-400 border border-purple-500/20'
+                                        }`}>
+                                          {staff.role}
+                                        </span>
+                                      </td>
+                                      <td className="py-3.5 px-4">
+                                        {renderWorkModeBadge(staff)}
+                                      </td>
+                                      <td className="py-3.5 px-4 text-xs text-odizo-grey">
+                                        <span className="font-semibold text-slate-900 dark:text-white block">{staff.shift?.name || 'Standard Shift'}</span>
+                                        <span>{staff.shift?.startTime} - {staff.shift?.endTime}</span>
+                                      </td>
+                                      <td className="py-3.5 px-4">
+                                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-rose-500/10 text-rose-400 border border-rose-500/20">
+                                          <span className="h-1.5 w-1.5 rounded-full bg-rose-500" />
+                                          Awaiting Punch In
+                                        </span>
+                                      </td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                            )
+                          )}
+
+                          {/* TAB 5: ALL RECORDS */}
+                          {punchTab === 'all' && (
+                            filteredRecords.length === 0 ? (
+                              <div className="text-center py-16 border border-dashed border-black/10 dark:border-white/10 rounded-2xl">
+                                <UserCheck size={40} className="mx-auto text-odizo-grey/50 mb-3" />
+                                <p className="text-sm font-semibold text-slate-900 dark:text-white">No attendance records found</p>
+                                <p className="text-xs text-odizo-grey mt-1">No check-ins have been recorded today yet.</p>
+                              </div>
+                            ) : (
+                              <table className="w-full text-left border-collapse text-sm">
+                                <thead>
+                                  <tr className="border-b border-black/5 dark:border-white/5 text-odizo-grey font-medium text-xs uppercase">
+                                    <th className="py-3 px-4">Name</th>
+                                    <th className="py-3 px-4">Work Mode</th>
+                                    <th className="py-3 px-4">Shift</th>
+                                    <th className="py-3 px-4">Active Punches</th>
+                                    <th className="py-3 px-4">Duration</th>
+                                    <th className="py-3 px-4">Status</th>
+                                  </tr>
+                                </thead>
+                                <tbody className="divide-y divide-black/10 dark:divide-black/10 dark:divide-white/5">
+                                  {filteredRecords.map((record) => {
+                                    const activeSession = record.sessions.find(s => !s.checkOut);
+                                    const lastSession = record.sessions[record.sessions.length - 1];
+                                    const punchTime = lastSession 
+                                      ? new Date(lastSession.checkOut || lastSession.checkIn).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                                      : '';
+                                    const location = lastSession?.checkOutLocation || lastSession?.checkInLocation;
+
+                                    return (
+                                      <tr key={record._id} className="hover:bg-black/5 dark:bg-white/3 transition-colors">
+                                        <td className="py-4 px-4 font-semibold text-slate-900 dark:text-white">
+                                          <div className="flex flex-col">
+                                            <span>{record.userId?.name || 'Unknown User'}</span>
+                                            <span className="text-xs text-odizo-grey font-normal">{record.userId?.email}</span>
+                                          </div>
+                                        </td>
+                                        <td className="py-4 px-4">
+                                          {renderWorkModeBadge(record.userId, record.isWFH)}
+                                        </td>
+                                        <td className="py-4 px-4 text-xs">
+                                          <div className="flex flex-col">
+                                            <span className={`font-semibold ${
+                                              record.isFlagged ? 'text-rose-500 dark:text-rose-400 font-bold' : 'text-slate-900 dark:text-white'
+                                            }`}>{record.shiftSnapshot?.name || 'Standard Shift'}</span>
+                                            <span className="text-odizo-grey">{record.shiftSnapshot?.startTime} - {record.shiftSnapshot?.endTime}</span>
+                                          </div>
+                                        </td>
+                                        <td className="py-4 px-4 text-xs font-medium text-slate-900 dark:text-white">
+                                          <div className="flex items-center gap-2">
+                                            <span className={`h-1.5 w-1.5 rounded-full ${activeSession ? 'bg-green-500 animate-pulse' : 'bg-odizo-grey'}`} />
+                                            <span>
+                                              {activeSession 
+                                                ? `In at ${new Date(activeSession.checkIn).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}` 
+                                                : `Out at ${punchTime}`}
+                                            </span>
+                                            {location && (
+                                              <a
+                                                href={`https://www.google.com/maps/search/?api=1&query=${location.latitude},${location.longitude}`}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                className="text-odizo-red hover:underline flex items-center gap-0.5"
+                                                title={location.address || 'Show Map'}
+                                              >
+                                                <MapPin size={11} />
+                                              </a>
+                                            )}
+                                          </div>
+                                        </td>
+                                        <td className="py-4 px-4 font-mono font-medium text-slate-900 dark:text-white">
+                                          {record.totalMinutesWorked > 0
+                                            ? `${Math.floor(record.totalMinutesWorked / 60)}h ${record.totalMinutesWorked % 60}m`
+                                            : activeSession 
+                                              ? 'Active...' 
+                                              : '0m'}
+                                        </td>
+                                        <td className="py-4 px-4">
+                                          <div className="flex flex-wrap items-center gap-1.5">
+                                            <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-bold ${
+                                              record.attendanceStatus === 'Present' 
+                                                ? 'bg-green-500/15 text-green-400' 
+                                                : record.attendanceStatus === 'Late'
+                                                  ? 'bg-amber-500/15 text-amber-400'
+                                                  : 'bg-red-500/15 text-red-400'
+                                            }`}>
+                                              {record.attendanceStatus}
+                                            </span>
+                                            {record.isFlagged && (
+                                              <span 
+                                                className="inline-flex items-center gap-0.5 px-2 py-0.5 rounded-full text-[10px] font-bold border bg-rose-500/10 text-rose-400 border-rose-500/30 uppercase tracking-wider animate-pulse"
+                                                title={record.flagReason}
+                                              >
+                                                <ShieldAlert size={10} />
+                                                Flagged
+                                              </span>
+                                            )}
+                                          </div>
+                                        </td>
+                                      </tr>
+                                    );
+                                  })}
+                                </tbody>
+                              </table>
+                            )
+                          )}
                         </div>
                       )}
                     </div>

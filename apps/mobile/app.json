@@ -1,12 +1,11 @@
 {
   "expo": {
-    "name": "Odi_attend",
+    "name": "ODIZO Attend",
     "slug": "mobile",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
-    "newArchEnabled": false,
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
@@ -24,9 +23,10 @@
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false
     },
-    "web": {
-      "favicon": "./assets/favicon.png"
-    },
+    "platforms": [
+      "android",
+      "ios"
+    ],
     "extra": {
       "eas": {
         "projectId": "ce783afb-514d-4aeb-b73a-64edfaf411fc"

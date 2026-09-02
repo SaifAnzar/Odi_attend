@@ -115,6 +115,8 @@ export default function ShiftSwapsAdminPage() {
       const data = await res.json();
       if (res.ok) {
         showSuccess('Approved!', 'Shift swap request approved successfully.');
+        // Immediately remove from pending view
+        setSwaps(prev => prev.filter(s => s._id !== id));
         fetchSwaps();
       } else {
         showError('Approval Failed', data.error || 'Failed to approve swap.');
@@ -151,6 +153,8 @@ export default function ShiftSwapsAdminPage() {
       if (res.ok) {
         setShowRejectModal(false);
         showSuccess('Rejected', 'Shift swap request has been rejected.');
+        // Immediately remove from pending view
+        setSwaps(prev => prev.filter(s => s._id !== selectedSwapId));
         fetchSwaps();
       } else {
         showError('Rejection Failed', data.error || 'Failed to reject swap.');
@@ -401,7 +405,12 @@ export default function ShiftSwapsAdminPage() {
                   required
                   value={swapDate}
                   onChange={(e) => setSwapDate(e.target.value)}
-                  className="w-full bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-xl px-4 py-3 text-sm text-slate-900 dark:text-white focus:border-odizo-red focus:outline-none transition-colors"
+                  onClick={(e) => {
+                    try {
+                      (e.target as any).showPicker?.();
+                    } catch {}
+                  }}
+                  className="w-full bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-xl px-4 py-3 text-sm text-slate-900 dark:text-white focus:border-odizo-red focus:outline-none transition-colors cursor-pointer"
                 />
               </div>
 
@@ -515,25 +524,25 @@ export default function ShiftSwapsAdminPage() {
 
       {/* Rejection Remarks Modal */}
       {showRejectModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fade-in">
-          <div className="w-full max-w-md bg-white/95 dark:bg-zinc-950/90 border border-slate-200 dark:border-white/10 rounded-2xl floating-shadow p-6 space-y-4 text-slate-900 dark:text-white">
-            <div className="flex items-center justify-between border-b border-black/5 dark:border-white/5 pb-3">
-              <div className="flex items-center gap-2 text-odizo-red">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-md">
+          <div className="w-full max-w-md bg-white dark:bg-[#121217] border border-slate-200 dark:border-white/10 rounded-3xl shadow-2xl p-6 text-slate-900 dark:text-white">
+            <div className="flex items-center justify-between border-b border-black/5 dark:border-white/5 pb-4 mb-5">
+              <div className="flex items-center gap-2.5 text-odizo-red">
                 <AlertCircle size={18} />
-                <h3 className="font-bold text-slate-900 dark:text-white">Decline Shift Swap</h3>
+                <h3 className="font-bold text-base text-slate-900 dark:text-white">Decline Shift Swap</h3>
               </div>
               <button 
                 onClick={() => setShowRejectModal(false)}
-                className="p-1 rounded-lg text-odizo-grey hover:text-slate-900 dark:text-white dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 transition-all cursor-pointer"
+                className="p-1.5 rounded-xl text-odizo-grey hover:text-slate-900 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/10 transition-colors cursor-pointer"
               >
                 <X size={18} />
               </button>
             </div>
 
             <form onSubmit={handleRejectSubmit} className="space-y-4">
-              <div className="space-y-2">
-                <label className="block text-xs font-semibold uppercase tracking-wider text-odizo-grey">
-                  Decline Remarks (Colleagues will see this reason)
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
+                  Decline Remarks (Reason) <span className="text-odizo-red">*</span>
                 </label>
                 <textarea
                   required
@@ -541,24 +550,24 @@ export default function ShiftSwapsAdminPage() {
                   value={adminRemarks}
                   onChange={(e) => setAdminRemarks(e.target.value)}
                   placeholder="Provide the reason for rejecting this swap (e.g. Schedule conflicts, resource constraints)..."
-                  className="w-full bg-black/5 dark:bg-white/3 border border-black/10 dark:border-white/10 rounded-xl px-4 py-3 text-sm text-slate-900 dark:text-white placeholder-odizo-grey focus:border-odizo-red focus:outline-none transition-colors"
+                  className="w-full bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl px-4 py-3 text-xs sm:text-sm text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-600 focus:border-odizo-red focus:bg-white dark:focus:bg-black/40 focus:outline-none transition-all resize-none"
                 />
               </div>
 
-              <div className="flex justify-end gap-3 pt-2">
+              <div className="flex gap-3 pt-2">
                 <button
                   type="button"
                   onClick={() => setShowRejectModal(false)}
-                  className="px-4 py-2 text-xs font-semibold text-odizo-grey hover:text-slate-900 dark:text-white dark:hover:text-white transition-colors border border-transparent rounded-lg"
+                  className="flex-1 py-2.5 rounded-xl border border-slate-200 dark:border-white/10 hover:bg-slate-100 dark:hover:bg-white/5 text-xs font-semibold text-slate-700 dark:text-slate-300 transition-colors cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={actionLoading}
-                  className="flex items-center gap-1.5 px-4 py-2 bg-odizo-red hover:bg-odizo-red/80 text-slate-900 dark:text-white rounded-lg text-xs font-bold transition-all disabled:opacity-50 cursor-pointer"
+                  className="flex-1 py-2.5 bg-odizo-red hover:brightness-110 text-white text-xs font-bold rounded-xl shadow-lg shadow-odizo-red/25 transition-all cursor-pointer disabled:opacity-50"
                 >
-                  Decline Request
+                  {actionLoading ? 'Declining...' : 'Confirm Decline'}
                 </button>
               </div>
             </form>

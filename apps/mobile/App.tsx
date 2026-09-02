@@ -13,8 +13,17 @@ import {
   Dimensions,
   StatusBar as RNStatusBar,
   Image,
-  Modal
+  Modal,
+  LogBox
 } from 'react-native';
+
+LogBox.ignoreLogs([
+  'expo-notifications',
+  '`expo-notifications` functionality is not fully supported in Expo Go',
+  'Android Push notifications (remote notifications) functionality',
+  'Android Push notifications (remote notifications) functionality provided by expo-notifications was removed from Expo Go',
+  'Push notifications'
+]);
 import { StatusBar } from 'expo-status-bar';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
@@ -43,14 +52,23 @@ NetInfo.configure({
   shouldFetchWiFiSSID: true,
 });
 
-const { width } = Dimensions.get('window');
-const apiUrl = 'https://odi-attend-admin.vercel.app';
+const getApiUrl = () => {
+  const hostUri = Constants.expoConfig?.hostUri; // e.g. "192.168.1.3:8081"
+  if (hostUri) {
+    const ip = hostUri.split(':')[0];
+    return `http://${ip}:3000`;
+  }
+  return 'https://odi-attend-admin.vercel.app';
+};
+
+const apiUrl = getApiUrl();
 
 interface User {
   _id: string;
   name: string;
   email: string;
   role: 'Employee' | 'Intern' | 'Admin';
+  workMode?: 'On-Site' | 'Remote' | 'Hybrid';
   status: 'Active' | 'Inactive';
   shift: {
     name: string;
@@ -370,6 +388,12 @@ function CustomAlertProvider({ children }: { children: React.ReactNode }) {
 }
 
 async function registerForPushNotificationsAsync() {
+  // If running inside Expo Go, skip remote push token registration to avoid SDK 53+ warning/error
+  const isExpoGo = Constants.appOwnership === 'expo' || Constants.executionEnvironment === 'storeClient';
+  if (isExpoGo) {
+    return null;
+  }
+
   let token;
 
   if (Platform.OS === 'android') {
@@ -885,51 +909,32 @@ function AppContent() {
     }
   };
 
-  // Handle Punch In / Out Trigger Execution
+  // Handle Punch In / Out Trigger Execution with Strict Geofence & WFH Enforcement
   const executePunch = async (completedTasksList: string[] = []) => {
     const { status } = await Location.requestForegroundPermissionsAsync();
     if (status !== 'granted') {
-      showAlert('Location Blocked', 'GPS Location permission is required to log punches.', 'error');
+      showAlert('Location Blocked', 'GPS Location permission is required to verify office proximity.', 'error');
       return;
     }
 
     setPunchLoading(true);
     try {
-      // 1. Fetch Wi-Fi settings from backend
-      const settingsRes = await fetch(`${apiUrl}/api/settings/wifi`, {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-      const settingsData = await settingsRes.json();
-      
+      // 1. Fetch current Wi-Fi SSID if connected
       let clientSsid: string | null = null;
-      let clientIsFlagged = false;
-      let clientFlagReason = '';
-
-      if (settingsRes.ok && settingsData.config?.isWifiLockEnabled) {
-        const allowedSSID = settingsData.config.allowedWifiSSID;
-        
-        try {
-          // 2. Fetch current connected Wi-Fi SSID
-          const netState = await NetInfo.fetch();
-          clientSsid = netState.type === 'wifi' ? (netState.details as any).ssid : null;
-        } catch (err) {
-          console.warn('Failed to fetch Wi-Fi SSID:', err);
-        }
-        
-        if (!clientSsid || clientSsid !== allowedSSID) {
-          clientIsFlagged = true;
-          clientFlagReason = 'Wi-Fi mismatch or network unavailable';
-        }
+      try {
+        const netState = await NetInfo.fetch();
+        clientSsid = netState.type === 'wifi' ? (netState.details as any).ssid : null;
+      } catch (err) {
+        console.warn('Failed to fetch Wi-Fi SSID:', err);
       }
 
+      // 2. Fetch high accuracy GPS coordinates
       const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
       setGpsCoords({ lat: loc.coords.latitude, lng: loc.coords.longitude });
 
       const deviceLabel = `${Platform.OS === 'ios' ? 'iOS App' : 'Android App'} (${Platform.Version})`;
 
+      // 3. Send punch request to backend
       const res = await fetch(`${apiUrl}/api/attendance`, {
         method: 'POST',
         headers: {
@@ -946,20 +951,36 @@ function AppContent() {
           deviceInfo: deviceLabel,
           notes: punchNotes || undefined,
           ssid: clientSsid || undefined,
-          isFlagged: clientIsFlagged,
-          flagReason: clientFlagReason || undefined,
           completedTasks: isCheckedIn ? completedTasksList : undefined
         })
       });
 
       const data = await res.json();
-      if (res.ok) {
-        setPunchNotes('');
-        if (clientIsFlagged) {
-          showAlert('Punch Recorded', `Shift check-${isCheckedIn ? 'out' : 'in'} recorded, but flagged: ${clientFlagReason}.`, 'error');
+
+      // 4. Handle 403 Strict Security Blocking
+      if (res.status === 403) {
+        if (data.reason === 'GEOFENCE_VIOLATION') {
+          showAlert(
+            'Punch Blocked: Out of Range',
+            `You are ${data.distance}m away from the ODIZO office (Allowed radius: ${data.maxAllowedRadius || 100}m).\n\nTo punch in from home or outside the office, please apply for Work From Home (WFH) and ensure it is approved.`,
+            'error'
+          );
+        } else if (data.reason === 'WIFI_LOCK_VIOLATION') {
+          showAlert(
+            'Punch Blocked: Wi-Fi Lock',
+            data.error || 'You must connect to the authorized ODIZO office Wi-Fi network.',
+            'error'
+          );
         } else {
-          showAlert('Success', `Shift check-${isCheckedIn ? 'out' : 'in'} recorded!`, 'success');
+          showAlert('Punch Blocked', data.error || 'Attendance rejected due to security policy.', 'error');
         }
+        return;
+      }
+
+      // 5. Handle Success
+      if (res.ok && data.success) {
+        setPunchNotes('');
+        showAlert('Success', `ODIZO shift check-${isCheckedIn ? 'out' : 'in'} recorded!`, 'success');
         fetchLogs();
       } else {
         showAlert('Punch Failed', data.error || 'Operation denied by server.', 'error');
@@ -1011,35 +1032,40 @@ function AppContent() {
       <SafeAreaView style={styles.darkBackground}>
         <StatusBar style={theme === 'light' ? 'dark' : 'light'} />
         
-        {/* Top-Right Theme Toggle */}
-        <TouchableOpacity 
-          onPress={toggleTheme} 
-          style={{
-            position: 'absolute',
-            top: Platform.OS === 'ios' ? 12 : 20,
-            right: 20,
-            zIndex: 10,
-            flexDirection: 'row',
-            alignItems: 'center',
-            gap: 6,
-            backgroundColor: theme === 'dark' ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)',
-            paddingVertical: 6,
-            paddingHorizontal: 12,
-            borderRadius: 20,
-            borderWidth: 1,
-            borderColor: theme === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)',
-          }}
-          activeOpacity={0.7}
-        >
-          <Ionicons 
-            name={theme === 'light' ? 'moon-outline' : 'sunny-outline'} 
-            size={14} 
-            color={colors[theme].text} 
-          />
-          <Text style={{ fontSize: 11, color: colors[theme].text, fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: 0.5 }}>
-            {theme === 'dark' ? 'Dark' : 'Light'}
-          </Text>
-        </TouchableOpacity>
+        {/* Top-Right Theme Toggle Row */}
+        <View style={{ 
+          width: '100%', 
+          flexDirection: 'row', 
+          justifyContent: 'flex-end', 
+          paddingHorizontal: 20, 
+          paddingTop: Platform.OS === 'ios' ? 4 : 12,
+          paddingBottom: 4
+        }}>
+          <TouchableOpacity 
+            onPress={toggleTheme} 
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              gap: 6,
+              backgroundColor: theme === 'dark' ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)',
+              paddingVertical: 6,
+              paddingHorizontal: 12,
+              borderRadius: 20,
+              borderWidth: 1,
+              borderColor: theme === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)',
+            }}
+            activeOpacity={0.7}
+          >
+            <Ionicons 
+              name={theme === 'light' ? 'moon-outline' : 'sunny-outline'} 
+              size={14} 
+              color={colors[theme].text} 
+            />
+            <Text style={{ fontSize: 11, color: colors[theme].text, fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: 0.5 }}>
+              {theme === 'dark' ? 'Dark' : 'Light'}
+            </Text>
+          </TouchableOpacity>
+        </View>
 
         <KeyboardAvoidingView
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -1048,7 +1074,6 @@ function AppContent() {
           <ScrollView contentContainerStyle={styles.scrollCenter} bounces={false}>
             {/* Top Logo / Accent */}
             <View style={styles.logoContainer}>
-              <View style={styles.redDotGlow}></View>
               <Image 
                 source={require('./assets/logo.png')} 
                 style={styles.logoImage} 
@@ -1058,12 +1083,21 @@ function AppContent() {
 
             {/* Glass Form Panel */}
             <View style={styles.formPanel}>
-              <Text style={styles.formTitle}>Sign In</Text>
+              <Text style={[styles.formTitle, { marginBottom: 8 }]}>Welcome to ODIZO</Text>
+              <Text style={{
+                fontSize: 13,
+                color: colors[theme].textMuted,
+                marginBottom: 20,
+                textAlign: 'center',
+                lineHeight: 18,
+              }}>
+                Sign in to access your employee or intern dashboard.
+              </Text>
 
               <View style={styles.inputWrapper}>
                 <Ionicons name="mail-outline" size={18} color={colors[theme].textMuted} style={styles.inputIcon} />
                 <TextInput
-                  placeholder="Email"
+                  placeholder="name@odizo.in"
                   placeholderTextColor={colors[theme].textMuted}
                   value={email}
                   onChangeText={setEmail}
@@ -1184,7 +1218,25 @@ function AppContent() {
             {/* Shift snapshot Header */}
             <View style={styles.shiftCard}>
               <View style={styles.shiftCardHeader}>
-                <Text style={styles.shiftTitle}>Daily Shift</Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                  <Text style={styles.shiftTitle}>Daily Shift</Text>
+                  <View style={{ 
+                    backgroundColor: user?.workMode === 'Remote' ? 'rgba(74, 222, 128, 0.15)' : 'rgba(96, 165, 250, 0.15)',
+                    paddingHorizontal: 6,
+                    paddingVertical: 2,
+                    borderRadius: 8,
+                    borderWidth: 1,
+                    borderColor: user?.workMode === 'Remote' ? 'rgba(74, 222, 128, 0.3)' : 'rgba(96, 165, 250, 0.3)'
+                  }}>
+                    <Text style={{ 
+                      fontSize: 10, 
+                      fontWeight: 'bold', 
+                      color: user?.workMode === 'Remote' ? '#4ADE80' : '#60A5FA' 
+                    }}>
+                      {user?.workMode === 'Remote' ? '🏠 REMOTE' : '🏢 ON-SITE'}
+                    </Text>
+                  </View>
+                </View>
                 <Text style={styles.shiftStatusLabel}>
                   {isCheckedIn ? 'ON-SHIFT' : 'OFF-SHIFT'}
                 </Text>
@@ -2163,28 +2215,31 @@ const getStyles = (theme: 'light' | 'dark') => {
   },
   formPanel: {
     width: '100%',
-    backgroundColor: themeColors.surface,
+    maxWidth: 400,
+    alignSelf: 'center',
+    backgroundColor: theme === 'light' ? '#FFFFFF' : '#121214',
     borderColor: themeColors.border,
     borderWidth: 1,
     borderRadius: 24,
     padding: 24,
     shadowColor: '#E16167',
     shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.04,
+    shadowOpacity: theme === 'light' ? 0.06 : 0.35,
     shadowRadius: 20,
-    elevation: 8,
+    elevation: 4,
   },
   formTitle: {
-    fontSize: 20,
+    fontSize: 22,
     fontWeight: 'bold',
     color: themeColors.text,
-    marginBottom: 20,
+    marginBottom: 8,
     letterSpacing: 0.5,
+    textAlign: 'center',
   },
   inputWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.04)',
+    backgroundColor: themeColors.inputBg,
     borderColor: themeColors.border,
     borderWidth: 1,
     borderRadius: 16,
@@ -2264,8 +2319,7 @@ const getStyles = (theme: 'light' | 'dark') => {
   tabScroll: {
     flexGrow: 1,
     padding: 20,
-    paddingBottom: 20,
-    justifyContent: 'space-between',
+    paddingBottom: 32,
   },
   shiftCard: {
     backgroundColor: themeColors.cardBackground,

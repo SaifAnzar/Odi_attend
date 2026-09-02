@@ -45,7 +45,7 @@ export default function WFHRequestsPage() {
   const [requests, setRequests] = useState<LeaveRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [statusFilter, setStatusFilter] = useState<'All' | 'Pending' | 'Approved' | 'Rejected'>('All');
+  const [statusFilter, setStatusFilter] = useState<'All' | 'Pending' | 'Approved' | 'Rejected'>('Pending');
   const [searchQuery, setSearchQuery] = useState('');
   
   // Details Modal state
@@ -134,6 +134,8 @@ export default function WFHRequestsPage() {
       
       if (res.ok) {
         showSuccess('Approved!', 'WFH request has been approved.');
+        // Immediately remove from current pending view
+        setRequests(prev => prev.filter(r => r._id !== id));
         fetchRequests();
       } else {
         showError('Approval Failed', data.error || 'Failed to approve request.');
@@ -171,6 +173,8 @@ export default function WFHRequestsPage() {
       if (res.ok) {
         setShowRejectModal(false);
         showSuccess('Rejected', 'WFH request has been rejected.');
+        // Immediately remove from current pending view
+        setRequests(prev => prev.filter(r => r._id !== selectedRequestId));
         fetchRequests();
       } else {
         showError('Rejection Failed', data.error || 'Failed to reject request.');
@@ -371,7 +375,12 @@ export default function WFHRequestsPage() {
                   required
                   value={applyStartDate}
                   onChange={(e) => setApplyStartDate(e.target.value)}
-                  className="w-full bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-xl px-4 py-2.5 text-sm text-slate-900 dark:text-white focus:border-odizo-red focus:outline-none focus:ring-0"
+                  onClick={(e) => {
+                    try {
+                      (e.target as any).showPicker?.();
+                    } catch {}
+                  }}
+                  className="w-full bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-xl px-4 py-2.5 text-sm text-slate-900 dark:text-white focus:border-odizo-red focus:outline-none focus:ring-0 cursor-pointer"
                 />
               </div>
 
@@ -382,7 +391,12 @@ export default function WFHRequestsPage() {
                   required
                   value={applyEndDate}
                   onChange={(e) => setApplyEndDate(e.target.value)}
-                  className="w-full bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-xl px-4 py-2.5 text-sm text-slate-900 dark:text-white focus:border-odizo-red focus:outline-none focus:ring-0"
+                  onClick={(e) => {
+                    try {
+                      (e.target as any).showPicker?.();
+                    } catch {}
+                  }}
+                  className="w-full bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-xl px-4 py-2.5 text-sm text-slate-900 dark:text-white focus:border-odizo-red focus:outline-none focus:ring-0 cursor-pointer"
                 />
               </div>
 
@@ -474,13 +488,13 @@ export default function WFHRequestsPage() {
 
       {/* Admin Rejection Modal */}
       {showRejectModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-          <div className="w-full max-w-md bg-white/95 dark:bg-zinc-950/90 border border-slate-200 dark:border-white/10 rounded-2xl floating-shadow p-6 space-y-4 animate-float-in text-slate-900 dark:text-white">
-            <div className="flex justify-between items-center border-b border-black/5 dark:border-white/5 pb-3">
-              <h3 className="text-base font-bold text-slate-900 dark:text-white uppercase tracking-wider">Reject WFH Request</h3>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-md p-4">
+          <div className="w-full max-w-md bg-white dark:bg-[#121217] border border-slate-200 dark:border-white/10 rounded-3xl shadow-2xl p-6 text-slate-900 dark:text-white">
+            <div className="flex justify-between items-center border-b border-black/5 dark:border-white/5 pb-4 mb-5">
+              <h3 className="text-base font-bold text-slate-900 dark:text-white">Reject WFH Request</h3>
               <button 
                 onClick={() => setShowRejectModal(false)}
-                className="p-1 rounded-lg text-odizo-grey hover:text-slate-900 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 transition-all cursor-pointer"
+                className="p-1.5 rounded-xl text-odizo-grey hover:text-slate-900 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/10 transition-colors cursor-pointer"
               >
                 <X size={18} />
               </button>
@@ -488,31 +502,33 @@ export default function WFHRequestsPage() {
 
             <form onSubmit={handleRejectSubmit} className="space-y-4">
               <div>
-                <label className="block text-xs font-semibold uppercase tracking-wider text-odizo-grey mb-1.5">Remarks / Reason for Rejection</label>
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
+                  Remarks / Reason for Rejection <span className="text-odizo-red">*</span>
+                </label>
                 <textarea
                   required
                   rows={4}
                   value={adminRemarks}
                   onChange={(e) => setAdminRemarks(e.target.value)}
-                  placeholder="Explain why this request is being rejected..."
-                  className="w-full bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-xl px-4 py-2.5 text-sm text-slate-900 dark:text-white focus:border-odizo-red focus:outline-none focus:ring-0 resize-none"
+                  placeholder="Explain why this WFH request is being rejected..."
+                  className="w-full bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl px-4 py-3 text-xs sm:text-sm text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-600 focus:border-odizo-red focus:bg-white dark:focus:bg-black/40 focus:outline-none transition-all resize-none"
                 />
               </div>
 
-              <div className="flex justify-end gap-3 pt-2">
+              <div className="flex gap-3 pt-2">
                 <button
                   type="button"
                   onClick={() => setShowRejectModal(false)}
-                  className="px-4 py-2 border border-black/10 dark:border-white/10 hover:border-white/20 bg-black/5 dark:bg-white/5 text-xs text-slate-900 dark:text-white rounded-xl font-semibold transition-all duration-300 cursor-pointer"
+                  className="flex-1 py-2.5 rounded-xl border border-slate-200 dark:border-white/10 hover:bg-slate-100 dark:hover:bg-white/5 text-xs font-semibold text-slate-700 dark:text-slate-300 transition-colors cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={actionLoading}
-                  className="px-4 py-2 bg-odizo-red hover:bg-odizo-red/90 text-xs text-slate-900 dark:text-white rounded-xl font-semibold transition-all duration-300 cursor-pointer"
+                  className="flex-1 py-2.5 bg-odizo-red hover:brightness-110 text-white text-xs font-bold rounded-xl shadow-lg shadow-odizo-red/25 transition-all cursor-pointer disabled:opacity-50"
                 >
-                  {actionLoading ? 'Rejecting...' : 'Reject Request'}
+                  {actionLoading ? 'Rejecting...' : 'Confirm Reject'}
                 </button>
               </div>
             </form>

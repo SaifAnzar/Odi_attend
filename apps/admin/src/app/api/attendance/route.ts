@@ -3,6 +3,23 @@ import { connectToDatabase } from '@/lib/db';
 import { verifyAuth } from '@/lib/auth';
 import { User, AttendanceRecord, AppConfig, LeaveRequest, ShiftSwapRequest } from '@odi_attend/shared';
 
+// Helper to calculate exact distance in meters between two GPS coordinates using Haversine formula
+function calculateDistanceInMeters(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  const R = 6371e3; // Earth's radius in meters
+  const toRad = (deg: number) => (deg * Math.PI) / 180;
+  
+  const dLat = toRad(lat2 - lat1);
+  const dLon = toRad(lon2 - lon1);
+  
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) *
+    Math.sin(dLon / 2) * Math.sin(dLon / 2);
+    
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c; // Distance in meters
+}
+
 // Helper to get local date string YYYY-MM-DD (defaults to IST timezone UTC+5:30)
 function getLocalDateString(date: Date = new Date()): string {
   const utcOffset = 5.5; // IST offset
@@ -110,7 +127,7 @@ export async function GET(request: NextRequest) {
 
     // Populate user details for Admins
     const records = await AttendanceRecord.find(query)
-      .populate('userId', 'name email role status shift')
+      .populate('userId', 'name email role status shift workMode')
       .sort({ date: -1, createdAt: -1 });
 
     return NextResponse.json({ records });
@@ -153,18 +170,23 @@ export async function POST(request: NextRequest) {
     const todayStr = getLocalDateString(now);
     const todayDate = new Date(todayStr); // UTC midnight representation of today
 
-    // Check if user has an active and approved WFH request for today (comparing local date strings to prevent timezone offset mismatches)
+    // Check if user is a permanent Remote worker OR has an active and approved WFH request for today
+    const isPermanentRemote = user.workMode === 'Remote';
+
     const approvedWfhRequests = await LeaveRequest.find({
       userId: user._id,
       requestType: 'WFH',
       status: 'Approved'
     });
 
-    const isWfhActive = approvedWfhRequests.some(req => {
+    const isTemporaryWfhActive = approvedWfhRequests.some(req => {
       const startStr = getLocalDateString(new Date(req.startDate));
       const endStr = getLocalDateString(new Date(req.endDate));
       return todayStr >= startStr && todayStr <= endStr;
     });
+
+    // Remote mode or approved daily WFH request bypasses geofence and office Wi-Fi
+    const isWfhActive = isPermanentRemote || isTemporaryWfhActive;
 
     // Check for approved shift swap for this user on todayDate
     let activeShift = {
@@ -199,22 +221,65 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Determine flag state from client and server-side Wi-Fi check
-    let isFlagged = isWfhActive ? false : (body.isFlagged || false);
-    let flagReason = isWfhActive ? '' : (body.flagReason || '');
-    let approvalStatus: 'Approved' | 'Pending Approval' | 'Rejected' = isFlagged ? 'Pending Approval' : 'Approved';
+    // Fetch Global App Security & Geofence Configuration
+    let config = await AppConfig.findOne({});
+    if (!config) {
+      config = new AppConfig({
+        isWifiLockEnabled: false,
+        allowedWifiSSID: '',
+        isGeofenceEnabled: true,
+        officeLatitude: 12.9716,
+        officeLongitude: 77.5946,
+        geofenceRadiusMeters: 100
+      });
+      await config.save();
+    }
 
+    // STRICT SECURITY ENFORCEMENT:
+    // If the employee does NOT have an approved WFH request for today:
     if (!isWfhActive) {
-      // Server-side validation as double-check
-      const config = await AppConfig.findOne({});
-      if (config?.isWifiLockEnabled) {
+      // 1. Strict GPS Geofence Check
+      if (config.isGeofenceEnabled !== false) {
+        const officeLat = config.officeLatitude ?? 12.9716;
+        const officeLon = config.officeLongitude ?? 77.5946;
+        const maxRadius = config.geofenceRadiusMeters ?? 100;
+
+        const distanceMeters = calculateDistanceInMeters(
+          location.latitude,
+          location.longitude,
+          officeLat,
+          officeLon
+        );
+
+        if (distanceMeters > maxRadius) {
+          console.warn(`[GEOFENCE BLOCKED] User ${user.email} (${user._id}) attempted punch from ${Math.round(distanceMeters)}m away without approved WFH.`);
+          return NextResponse.json({
+            error: 'Punch-in blocked: Out of office range and no approved WFH found.',
+            blocked: true,
+            reason: 'GEOFENCE_VIOLATION',
+            distance: Math.round(distanceMeters),
+            maxAllowedRadius: maxRadius
+          }, { status: 403 });
+        }
+      }
+
+      // 2. Strict Wi-Fi Check (if enabled)
+      if (config.isWifiLockEnabled && config.allowedWifiSSID) {
         if (!ssid || ssid !== config.allowedWifiSSID) {
-          isFlagged = true;
-          flagReason = flagReason ? `${flagReason} (Server verified)` : 'Wi-Fi Mismatch';
-          approvalStatus = 'Pending Approval';
+          console.warn(`[WIFI BLOCKED] User ${user.email} (${user._id}) attempted punch on unauthorized Wi-Fi: ${ssid || 'None'}`);
+          return NextResponse.json({
+            error: 'Punch-in blocked: Not connected to the authorized ODIZO office Wi-Fi network.',
+            blocked: true,
+            reason: 'WIFI_LOCK_VIOLATION'
+          }, { status: 403 });
         }
       }
     }
+
+    // Determine flag state (for backward compatibility if needed)
+    let isFlagged = false;
+    let flagReason = '';
+    let approvalStatus: 'Approved' | 'Pending Approval' | 'Rejected' = 'Approved';
 
     console.log(`[API POST /api/attendance] userPayload.id="${userPayload.id}" | user._id="${user?._id}" | todayStr="${todayStr}" | type="${type}" | isWfhActive=${isWfhActive}`);
 

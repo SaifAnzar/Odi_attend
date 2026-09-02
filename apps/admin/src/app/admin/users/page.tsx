@@ -21,7 +21,14 @@ interface User {
   name: string;
   email: string;
   role: 'Admin' | 'Employee' | 'Intern';
+  workMode?: 'On-Site' | 'Remote' | 'Hybrid';
   status: 'Active' | 'Inactive';
+  baseSalary?: number;
+  stats?: {
+    approvedLeaves: number;
+    approvedWfh: number;
+    approvedSwaps: number;
+  };
   shift: {
     name: string;
     startTime: string;
@@ -39,6 +46,7 @@ export default function UserManagement() {
   const [showModal, setShowModal] = useState(false);
   const [modalMode, setModalMode] = useState<'create' | 'edit'>('create');
   const [error, setError] = useState('');
+  const [selectedUserStats, setSelectedUserStats] = useState<{ approvedLeaves: number; approvedWfh: number; approvedSwaps: number } | null>(null);
   
   // Form fields
   const [userId, setUserId] = useState('');
@@ -46,10 +54,20 @@ export default function UserManagement() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [role, setRole] = useState<'Admin' | 'Employee' | 'Intern'>('Employee');
+  const [workMode, setWorkMode] = useState<'On-Site' | 'Remote' | 'Hybrid'>('On-Site');
+  const [baseSalary, setBaseSalary] = useState<number>(65000);
   const [status, setStatus] = useState<'Active' | 'Inactive'>('Active');
   const [shiftName, setShiftName] = useState('Standard Shift');
   const [shiftStart, setShiftStart] = useState('09:00');
   const [shiftEnd, setShiftEnd] = useState('18:00');
+
+  // Role change with auto-fill suggested base salary
+  const handleRoleChange = (newRole: 'Admin' | 'Employee' | 'Intern') => {
+    setRole(newRole);
+    if (newRole === 'Employee') setBaseSalary(65000);
+    else if (newRole === 'Intern') setBaseSalary(25000);
+    else if (newRole === 'Admin') setBaseSalary(90000);
+  };
 
   const fetchUsers = async () => {
     try {
@@ -78,6 +96,8 @@ export default function UserManagement() {
     setEmail('');
     setPassword('');
     setRole('Employee');
+    setWorkMode('On-Site');
+    setBaseSalary(65000);
     setStatus('Active');
     setShiftName('Standard Shift');
     setShiftStart('09:00');
@@ -88,11 +108,14 @@ export default function UserManagement() {
   const handleOpenEdit = (user: User) => {
     setModalMode('edit');
     setError('');
+    setSelectedUserStats(user.stats || { approvedLeaves: 0, approvedWfh: 0, approvedSwaps: 0 });
     setUserId(user._id);
     setName(user.name);
     setEmail(user.email);
     setPassword(''); // leave blank if no password change
     setRole(user.role);
+    setWorkMode(user.workMode || 'On-Site');
+    setBaseSalary(user.baseSalary || (user.role === 'Intern' ? 25000 : user.role === 'Admin' ? 90000 : 65000));
     setStatus(user.status);
     setShiftName(user.shift?.name || 'Standard Shift');
     setShiftStart(user.shift?.startTime || '09:00');
@@ -112,8 +135,8 @@ export default function UserManagement() {
       } else {
         showError('Delete Failed', data.error || 'Failed to delete user');
       }
-    } catch (e) {
-      console.error(e);
+    } catch (err) {
+      console.error(err);
       showError('Error', 'An unexpected error occurred.');
     }
   };
@@ -122,92 +145,111 @@ export default function UserManagement() {
     e.preventDefault();
     setError('');
 
-    const payload = {
-      name,
-      email,
-      password: password || undefined,
-      role,
-      status,
-      shift: {
-        name: shiftName,
-        startTime: shiftStart,
-        endTime: shiftEnd
-      }
-    };
+    if (!name.trim() || !email.trim()) {
+      setError('Name and email are required.');
+      return;
+    }
+
+    if (modalMode === 'create' && !password.trim()) {
+      setError('Password is required for new users.');
+      return;
+    }
 
     try {
-      const url = modalMode === 'create' ? '/api/users' : `/api/users/${userId}`;
-      const method = modalMode === 'create' ? 'POST' : 'PUT';
+      const payload: any = {
+        name,
+        email,
+        role,
+        workMode,
+        baseSalary: Number(baseSalary),
+        status,
+        shift: {
+          name: shiftName,
+          startTime: shiftStart,
+          endTime: shiftEnd
+        }
+      };
 
-      const res = await fetch(url, {
-        method,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      });
+      if (password.trim()) {
+        payload.password = password;
+      }
+
+      let res;
+      if (modalMode === 'create') {
+        res = await fetch('/api/users', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+      } else {
+        res = await fetch(`/api/users/${userId}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+      }
+
       const data = await res.json();
-
       if (res.ok) {
         setShowModal(false);
-        showSuccess(modalMode === 'create' ? 'Created!' : 'Updated!', modalMode === 'create' ? 'User profile created successfully.' : 'User profile updated successfully.');
+        showSuccess(
+          modalMode === 'create' ? 'Created!' : 'Updated!',
+          modalMode === 'create' ? 'User profile has been created.' : 'User profile updated successfully.'
+        );
         fetchUsers();
       } else {
-        setError(data.error || 'Something went wrong');
+        setError(data.error || 'Operation failed');
       }
-    } catch (e) {
-      console.error(e);
-      setError('Connection failed');
+    } catch (err) {
+      console.error(err);
+      setError('An unexpected error occurred.');
     }
   };
 
   const filteredUsers = users.filter(user => 
-    user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    user.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    user.role.toLowerCase().includes(searchQuery.toLowerCase())
+    user.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    user.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    user.role?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      {/* Top Header & Actions */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-extrabold tracking-tight bg-gradient-to-r from-slate-900 via-odizo-grey to-slate-900 dark:from-white dark:via-odizo-grey dark:to-white bg-clip-text text-transparent">
-            User Management
-          </h1>
-          <p className="text-sm text-odizo-grey mt-1">Manage staff user profiles, shift settings and active categories</p>
+          <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">User Management</h1>
+          <p className="text-sm text-odizo-grey mt-1">Manage employees, interns, shift assignments and work mode permissions.</p>
         </div>
-        <button
-          onClick={handleOpenCreate}
-          className="flex items-center gap-2 px-5 py-2.5 bg-odizo-red text-slate-900 dark:text-white rounded-full text-sm font-semibold hover:bg-opacity-95 hover:shadow-[0_0_20px_rgba(225,97,103,0.3)] transition-all duration-300 hover:-translate-y-0.5 active:translate-y-0 cursor-pointer"
-        >
-          <Plus size={16} />
-          <span>Add User Profile</span>
-        </button>
-      </div>
 
-      {/* Table Container */}
-      <div className="glass-card p-6 floating-shadow border-black/5 dark:border-white/5">
-        <div className="flex justify-between items-center mb-6">
-          <div>
-            <h2 className="text-xl font-bold">Staff Directory</h2>
-            <p className="text-xs text-odizo-grey">Total of {filteredUsers.length} staff entries listed</p>
-          </div>
-          {/* Search bar */}
+        <div className="flex items-center gap-3">
+          {/* Search Box */}
           <div className="relative">
             <input
               type="text"
-              placeholder="Search staff name or email..."
+              placeholder="Search user..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-64 bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-full py-1.5 pl-9 pr-4 text-xs text-slate-900 dark:text-white placeholder-odizo-grey focus:border-odizo-red focus:outline-none transition-colors"
+              className="w-full sm:w-60 bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-xl py-2 pl-9 pr-4 text-xs text-slate-900 dark:text-white placeholder-odizo-grey focus:border-odizo-red focus:outline-none transition-colors"
             />
-            <Search className="absolute left-3.5 top-2.5 text-odizo-grey" size={13} />
+            <Search className="absolute left-3 top-2.5 text-odizo-grey" size={14} />
           </div>
-        </div>
 
+          <button
+            onClick={handleOpenCreate}
+            className="flex items-center gap-2 px-4 py-2 bg-odizo-red text-slate-900 dark:text-white text-xs font-bold rounded-xl shadow-[0_0_15px_rgba(225,97,103,0.3)] hover:opacity-90 transition-all duration-300 cursor-pointer"
+          >
+            <Plus size={16} />
+            <span>Add User</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Users Table */}
+      <div className="glass-card rounded-2xl p-6 border-black/5 dark:border-white/5 floating-shadow">
         {loading ? (
           <div className="flex flex-col items-center justify-center py-20">
             <div className="h-10 w-10 animate-spin rounded-full border-2 border-odizo-red border-t-transparent"></div>
-            <p className="mt-4 text-sm text-odizo-grey">Loading directory...</p>
+            <p className="mt-4 text-sm text-odizo-grey">Loading user directory...</p>
           </div>
         ) : filteredUsers.length === 0 ? (
           <div className="text-center py-16 border border-dashed border-black/10 dark:border-white/10 rounded-2xl">
@@ -222,6 +264,8 @@ export default function UserManagement() {
                 <tr className="border-b border-black/5 dark:border-white/5 text-odizo-grey font-medium text-xs uppercase">
                   <th className="py-3 px-4">Name & Email</th>
                   <th className="py-3 px-4">Role</th>
+                  <th className="py-3 px-4">Work Mode</th>
+                  <th className="py-3 px-4">Approved Activity</th>
                   <th className="py-3 px-4">Working Hours / Shift</th>
                   <th className="py-3 px-4">Status</th>
                   <th className="py-3 px-4">Created At</th>
@@ -248,6 +292,30 @@ export default function UserManagement() {
                         {user.role}
                       </span>
                     </td>
+                    <td className="py-4 px-4">
+                      <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold ${
+                        user.workMode === 'Remote'
+                          ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+                          : user.workMode === 'Hybrid'
+                            ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
+                            : 'bg-blue-500/10 text-blue-400 border border-blue-500/20'
+                      }`}>
+                        {user.workMode === 'Remote' ? '🏠 Remote' : user.workMode === 'Hybrid' ? '🔄 Hybrid' : '🏢 On-Site'}
+                      </span>
+                    </td>
+                    <td className="py-4 px-4">
+                      <div className="flex flex-wrap items-center gap-1 text-xs font-semibold">
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-rose-500/10 text-rose-400 border border-rose-500/20 text-[11px]" title="Total Approved Leaves Taken">
+                          🌴 {user.stats?.approvedLeaves || 0} Leaves
+                        </span>
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-purple-500/10 text-purple-400 border border-purple-500/20 text-[11px]" title="Total Approved WFH Days">
+                          🏠 {user.stats?.approvedWfh || 0} WFH
+                        </span>
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-sky-500/10 text-sky-400 border border-sky-500/20 text-[11px]" title="Total Approved Shift Swaps">
+                          🔄 {user.stats?.approvedSwaps || 0} Swaps
+                        </span>
+                      </div>
+                    </td>
                     <td className="py-4 px-4 text-xs text-odizo-grey">
                       <div className="flex items-center gap-2">
                         <Clock size={12} className="text-odizo-red" />
@@ -272,7 +340,7 @@ export default function UserManagement() {
                         <button
                           onClick={() => handleOpenEdit(user)}
                           className="p-2 bg-black/5 dark:bg-white/5 hover:bg-black/5 dark:bg-white/10 text-slate-900 dark:text-white rounded-lg border border-black/5 dark:border-white/5 hover:border-white/15 transition-all duration-300 cursor-pointer"
-                          title="Edit User"
+                          title="Edit User Profile & Stats"
                         >
                           <Edit size={14} />
                         </button>
@@ -293,172 +361,270 @@ export default function UserManagement() {
         )}
       </div>
 
-      {/* Custom Sliding Glass Modal */}
+      {/* Custom Ultra-Clean Stable Modal */}
       {showModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-md px-4">
-          <div className="w-full max-w-lg bg-white/95 dark:bg-zinc-950/90 border border-slate-200 dark:border-white/10 rounded-2xl floating-shadow-red p-6 animate-float text-slate-900 dark:text-white">
-            <div className="flex items-center justify-between border-b border-black/5 dark:border-white/5 pb-4 mb-5">
-              <h2 className="text-xl font-bold">
-                {modalMode === 'create' ? 'Create User Profile' : 'Edit User Profile'}
-              </h2>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-md px-4 p-4 sm:p-6 overflow-y-auto">
+          <div className="w-full max-w-2xl bg-white dark:bg-[#121217] border border-slate-200 dark:border-white/10 rounded-3xl shadow-2xl overflow-hidden my-auto text-slate-900 dark:text-white">
+            
+            {/* Modal Header */}
+            <div className="flex items-center justify-between px-6 py-5 border-b border-black/5 dark:border-white/5 bg-slate-50/50 dark:bg-white/[0.02]">
+              <div className="flex items-center gap-3.5">
+                <div className="p-2.5 rounded-2xl bg-odizo-red/10 border border-odizo-red/20 text-odizo-red">
+                  {modalMode === 'create' ? <Plus size={20} /> : <Edit size={20} />}
+                </div>
+                <div>
+                  <h2 className="text-lg font-bold text-slate-900 dark:text-white tracking-tight">
+                    {modalMode === 'create' ? 'Create New User Profile' : 'Edit User Profile'}
+                  </h2>
+                  <p className="text-xs text-odizo-grey">
+                    {modalMode === 'create' 
+                      ? 'Add a new employee, intern or administrator to the organization' 
+                      : `Update account credentials, shift timing and work mode for ${name || 'user'}`}
+                  </p>
+                </div>
+              </div>
+
               <button 
                 onClick={() => setShowModal(false)}
-                className="p-1 rounded-lg text-odizo-grey hover:text-slate-900 dark:text-white dark:hover:text-white hover:bg-black/5 dark:bg-white/5 transition-all cursor-pointer"
+                className="p-2 rounded-xl text-odizo-grey hover:text-slate-900 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/10 transition-colors cursor-pointer"
+                title="Close"
               >
-                <X size={20} />
+                <X size={18} />
               </button>
             </div>
 
-            {error && (
-              <div className="flex items-center gap-2 bg-odizo-red/10 border border-odizo-red/25 rounded-xl p-3 mb-5 text-sm text-odizo-red">
-                <AlertCircle size={16} />
-                <span>{error}</span>
-              </div>
-            )}
+            {/* Modal Body */}
+            <div className="p-6 sm:p-7 space-y-6 max-h-[75vh] overflow-y-auto">
+              {error && (
+                <div className="flex items-center gap-2.5 bg-odizo-red/10 border border-odizo-red/25 rounded-2xl p-3.5 text-xs font-semibold text-odizo-red">
+                  <AlertCircle size={16} className="shrink-0" />
+                  <span>{error}</span>
+                </div>
+              )}
 
-            {modalMode === 'edit' && (
-              <div className="mb-5">
-                <EmployeeQuickStats 
-                  leaveCount={(name.length * 3) % 8 + 1} 
-                  wfhCount={(name.length * 7) % 15 + 2} 
-                  swapCount={(name.length * 2) % 5} 
-                />
-              </div>
-            )}
-
-            <form onSubmit={handleSubmit} className="space-y-4">
-              {/* Name */}
-              <div>
-                <label className="block text-xs font-semibold uppercase tracking-wider text-odizo-grey mb-1.5">Full Name</label>
-                <div className="relative">
-                  <input
-                    type="text"
-                    required
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    placeholder="Enter name"
-                    className="w-full bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-xl px-4 py-2.5 pl-10 text-sm text-slate-900 dark:text-white focus:border-odizo-red focus:outline-none focus:ring-0"
+              {/* Edit Mode: Live Approved Stats */}
+              {modalMode === 'edit' && (
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold uppercase tracking-wider text-odizo-grey">
+                      Approved Activity & Balances
+                    </span>
+                    <span className="text-[11px] text-odizo-grey font-medium">Real-time Ground Truth</span>
+                  </div>
+                  <EmployeeQuickStats 
+                    leaveCount={selectedUserStats?.approvedLeaves || 0} 
+                    wfhCount={selectedUserStats?.approvedWfh || 0} 
+                    swapCount={selectedUserStats?.approvedSwaps || 0} 
                   />
-                  <UserIcon className="absolute left-3.5 top-3 text-odizo-grey" size={16} />
                 </div>
-              </div>
+              )}
 
-              {/* Email */}
-              <div>
-                <label className="block text-xs font-semibold uppercase tracking-wider text-odizo-grey mb-1.5">Email Address</label>
-                <div className="relative">
-                  <input
-                    type="email"
-                    required
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="Enter email"
-                    className="w-full bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-xl px-4 py-2.5 pl-10 text-sm text-slate-900 dark:text-white focus:border-odizo-red focus:outline-none focus:ring-0"
-                  />
-                  <Mail className="absolute left-3.5 top-3 text-odizo-grey" size={16} />
-                </div>
-              </div>
+              <form id="user-profile-form" onSubmit={handleSubmit} className="space-y-5">
+                {/* 1. Basic Credentials Grid */}
+                <div className="space-y-4">
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-odizo-grey">
+                    Account Credentials
+                  </h3>
 
-              {/* Password */}
-              <div>
-                <label className="block text-xs font-semibold uppercase tracking-wider text-odizo-grey mb-1.5">
-                  Password {modalMode === 'edit' && '(leave blank to keep unchanged)'}
-                </label>
-                <input
-                  type="password"
-                  required={modalMode === 'create'}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Enter password"
-                  className="w-full bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-xl px-4 py-2.5 text-sm text-slate-900 dark:text-white focus:border-odizo-red focus:outline-none focus:ring-0"
-                />
-              </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {/* Full Name */}
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
+                        Full Name <span className="text-odizo-red">*</span>
+                      </label>
+                      <div className="relative">
+                        <input
+                          type="text"
+                          required
+                          value={name}
+                          onChange={(e) => setName(e.target.value)}
+                          placeholder="e.g. Rahul Sharma"
+                          className="w-full bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl px-3.5 py-2.5 pl-10 text-xs sm:text-sm text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-600 focus:border-odizo-red focus:bg-white dark:focus:bg-black/40 focus:outline-none transition-all"
+                        />
+                        <UserIcon className="absolute left-3.5 top-1/2 -translate-y-1/2 text-odizo-grey" size={15} />
+                      </div>
+                    </div>
 
-              {/* Role & Status */}
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-semibold uppercase tracking-wider text-odizo-grey mb-1.5">Role</label>
-                  <select
-                    value={role}
-                    onChange={(e) => setRole(e.target.value as any)}
-                    className="w-full bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-xl px-4 py-2.5 text-sm text-slate-900 dark:text-white focus:border-odizo-red focus:outline-none"
-                  >
-                    <option value="Employee" className="bg-white dark:bg-zinc-900 text-slate-900 dark:text-white">Employee</option>
-                    <option value="Intern" className="bg-white dark:bg-zinc-900 text-slate-900 dark:text-white">Intern</option>
-                    <option value="Admin" className="bg-white dark:bg-zinc-900 text-slate-900 dark:text-white">Admin</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold uppercase tracking-wider text-odizo-grey mb-1.5">Status</label>
-                  <select
-                    value={status}
-                    onChange={(e) => setStatus(e.target.value as any)}
-                    className="w-full bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-xl px-4 py-2.5 text-sm text-slate-900 dark:text-white focus:border-odizo-red focus:outline-none"
-                  >
-                    <option value="Active" className="bg-white dark:bg-zinc-900 text-slate-900 dark:text-white">Active</option>
-                    <option value="Inactive" className="bg-white dark:bg-zinc-900 text-slate-900 dark:text-white">Inactive</option>
-                  </select>
-                </div>
-              </div>
-
-              {/* Shift Settings */}
-              <div className="border-t border-black/5 dark:border-white/5 pt-4 space-y-4">
-                <h3 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-1">
-                  <Clock size={14} className="text-odizo-red" />
-                  <span>Assign Shift Details</span>
-                </h3>
-
-                <div className="grid grid-cols-3 gap-3">
-                  <div className="col-span-1">
-                    <label className="block text-[10px] font-semibold uppercase tracking-wider text-odizo-grey mb-1">Shift Name</label>
-                    <input
-                      type="text"
-                      value={shiftName}
-                      onChange={(e) => setShiftName(e.target.value)}
-                      placeholder="e.g. Day Shift"
-                      className="w-full bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-lg px-3 py-1.5 text-xs text-slate-900 dark:text-white focus:border-odizo-red focus:outline-none"
-                    />
+                    {/* Email Address */}
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
+                        Email Address <span className="text-odizo-red">*</span>
+                      </label>
+                      <div className="relative">
+                        <input
+                          type="email"
+                          required
+                          value={email}
+                          onChange={(e) => setEmail(e.target.value)}
+                          placeholder="e.g. rahul@odizo.in"
+                          className="w-full bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl px-3.5 py-2.5 pl-10 text-xs sm:text-sm text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-600 focus:border-odizo-red focus:bg-white dark:focus:bg-black/40 focus:outline-none transition-all"
+                        />
+                        <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 text-odizo-grey" size={15} />
+                      </div>
+                    </div>
                   </div>
+
+                  {/* Password */}
                   <div>
-                    <label className="block text-[10px] font-semibold uppercase tracking-wider text-odizo-grey mb-1">Start Time</label>
-                    <input
-                      type="text"
-                      value={shiftStart}
-                      onChange={(e) => setShiftStart(e.target.value)}
-                      placeholder="HH:MM (e.g. 09:00)"
-                      className="w-full bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-lg px-3 py-1.5 text-xs text-slate-900 dark:text-white focus:border-odizo-red focus:outline-none"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[10px] font-semibold uppercase tracking-wider text-odizo-grey mb-1">End Time</label>
-                    <input
-                      type="text"
-                      value={shiftEnd}
-                      onChange={(e) => setShiftEnd(e.target.value)}
-                      placeholder="HH:MM (e.g. 18:00)"
-                      className="w-full bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-lg px-3 py-1.5 text-xs text-slate-900 dark:text-white focus:border-odizo-red focus:outline-none"
-                    />
+                    <div className="flex items-center justify-between mb-1.5">
+                      <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                        Password {modalMode === 'create' ? <span className="text-odizo-red">*</span> : ''}
+                      </label>
+                      {modalMode === 'edit' && (
+                        <span className="text-[11px] text-odizo-grey">Leave blank to keep existing password</span>
+                      )}
+                    </div>
+                    <div className="relative">
+                      <input
+                        type="password"
+                        required={modalMode === 'create'}
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        placeholder={modalMode === 'create' ? 'Create a secure password' : 'Enter new password only if changing'}
+                        className="w-full bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl px-3.5 py-2.5 text-xs sm:text-sm text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-600 focus:border-odizo-red focus:bg-white dark:focus:bg-black/40 focus:outline-none transition-all"
+                      />
+                    </div>
                   </div>
                 </div>
-              </div>
 
-              {/* Submit Buttons */}
-              <div className="flex gap-3 justify-end border-t border-black/5 dark:border-white/5 pt-4 mt-6">
-                <button
-                  type="button"
-                  onClick={() => setShowModal(false)}
-                  className="px-5 py-2 border border-black/10 dark:border-white/10 hover:border-white/20 text-slate-900 dark:text-white rounded-full text-xs font-semibold transition-all duration-300"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="px-6 py-2 bg-odizo-red hover:bg-opacity-95 text-slate-900 dark:text-white rounded-full text-xs font-semibold hover:shadow-[0_0_15px_rgba(225,97,103,0.25)] transition-all duration-300"
-                >
-                  {modalMode === 'create' ? 'Create User' : 'Save Changes'}
-                </button>
-              </div>
-            </form>
+                {/* 2. Role, Work Mode, Salary & Status */}
+                <div className="space-y-4 pt-2 border-t border-black/5 dark:border-white/5">
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-odizo-grey">
+                    Role & Policy Settings
+                  </h3>
+
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3.5">
+                    {/* Role */}
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
+                        Role
+                      </label>
+                      <select
+                        value={role}
+                        onChange={(e) => handleRoleChange(e.target.value as any)}
+                        className="w-full bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl px-3 py-2.5 text-xs sm:text-sm text-slate-900 dark:text-white focus:border-odizo-red focus:outline-none cursor-pointer"
+                      >
+                        <option value="Employee" className="bg-white dark:bg-zinc-900 text-slate-900 dark:text-white">Employee</option>
+                        <option value="Intern" className="bg-white dark:bg-zinc-900 text-slate-900 dark:text-white">Intern</option>
+                        <option value="Admin" className="bg-white dark:bg-zinc-900 text-slate-900 dark:text-white">Admin</option>
+                      </select>
+                    </div>
+
+                    {/* Work Mode */}
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
+                        Work Mode
+                      </label>
+                      <select
+                        value={workMode}
+                        onChange={(e) => setWorkMode(e.target.value as any)}
+                        className="w-full bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl px-3 py-2.5 text-xs sm:text-sm text-slate-900 dark:text-white focus:border-odizo-red focus:outline-none cursor-pointer"
+                      >
+                        <option value="On-Site" className="bg-white dark:bg-zinc-900 text-slate-900 dark:text-white">🏢 On-Site</option>
+                        <option value="Remote" className="bg-white dark:bg-zinc-900 text-slate-900 dark:text-white">🏠 Remote</option>
+                        <option value="Hybrid" className="bg-white dark:bg-zinc-900 text-slate-900 dark:text-white">🔄 Hybrid</option>
+                      </select>
+                    </div>
+
+                    {/* Base Salary */}
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
+                        Base Salary (₹)
+                      </label>
+                      <input
+                        type="number"
+                        required
+                        min="0"
+                        value={baseSalary}
+                        onChange={(e) => setBaseSalary(parseFloat(e.target.value) || 0)}
+                        placeholder="65000"
+                        className="w-full bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl px-3 py-2.5 text-xs sm:text-sm text-slate-900 dark:text-white focus:border-odizo-red focus:outline-none"
+                      />
+                    </div>
+
+                    {/* Status */}
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
+                        Account Status
+                      </label>
+                      <select
+                        value={status}
+                        onChange={(e) => setStatus(e.target.value as any)}
+                        className="w-full bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl px-3 py-2.5 text-xs sm:text-sm text-slate-900 dark:text-white focus:border-odizo-red focus:outline-none cursor-pointer"
+                      >
+                        <option value="Active" className="bg-white dark:bg-zinc-900 text-slate-900 dark:text-white">🟢 Active</option>
+                        <option value="Inactive" className="bg-white dark:bg-zinc-900 text-slate-900 dark:text-white">🔴 Inactive</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 3. Shift Settings Card */}
+                <div className="p-4 rounded-2xl bg-slate-50 dark:bg-white/[0.03] border border-slate-200 dark:border-white/5 space-y-3">
+                  <div className="flex items-center gap-2">
+                    <Clock size={15} className="text-odizo-red" />
+                    <h3 className="text-xs font-bold uppercase tracking-wider text-slate-800 dark:text-slate-200">
+                      Assigned Shift & Schedule
+                    </h3>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div>
+                      <label className="block text-[11px] font-semibold text-odizo-grey mb-1">Shift Name</label>
+                      <input
+                        type="text"
+                        value={shiftName}
+                        onChange={(e) => setShiftName(e.target.value)}
+                        placeholder="e.g. Standard Shift"
+                        className="w-full bg-white dark:bg-black/30 border border-slate-200 dark:border-white/10 rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-white focus:border-odizo-red focus:outline-none"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-[11px] font-semibold text-odizo-grey mb-1">Start Time (24h)</label>
+                      <input
+                        type="text"
+                        value={shiftStart}
+                        onChange={(e) => setShiftStart(e.target.value)}
+                        placeholder="09:00"
+                        className="w-full bg-white dark:bg-black/30 border border-slate-200 dark:border-white/10 rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-white focus:border-odizo-red focus:outline-none font-mono"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-[11px] font-semibold text-odizo-grey mb-1">End Time (24h)</label>
+                      <input
+                        type="text"
+                        value={shiftEnd}
+                        onChange={(e) => setShiftEnd(e.target.value)}
+                        placeholder="18:00"
+                        className="w-full bg-white dark:bg-black/30 border border-slate-200 dark:border-white/10 rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-white focus:border-odizo-red focus:outline-none font-mono"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </form>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-black/5 dark:border-white/5 bg-slate-50/50 dark:bg-white/[0.02]">
+              <button
+                type="button"
+                onClick={() => setShowModal(false)}
+                className="px-5 py-2.5 rounded-xl border border-slate-200 dark:border-white/10 hover:bg-slate-100 dark:hover:bg-white/5 text-xs font-semibold text-slate-700 dark:text-slate-300 transition-colors cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                form="user-profile-form"
+                className="flex items-center gap-2 px-6 py-2.5 bg-odizo-red text-white text-xs font-bold rounded-xl shadow-lg shadow-odizo-red/25 hover:brightness-110 active:scale-[0.99] transition-all cursor-pointer"
+              >
+                <Check size={15} />
+                <span>{modalMode === 'create' ? 'Create User Profile' : 'Save User Changes'}</span>
+              </button>
+            </div>
+
           </div>
         </div>
       )}

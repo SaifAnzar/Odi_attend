@@ -2,6 +2,10 @@ import mongoose, { Document } from 'mongoose';
 export interface IAppConfig extends Document {
     isWifiLockEnabled: boolean;
     allowedWifiSSID: string;
+    isGeofenceEnabled: boolean;
+    officeLatitude: number;
+    officeLongitude: number;
+    geofenceRadiusMeters: number;
     createdAt: Date;
     updatedAt: Date;
 }

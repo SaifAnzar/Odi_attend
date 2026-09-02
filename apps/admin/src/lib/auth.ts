@@ -3,10 +3,20 @@ import { NextRequest } from 'next/server';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'super_secret_odizo_key_1234567890';
 
+export type UserRole = 'ADMIN' | 'EMPLOYEE' | 'INTERN' | 'Admin' | 'Employee' | 'Intern';
+
 export interface IUserPayload {
   id: string;
-  role: 'Admin' | 'Employee' | 'Intern';
+  role: UserRole;
   name: string;
+}
+
+export function normalizeRole(role?: string): 'ADMIN' | 'EMPLOYEE' | 'INTERN' {
+  if (!role) return 'EMPLOYEE';
+  const upper = role.toUpperCase();
+  if (upper === 'ADMIN') return 'ADMIN';
+  if (upper === 'INTERN') return 'INTERN';
+  return 'EMPLOYEE';
 }
 
 export async function verifyAuth(request: NextRequest): Promise<IUserPayload | null> {

@@ -18,11 +18,15 @@ export async function PUT(
     await connectToDatabase();
     
     const body = await request.json();
-    const { name, email, password, role, status, shift } = body;
+    const { name, email, password, role, status, shift, baseSalary, workMode } = body;
 
     const user = await User.findById(id);
     if (!user) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    }
+
+    if (baseSalary !== undefined && baseSalary !== null) {
+      user.baseSalary = Number(baseSalary);
     }
 
     if (name) user.name = name;
@@ -31,6 +35,12 @@ export async function PUT(
         return NextResponse.json({ error: 'Invalid role' }, { status: 400 });
       }
       user.role = role;
+    }
+    if (workMode) {
+      if (!['On-Site', 'Remote', 'Hybrid'].includes(workMode)) {
+        return NextResponse.json({ error: 'Invalid workMode' }, { status: 400 });
+      }
+      user.workMode = workMode;
     }
     if (status) {
       if (!['Active', 'Inactive'].includes(status)) {

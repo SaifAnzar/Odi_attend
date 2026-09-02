@@ -4,13 +4,16 @@ export interface IShift {
     startTime: string;
     endTime: string;
 }
+export type WorkMode = 'On-Site' | 'Remote' | 'Hybrid';
 export interface IUser extends Document {
     name: string;
     email: string;
     passwordHash: string;
     role: 'Admin' | 'Employee' | 'Intern';
+    workMode: WorkMode;
     status: 'Active' | 'Inactive';
     shift: IShift;
+    baseSalary?: number;
     expoPushToken?: string | null;
     createdAt: Date;
     updatedAt: Date;

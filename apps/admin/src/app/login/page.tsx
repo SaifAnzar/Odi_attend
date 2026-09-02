@@ -37,7 +37,12 @@ export default function Login() {
 
       if (res.ok) {
         localStorage.setItem('user', JSON.stringify(data.user));
-        router.push('/admin/dashboard');
+        const role = data.user?.role?.toUpperCase();
+        if (role === 'ADMIN') {
+          router.push('/admin/dashboard');
+        } else {
+          router.push('/dashboard');
+        }
       } else {
         setError(data.error || 'Invalid credentials');
       }
@@ -58,8 +63,9 @@ export default function Login() {
           <div className="flex flex-col items-center text-center mt-2 mb-6">
             <Logo size="md" variant="dark" />
             <h2 className="text-2xl font-bold tracking-tight text-white mt-6">
-              Admin Access
+              Welcome to ODIZO
             </h2>
+            <p className="text-sm text-gray-400 mt-2 text-center">Sign in to access your admin, employee, or intern dashboard.</p>
           </div>
 
           {error && (
@@ -84,7 +90,7 @@ export default function Login() {
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="admin@odizo.in"
+                placeholder="name@odizo.in"
                 className="w-full bg-[#030303] border border-zinc-800/80 rounded-xl px-4 py-3 text-sm text-white placeholder-zinc-700 focus:border-odizo-red focus:outline-none transition-colors"
               />
             </div>

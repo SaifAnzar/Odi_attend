@@ -60,6 +60,7 @@ export async function POST(request: Request) {
         name: user.name,
         email: user.email,
         role: user.role,
+        workMode: user.workMode || 'On-Site',
         shift: user.shift
       },
       token

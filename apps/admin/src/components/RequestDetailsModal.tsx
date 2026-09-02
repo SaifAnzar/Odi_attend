@@ -15,6 +15,7 @@ import {
   ArrowRight
 } from 'lucide-react';
 import { formatDisplayDate } from '@/lib/dateFormatter';
+import { EmployeeQuickStats } from '@/components/ui/EmployeeQuickStats';
 
 export interface UserDetail {
   _id?: string;
@@ -78,6 +79,66 @@ export function RequestDetailsModal({
   onReject,
   actionLoading = false,
 }: RequestDetailsModalProps) {
+  const [stats, setStats] = React.useState({ leaveCount: 0, wfhCount: 0, swapCount: 0 });
+  const [statsLoading, setStatsLoading] = React.useState(false);
+
+  React.useEffect(() => {
+    if (!isOpen || !request || !request.userId || !isAdmin) return;
+    
+    const employeeId = request.userId._id || request.userId.id;
+    if (!employeeId) return;
+
+    let active = true;
+
+    const fetchStats = async () => {
+      try {
+        setStatsLoading(true);
+        // Fetch leaves
+        const leavesRes = await fetch(`/api/leaves/my?userId=${employeeId}`);
+        // Fetch swaps
+        const swapsRes = await fetch('/api/swaps');
+        
+        let leaveCount = 0;
+        let wfhCount = 0;
+        let swapCount = 0;
+
+        if (leavesRes.ok) {
+          const data = await leavesRes.json();
+          if (data.leaves) {
+            leaveCount = data.leaves.filter((l: any) => l.requestType === 'Leave').length;
+            wfhCount = data.leaves.filter((l: any) => l.requestType === 'WFH').length;
+          }
+        }
+        
+        if (swapsRes.ok) {
+          const data = await swapsRes.json();
+          if (data.swaps) {
+            swapCount = data.swaps.filter(
+              (s: any) => 
+                (s.requesterId?._id === employeeId || s.targetUserId?._id === employeeId)
+            ).length;
+          }
+        }
+
+        if (active) {
+          setStats({ leaveCount, wfhCount, swapCount });
+        }
+      } catch (err) {
+        console.error('Failed to fetch employee stats:', err);
+      } finally {
+        if (active) {
+          setStatsLoading(false);
+        }
+      }
+    };
+
+    fetchStats();
+
+    return () => {
+      active = false;
+    };
+  }, [isOpen, request, isAdmin]);
+
   if (!isOpen || !request) return null;
 
   const isWFH = request.requestType === 'WFH';
@@ -169,6 +230,28 @@ export function RequestDetailsModal({
                 <p className="text-xs text-odizo-grey truncate mt-0.5">{employeeEmail}</p>
               </div>
             </div>
+
+            {/* Quick Stats Summary for Admin */}
+            {isAdmin && (
+              <div className="space-y-1.5">
+                <span className="text-[10px] font-bold text-odizo-grey uppercase tracking-wider block">
+                  Employee Activity Summary
+                </span>
+                {statsLoading ? (
+                  <div className="grid grid-cols-3 gap-4 w-full">
+                    {[1, 2, 3].map((i) => (
+                      <div key={i} className="h-[74px] bg-black/10 dark:bg-white/5 animate-pulse rounded-2xl border border-black/5 dark:border-white/10"></div>
+                    ))}
+                  </div>
+                ) : (
+                  <EmployeeQuickStats 
+                    leaveCount={stats.leaveCount} 
+                    wfhCount={stats.wfhCount} 
+                    swapCount={stats.swapCount} 
+                  />
+                )}
+              </div>
+            )}
 
             {/* Date Details Grid */}
             <div className="grid grid-cols-2 gap-3">

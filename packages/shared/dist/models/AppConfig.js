@@ -37,7 +37,11 @@ exports.AppConfig = void 0;
 const mongoose_1 = __importStar(require("mongoose"));
 const AppConfigSchema = new mongoose_1.Schema({
     isWifiLockEnabled: { type: Boolean, required: true, default: false },
-    allowedWifiSSID: { type: String, default: "" }
+    allowedWifiSSID: { type: String, default: "" },
+    isGeofenceEnabled: { type: Boolean, required: true, default: true },
+    officeLatitude: { type: Number, default: 12.9716 },
+    officeLongitude: { type: Number, default: 77.5946 },
+    geofenceRadiusMeters: { type: Number, default: 100 }
 }, {
     timestamps: true
 });

@@ -10,68 +10,90 @@ export interface EmployeeQuickStatsProps {
 }
 
 /**
- * A highly polished, premium glassmorphic component to display quick counts
- * of an employee's activities (Leaves, WFH, and Shift Swaps).
+ * A highly polished, reusable EmployeeQuickStats component
+ * that displays the total counts for Leaves, WFH (Work From Home), and Shift Swaps.
+ * Designed with a premium, glassmorphic look suitable for ODIZO Admin Panel.
  */
 export function EmployeeQuickStats({
-  leaveCount = 4,
-  wfhCount = 12,
-  swapCount = 2
+  leaveCount = 0,
+  wfhCount = 0,
+  swapCount = 0,
 }: EmployeeQuickStatsProps) {
   const stats = [
     {
-      label: 'Total Leaves',
+      label: 'Approved Leaves',
       count: leaveCount,
+      unit: 'Days',
       icon: Calendar,
-      colorClass: 'border-l-rose-500/60 dark:border-l-rose-500/80 hover:border-rose-500/30 text-rose-500 dark:text-rose-400',
-      bgGlow: 'bg-rose-500/5 dark:bg-rose-500/10',
-      iconBg: 'bg-rose-500/10 border-rose-500/25 dark:border-rose-500/20 text-rose-500 dark:text-rose-400',
+      badgeColor: 'bg-rose-500/10 border-rose-500/25 text-rose-500 dark:text-rose-400',
+      textColor: 'text-rose-600 dark:text-rose-400',
+      bgCard: 'bg-rose-50/50 dark:bg-rose-950/20 border-rose-200 dark:border-rose-900/40',
     },
     {
-      label: 'Total WFH',
+      label: 'Approved WFH',
       count: wfhCount,
+      unit: 'Days',
       icon: Home,
-      colorClass: 'border-l-purple-500/60 dark:border-l-purple-500/80 hover:border-purple-500/30 text-purple-500 dark:text-purple-400',
-      bgGlow: 'bg-purple-500/5 dark:bg-purple-500/10',
-      iconBg: 'bg-purple-500/10 border-purple-500/25 dark:border-purple-500/20 text-purple-500 dark:text-purple-400',
+      badgeColor: 'bg-purple-500/10 border-purple-500/25 text-purple-500 dark:text-purple-400',
+      textColor: 'text-purple-600 dark:text-purple-400',
+      bgCard: 'bg-purple-50/50 dark:bg-purple-950/20 border-purple-200 dark:border-purple-900/40',
     },
     {
-      label: 'Total Swaps',
+      label: 'Shift Swaps',
       count: swapCount,
+      unit: 'Completed',
       icon: ArrowLeftRight,
-      colorClass: 'border-l-sky-500/60 dark:border-l-sky-500/80 hover:border-sky-500/30 text-sky-500 dark:text-sky-400',
-      bgGlow: 'bg-sky-500/5 dark:bg-sky-500/10',
-      iconBg: 'bg-sky-500/10 border-sky-500/25 dark:border-sky-500/20 text-sky-500 dark:text-sky-400',
+      badgeColor: 'bg-sky-500/10 border-sky-500/25 text-sky-500 dark:text-sky-400',
+      textColor: 'text-sky-600 dark:text-sky-400',
+      bgCard: 'bg-sky-50/50 dark:bg-sky-950/20 border-sky-200 dark:border-sky-900/40',
     },
   ];
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 w-full">
+    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 w-full">
       {stats.map((stat, index) => {
         const Icon = stat.icon;
         return (
           <div
             key={index}
-            className={`relative overflow-hidden glass-card p-4 flex items-center justify-between border-l-4 ${stat.colorClass} border-t border-r border-b border-black/5 dark:border-white/5 transition-all duration-300 hover:scale-[1.01] hover:bg-black/5 dark:hover:bg-white/5`}
+            className={`p-3.5 rounded-2xl border ${stat.bgCard} flex items-center justify-between transition-colors shadow-sm`}
           >
-            {/* Soft Ambient Radial Background Glow */}
-            <div className={`absolute -right-6 -bottom-6 w-24 h-24 ${stat.bgGlow} rounded-full blur-[24px] pointer-events-none opacity-60 dark:opacity-80`}></div>
-
-            <div className="space-y-1.5 z-10 select-none">
-              <span className="text-[10px] uppercase font-bold tracking-wider text-slate-500 dark:text-gray-400">
+            <div className="flex flex-col">
+              <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
                 {stat.label}
               </span>
-              <p className="text-2xl font-extrabold text-slate-900 dark:text-white leading-none font-sans">
-                {stat.count}
-              </p>
+              <div className="flex items-baseline gap-1.5 mt-0.5">
+                <span className="text-2xl font-black text-slate-900 dark:text-white tracking-tight">
+                  {stat.count}
+                </span>
+                <span className="text-[11px] font-medium text-slate-500 dark:text-slate-400">
+                  {stat.unit}
+                </span>
+              </div>
             </div>
 
-            <div className={`p-2.5 rounded-xl border flex items-center justify-center ${stat.iconBg} z-10`}>
-              <Icon size={16} />
+            <div className={`p-2.5 rounded-xl border ${stat.badgeColor} flex items-center justify-center shrink-0`}>
+              <Icon className="w-4 h-4" />
             </div>
           </div>
         );
       })}
+    </div>
+  );
+}
+
+/**
+ * Demo Component to show how to use EmployeeQuickStats with dummy data.
+ * Used for visual verification of the component.
+ */
+export function EmployeeQuickStatsDemo() {
+  return (
+    <div className="p-6 bg-slate-950 rounded-3xl border border-white/5 max-w-4xl mx-auto space-y-6">
+      <div className="space-y-1">
+        <h3 className="text-lg font-semibold text-white">Employee Quick Stats</h3>
+        <p className="text-xs text-gray-400">Previewing with dummy data: Leave = 4, WFH = 12, Swaps = 2</p>
+      </div>
+      <EmployeeQuickStats leaveCount={4} wfhCount={12} swapCount={2} />
     </div>
   );
 }

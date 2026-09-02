@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   FileText, 
   Calendar, 
@@ -27,6 +27,7 @@ interface User {
   name: string;
   email: string;
   role: 'Admin' | 'Employee' | 'Intern';
+  workMode?: 'On-Site' | 'Remote' | 'Hybrid';
   status: 'Active' | 'Inactive';
 }
 
@@ -61,6 +62,8 @@ export default function Reports() {
   const [records, setRecords] = useState<AttendanceRecord[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
+  
+  const dateInputRef = useRef<HTMLInputElement>(null);
   
   // Details Drawer State
   const [selectedRecord, setSelectedRecord] = useState<AttendanceRecord | null>(null);
@@ -152,20 +155,21 @@ export default function Reports() {
     if (records.length === 0) return;
     
     // Construct CSV content
-    const headers = ['Date', 'Staff Name', 'Email', 'Role', 'Shift Name', 'Shift Start', 'Shift End', 'Minutes Worked', 'Attendance Status', 'Verification Status', 'Flagged', 'Flag Reason', 'Work From Home'];
+    const headers = ['Date', 'Staff Name', 'Email', 'Role', 'Work Mode', 'Shift Name', 'Shift Start', 'Shift End', 'Minutes Worked', 'Attendance Status', 'Verification Status', 'Flagged', 'Flag Reason', 'Work From Home'];
     const rows = records.map(r => [
       r.date,
-      r.userId?.name || 'Unknown',
-      r.userId?.email || '',
+      `"${r.userId?.name || 'Unknown'}"`,
+      `"${r.userId?.email || ''}"`,
       r.userId?.role || '',
-      r.shiftSnapshot?.name || '',
+      r.userId?.workMode || (r.isWFH ? 'Remote' : 'On-Site'),
+      `"${r.shiftSnapshot?.name || ''}"`,
       r.shiftSnapshot?.startTime || '',
       r.shiftSnapshot?.endTime || '',
       r.totalMinutesWorked,
       r.attendanceStatus,
       r.status,
       r.isFlagged ? 'Yes' : 'No',
-      r.flagReason || '',
+      `"${r.flagReason || ''}"`,
       r.isWFH ? 'Yes' : 'No'
     ]);
     
@@ -203,6 +207,44 @@ export default function Reports() {
   };
 
   const isAdmin = currentUser?.role === 'Admin';
+
+  const renderModeBadge = (record: AttendanceRecord) => {
+    const userMode = record.userId?.workMode;
+
+    if (userMode === 'Remote') {
+      return (
+        <span className="inline-flex items-center gap-1 text-[9px] px-1.5 py-0.5 rounded font-bold border w-fit uppercase mt-0.5 bg-purple-500/10 border-purple-500/20 text-purple-400">
+          <Home size={10} />
+          Remote
+        </span>
+      );
+    }
+
+    if (userMode === 'Hybrid') {
+      return (
+        <span className="inline-flex items-center gap-1 text-[9px] px-1.5 py-0.5 rounded font-bold border w-fit uppercase mt-0.5 bg-amber-500/10 border-amber-500/20 text-amber-400">
+          <Home size={10} />
+          Hybrid {record.isWFH ? '(WFH)' : '(Office)'}
+        </span>
+      );
+    }
+
+    if (record.isWFH) {
+      return (
+        <span className="inline-flex items-center gap-1 text-[9px] px-1.5 py-0.5 rounded font-bold border w-fit uppercase mt-0.5 bg-sky-500/10 border-sky-500/20 text-sky-400">
+          <Home size={10} />
+          WFH
+        </span>
+      );
+    }
+
+    return (
+      <span className="inline-flex items-center gap-1 text-[9px] px-1.5 py-0.5 rounded font-bold border w-fit uppercase mt-0.5 bg-emerald-500/10 border-emerald-500/20 text-emerald-400">
+        <MapPin size={10} />
+        On-Site
+      </span>
+    );
+  };
 
   return (
     <div className="space-y-6">
@@ -256,34 +298,46 @@ export default function Reports() {
             <Calendar size={12} className="text-odizo-red" />
             <span>Filter by Date</span>
           </label>
-          <div className="relative w-full">
+          <div 
+            onClick={() => {
+              try {
+                dateInputRef.current?.showPicker();
+              } catch {
+                dateInputRef.current?.focus();
+              }
+            }}
+            className="relative w-full bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 hover:border-black/20 dark:hover:border-white/20 rounded-xl px-4 py-2.5 text-sm text-slate-900 dark:text-white flex justify-between items-center cursor-pointer transition-colors"
+          >
             <input
+              ref={dateInputRef}
               type="date"
               value={selectedDate}
               onChange={(e) => setSelectedDate(e.target.value)}
-              className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+              onClick={(e) => {
+                try {
+                  (e.target as any).showPicker?.();
+                } catch {}
+              }}
+              className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
             />
-            <div className="w-full bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-xl px-4 py-2.5 text-sm text-slate-900 dark:text-white flex justify-between items-center pointer-events-none">
-              <span className={selectedDate ? 'text-slate-900 dark:text-white font-medium' : 'text-odizo-grey'}>
-                {selectedDate ? formatDisplayDate(selectedDate) : 'DD-MM-YYYY'}
-              </span>
-              <div className="flex items-center gap-2 pointer-events-auto">
-                {selectedDate && (
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      e.preventDefault();
-                      setSelectedDate('');
-                    }}
-                    className="p-0.5 hover:bg-black/5 dark:bg-white/10 rounded text-odizo-grey hover:text-slate-900 dark:text-white dark:hover:text-white transition-colors cursor-pointer z-20"
-                    title="Clear date"
-                  >
-                    <X size={14} />
-                  </button>
-                )}
-                <Calendar size={14} className="text-odizo-grey" />
-              </div>
+            <span className={selectedDate ? 'text-slate-900 dark:text-white font-medium' : 'text-odizo-grey'}>
+              {selectedDate ? formatDisplayDate(selectedDate) : 'DD-MM-YYYY'}
+            </span>
+            <div className="flex items-center gap-2 z-10">
+              {selectedDate && (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setSelectedDate('');
+                  }}
+                  className="p-1 hover:bg-black/10 dark:hover:bg-white/10 rounded-full text-odizo-grey hover:text-slate-900 dark:text-white transition-colors cursor-pointer"
+                  title="Clear date"
+                >
+                  <X size={14} />
+                </button>
+              )}
+              <Calendar size={15} className="text-odizo-red" />
             </div>
           </div>
         </div>
@@ -356,14 +410,7 @@ export default function Reports() {
                     <td className="py-3.5 px-4">
                       <div className="flex flex-col">
                         <span className="font-semibold text-slate-900 dark:text-white font-mono text-[13px]">{formatDisplayDate(record.date)}</span>
-                        <span className={`inline-flex items-center gap-0.5 text-[9px] px-1.5 py-0.5 rounded font-bold border w-fit uppercase mt-0.5 ${
-                          record.isWFH 
-                            ? 'bg-sky-500/10 border-sky-500/20 text-sky-400' 
-                            : 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400'
-                        }`}>
-                          {record.isWFH ? <Home size={10} /> : <MapPin size={10} />}
-                          {record.isWFH ? 'WFH' : 'Office'}
-                        </span>
+                        {renderModeBadge(record)}
                       </div>
                     </td>
 
@@ -523,14 +570,7 @@ export default function Reports() {
                       }`}>
                         {selectedRecord.userId?.role || 'Staff'}
                       </span>
-                      <span className={`inline-flex items-center gap-1 text-[9px] px-1.5 py-0.5 rounded font-bold border uppercase ${
-                        selectedRecord.isWFH 
-                          ? 'bg-sky-500/10 border-sky-500/20 text-sky-400' 
-                          : 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400'
-                      }`}>
-                        {selectedRecord.isWFH ? <Home size={10} /> : <MapPin size={10} />}
-                        {selectedRecord.isWFH ? 'WFH' : 'Office'}
-                      </span>
+                      {renderModeBadge(selectedRecord)}
                     </div>
                   </div>
                 </div>
