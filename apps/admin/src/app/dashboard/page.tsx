@@ -227,14 +227,30 @@ export default function EmployeeDashboard() {
 
   if (!mounted) return null;
 
-  // Calculate live elapsed time
-  let activeElapsedStr = '';
-  if (activeSession) {
-    const elapsedMs = Math.max(0, currentTime.getTime() - new Date(activeSession.checkIn).getTime());
-    const totalSecs = Math.floor(elapsedMs / 1000);
-    const hrs = Math.floor(totalSecs / 3600);
-    const mins = Math.floor((totalSecs % 3600) / 60);
-    const secs = totalSecs % 60;
+  // Sum of seconds from all past completed sessions today
+  const pastSessionsCompletedSecs = (todayRecord?.sessions || []).reduce((acc, s) => {
+    if (s.checkIn && s.checkOut) {
+      const ms = Math.max(0, new Date(s.checkOut).getTime() - new Date(s.checkIn).getTime());
+      return acc + Math.floor(ms / 1000);
+    }
+    return acc;
+  }, 0);
+  const baselinePastSecs = pastSessionsCompletedSecs > 0 ? pastSessionsCompletedSecs : (todayRecord?.totalMinutesWorked || 0) * 60;
+
+  // Calculate live elapsed time (resuming from previous punchout for flexible shifts)
+  let activeElapsedStr = '00h 00m 00s';
+  if (isCheckedIn && activeSession) {
+    const currentSessionSecs = Math.max(0, Math.floor((currentTime.getTime() - new Date(activeSession.checkIn).getTime()) / 1000));
+    const totalDutySecs = isFlexibleShift ? (baselinePastSecs + currentSessionSecs) : currentSessionSecs;
+    const hrs = Math.floor(totalDutySecs / 3600);
+    const mins = Math.floor((totalDutySecs % 3600) / 60);
+    const secs = totalDutySecs % 60;
+    activeElapsedStr = `${String(hrs).padStart(2, '0')}h ${String(mins).padStart(2, '0')}m ${String(secs).padStart(2, '0')}s`;
+  } else if (isFlexibleShift && baselinePastSecs > 0) {
+    // When punched out: don't reset to zero! Show accumulated duty time logged so far today
+    const hrs = Math.floor(baselinePastSecs / 3600);
+    const mins = Math.floor((baselinePastSecs % 3600) / 60);
+    const secs = baselinePastSecs % 60;
     activeElapsedStr = `${String(hrs).padStart(2, '0')}h ${String(mins).padStart(2, '0')}m ${String(secs).padStart(2, '0')}s`;
   }
 
@@ -384,11 +400,15 @@ export default function EmployeeDashboard() {
                 <div className="text-2xl sm:text-3xl font-black text-white font-mono tracking-wider">
                   {currentTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
                 </div>
-                {isCheckedIn && (
-                  <div className="text-xs font-bold text-emerald-400">
-                    ⏱️ {activeElapsedStr}
+                {isCheckedIn ? (
+                  <div className="text-xs font-bold text-emerald-400 font-mono">
+                    ⏱️ {isFlexibleShift ? `Duty: ${activeElapsedStr}` : activeElapsedStr}
                   </div>
-                )}
+                ) : (isFlexibleShift && baselinePastSecs > 0) ? (
+                  <div className="text-xs font-bold text-amber-400 font-mono">
+                    ⏸️ Logged: {activeElapsedStr}
+                  </div>
+                ) : null}
               </div>
 
               <button

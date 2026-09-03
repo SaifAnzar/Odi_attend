@@ -952,28 +952,62 @@ function AppContent() {
   const activeSession = todayRecord?.sessions.find(s => !s.checkOut);
   const isCheckedIn = !!activeSession;
 
-  // Running timer for active shifts
+  // Flexible Shift Check
+  const isFlexibleShift = 
+    user?.shift?.type === 'Flexible' ||
+    String(user?.shift?.name || '').toLowerCase().includes('flexible') ||
+    user?.shift?.startTime === 'Flexible' ||
+    todayRecord?.shiftSnapshot?.type === 'Flexible' ||
+    String(todayRecord?.shiftSnapshot?.name || '').toLowerCase().includes('flexible') ||
+    todayRecord?.shiftSnapshot?.startTime === 'Flexible';
+
+  // Calculate total seconds already logged from past completed sessions today
+  const pastSessionsCompletedSeconds = (todayRecord?.sessions || []).reduce((acc, s) => {
+    if (s.checkIn && s.checkOut) {
+      const ms = Math.max(0, new Date(s.checkOut).getTime() - new Date(s.checkIn).getTime());
+      return acc + Math.floor(ms / 1000);
+    }
+    return acc;
+  }, 0);
+  const baselinePastSeconds = pastSessionsCompletedSeconds > 0 
+    ? pastSessionsCompletedSeconds 
+    : (todayRecord?.totalMinutesWorked || 0) * 60;
+
+  // Running timer for shifts (accumulates and resumes from previous punch-out for flexible workers)
   useEffect(() => {
     if (isCheckedIn && activeSession) {
       const startTime = new Date(activeSession.checkIn).getTime();
       
       const updateTimer = () => {
-        const diffMs = Date.now() - startTime;
-        const diffSecs = Math.floor(diffMs / 1000);
-        const hrs = Math.floor(diffSecs / 3600);
-        const mins = Math.floor((diffSecs % 3600) / 60);
-        const secs = diffSecs % 60;
+        const currentSessionSecs = Math.max(0, Math.floor((Date.now() - startTime) / 1000));
+        // For flexible workers: resume from previously logged duty time!
+        const totalSecs = isFlexibleShift ? (baselinePastSeconds + currentSessionSecs) : currentSessionSecs;
+        
+        const hrs = Math.floor(totalSecs / 3600);
+        const mins = Math.floor((totalSecs % 3600) / 60);
+        const secs = totalSecs % 60;
         
         setLiveTimer(
           `${hrs.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`
         );
-        setActiveDurationMinutes(Math.floor(diffSecs / 60));
+        setActiveDurationMinutes(Math.floor(currentSessionSecs / 60));
       };
 
       updateTimer();
       timerIntervalRef.current = setInterval(updateTimer, 1000);
     } else {
-      setLiveTimer('00:00:00');
+      // Punched Out / Off-Duty:
+      if (isFlexibleShift && baselinePastSeconds > 0) {
+        // For flexible timing workers: do NOT go to zero! Show duty time logged so far today
+        const hrs = Math.floor(baselinePastSeconds / 3600);
+        const mins = Math.floor((baselinePastSeconds % 3600) / 60);
+        const secs = baselinePastSeconds % 60;
+        setLiveTimer(
+          `${hrs.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`
+        );
+      } else {
+        setLiveTimer('00:00:00');
+      }
       setActiveDurationMinutes(0);
       if (timerIntervalRef.current) {
         clearInterval(timerIntervalRef.current);
@@ -984,7 +1018,7 @@ function AppContent() {
     return () => {
       if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
     };
-  }, [isCheckedIn, activeSession]);
+  }, [isCheckedIn, activeSession, isFlexibleShift, baselinePastSeconds]);
 
   // Auto check-out trigger when flexible target is reached in Mobile App
   const autoCheckoutTriggeredRef = useRef(false);
@@ -1621,14 +1655,26 @@ function AppContent() {
 
             {/* Live Ticking Timer display */}
             <View style={styles.timerWrapper}>
-              <Text style={styles.timerTitle}>Active Clock-In Duration</Text>
+              <Text style={styles.timerTitle}>
+                {isFlexibleShift 
+                  ? (isCheckedIn ? "Total Duty Time Today (Active)" : (baselinePastSeconds > 0 ? "Today's Duty Time (Paused)" : "Active Duty Duration"))
+                  : (isCheckedIn ? "Active Clock-In Duration" : "Clock-In Timer")}
+              </Text>
               <Text 
-                style={styles.timerValue}
+                style={[
+                  styles.timerValue,
+                  !isCheckedIn && isFlexibleShift && baselinePastSeconds > 0 && { color: '#FBBF24' }
+                ]}
                 adjustsFontSizeToFit={true}
                 numberOfLines={1}
               >
                 {liveTimer}
               </Text>
+              {!isCheckedIn && isFlexibleShift && baselinePastSeconds > 0 && (
+                <Text style={{ color: '#A1A1AA', fontSize: 11, marginTop: 4, textAlign: 'center' }}>
+                  ⏸️ Punched Out • Punch in to resume duty timing
+                </Text>
+              )}
             </View>
 
             {/* Glowing Action Button Container */}
