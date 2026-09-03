@@ -22,7 +22,7 @@ import {
   UserCheck
 } from 'lucide-react';
 import { showConfirm, showSuccess, showError } from '@/lib/swal';
-import { getLocalDateStringIST } from '@/lib/shiftUtils';
+import { getLocalDateStringIST, formatMinutesToDuration } from '@/lib/shiftUtils';
 
 interface User {
   _id: string;
@@ -33,8 +33,11 @@ interface User {
   status: 'Active' | 'Inactive';
   shift?: {
     name: string;
-    startTime: string;
-    endTime: string;
+    type?: 'Fixed' | 'Flexible';
+    startTime?: string;
+    endTime?: string;
+    minDailyMinutes?: number;
+    halfDayMinutes?: number;
   };
 }
 
@@ -53,8 +56,11 @@ interface AttendanceRecord {
   date: string;
   shiftSnapshot: {
     name: string;
-    startTime: string;
-    endTime: string;
+    type?: 'Fixed' | 'Flexible';
+    startTime?: string;
+    endTime?: string;
+    minDailyMinutes?: number;
+    halfDayMinutes?: number;
   };
   sessions: PunchSession[];
   attendanceStatus: 'Present' | 'Absent' | 'Late' | 'Half-Day' | 'Off-Day';
@@ -170,8 +176,10 @@ export default function CompanyLogsPage() {
         location: s.checkInLocation,
         device: s.checkInDevice || 'Mobile App',
         isActive: !s.checkOut,
-        shiftName: record.shiftSnapshot?.name || 'Standard Shift',
-        shiftTime: `${record.shiftSnapshot?.startTime || '09:00'} - ${record.shiftSnapshot?.endTime || '18:00'}`,
+        shiftName: record.shiftSnapshot?.name || (record.shiftSnapshot?.type === 'Flexible' ? 'Flexible Shift' : 'Standard Shift'),
+        shiftTime: (record.shiftSnapshot?.type === 'Flexible' || record.shiftSnapshot?.startTime === 'Flexible' || String(record.shiftSnapshot?.name || '').toLowerCase().includes('flexible'))
+          ? `${formatMinutesToDuration(record.shiftSnapshot?.minDailyMinutes || 480, '8h')} Target`
+          : `${record.shiftSnapshot?.startTime || '09:00'} - ${record.shiftSnapshot?.endTime || '18:00'}`,
         isWFH: record.isWFH,
         isFlagged: record.isFlagged,
         attendanceStatus: record.attendanceStatus
@@ -195,8 +203,10 @@ export default function CompanyLogsPage() {
           device: s.checkOutDevice || 'Mobile App',
           isActive: false,
           durationMinutes,
-          shiftName: record.shiftSnapshot?.name || 'Standard Shift',
-          shiftTime: `${record.shiftSnapshot?.startTime || '09:00'} - ${record.shiftSnapshot?.endTime || '18:00'}`,
+          shiftName: record.shiftSnapshot?.name || (record.shiftSnapshot?.type === 'Flexible' ? 'Flexible Shift' : 'Standard Shift'),
+          shiftTime: (record.shiftSnapshot?.type === 'Flexible' || record.shiftSnapshot?.startTime === 'Flexible' || String(record.shiftSnapshot?.name || '').toLowerCase().includes('flexible'))
+            ? `${formatMinutesToDuration(record.shiftSnapshot?.minDailyMinutes || 480, '8h')} Target`
+            : `${record.shiftSnapshot?.startTime || '09:00'} - ${record.shiftSnapshot?.endTime || '18:00'}`,
           isWFH: record.isWFH,
           isFlagged: record.isFlagged,
           attendanceStatus: record.attendanceStatus

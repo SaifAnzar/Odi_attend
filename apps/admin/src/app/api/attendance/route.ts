@@ -40,18 +40,64 @@ export async function performAutoCheckout() {
 
     for (const record of records) {
       const user = record.userId as any;
-      const startTimeStr = record.shiftSnapshot?.startTime || user?.shift?.startTime || '09:00';
-      const endTimeStr = record.shiftSnapshot?.endTime || user?.shift?.endTime || '18:00';
+      const isFlexible = 
+        record.shiftSnapshot?.type === 'Flexible' || 
+        user?.shift?.type === 'Flexible' ||
+        record.shiftSnapshot?.startTime === 'Flexible' ||
+        user?.shift?.startTime === 'Flexible' ||
+        String(record.shiftSnapshot?.name || '').toLowerCase().includes('flexible') ||
+        String(user?.shift?.name || '').toLowerCase().includes('flexible');
 
-      const shiftEndTimeUTC = calculateShiftEndTimeUTC(record.date, startTimeStr, endTimeStr);
+      let shouldAutoCheckout = false;
+      let checkoutTimestamp = now;
 
-      // If the current time is past the shift end time, auto check out the user!
-      if (now > shiftEndTimeUTC) {
+      if (isFlexible) {
+        // For Flexible shifts: Auto checkout when daily target is reached OR single session >= 720m OR past date rollover
+        const todayStr = getLocalDateStringIST(now);
+        const isPastDate = record.date < todayStr;
+        const targetMins = record.shiftSnapshot?.minDailyMinutes || user?.shift?.minDailyMinutes || 480;
+        const prevWorkedMins = record.totalMinutesWorked || 0;
+
+        for (const session of record.sessions) {
+          if (!session.checkOut) {
+            const checkInMs = new Date(session.checkIn).getTime();
+            const elapsedMins = Math.max(0, Math.floor((now.getTime() - checkInMs) / 60000));
+            const totalAccumulatedMins = prevWorkedMins + elapsedMins;
+
+            if (totalAccumulatedMins >= targetMins) {
+              shouldAutoCheckout = true;
+              // Set checkout timestamp to the exact moment the required target duration was satisfied
+              const minsNeededThisSession = Math.max(0, targetMins - prevWorkedMins);
+              const targetCompletedTimestamp = new Date(checkInMs + minsNeededThisSession * 60000);
+              checkoutTimestamp = targetCompletedTimestamp > now ? now : targetCompletedTimestamp;
+              break;
+            } else if (isPastDate || elapsedMins >= 720) {
+              shouldAutoCheckout = true;
+              checkoutTimestamp = isPastDate 
+                ? new Date(new Date(`${record.date}T23:59:59+05:30`).getTime()) 
+                : new Date(checkInMs + 720 * 60000);
+              break;
+            }
+          }
+        }
+      } else {
+        const startTimeStr = record.shiftSnapshot?.startTime || user?.shift?.startTime || '09:00';
+        const endTimeStr = record.shiftSnapshot?.endTime || user?.shift?.endTime || '18:00';
+        const shiftEndTimeUTC = calculateShiftEndTimeUTC(record.date, startTimeStr, endTimeStr);
+
+        // If current time is past the shift end time, auto check out fixed shift user
+        if (now > shiftEndTimeUTC) {
+          shouldAutoCheckout = true;
+          checkoutTimestamp = shiftEndTimeUTC;
+        }
+      }
+
+      if (shouldAutoCheckout) {
         let modified = false;
 
         for (const session of record.sessions) {
           if (!session.checkOut) {
-            session.checkOut = shiftEndTimeUTC; // Set checkout to shift end time
+            session.checkOut = checkoutTimestamp;
             session.checkOutLocation = {
               latitude: session.checkInLocation?.latitude || 0,
               longitude: session.checkInLocation?.longitude || 0,
@@ -61,21 +107,33 @@ export async function performAutoCheckout() {
             };
             session.checkOutDevice = 'System (Auto Check-Out)';
 
-            // Calculate session duration and add it to total minutes worked
-            const sessionDurationMinutes = Math.round((shiftEndTimeUTC.getTime() - new Date(session.checkIn).getTime()) / 60000);
+            const sessionDurationMinutes = Math.round((checkoutTimestamp.getTime() - new Date(session.checkIn).getTime()) / 60000);
             record.totalMinutesWorked = (record.totalMinutesWorked || 0) + Math.max(0, sessionDurationMinutes);
             modified = true;
           }
         }
 
         if (modified) {
-          record.markModified('sessions');
-          const noteText = '[System: Auto Checked-Out at Shift End]';
+          const minReq = isFlexible ? (record.shiftSnapshot?.minDailyMinutes || user?.shift?.minDailyMinutes || 480) : 0;
+          if (isFlexible) {
+            const halfReq = record.shiftSnapshot?.halfDayMinutes || user?.shift?.halfDayMinutes || 240;
+            if (record.totalMinutesWorked >= minReq) {
+              record.attendanceStatus = 'Present';
+            } else if (record.totalMinutesWorked >= halfReq) {
+              record.attendanceStatus = 'Half-Day';
+            }
+          }
+
+          const noteText = isFlexible 
+            ? (record.totalMinutesWorked >= minReq 
+                ? '[System: Auto Checked-Out (Target Duration Completed)]' 
+                : '[System: Auto Checked-Out (Flexible Limit/Rollover)]') 
+            : '[System: Auto Checked-Out at Shift End]';
           if (!record.notes || !record.notes.includes(noteText)) {
             record.notes = record.notes ? `${record.notes} ${noteText}` : noteText;
           }
           await record.save();
-          console.log(`[Auto Check-Out] User ${user?.name || record.userId} auto checked-out for date ${record.date} at shift end: ${shiftEndTimeUTC.toISOString()}`);
+          console.log(`[Auto Check-Out] User ${user?.name || record.userId} auto checked-out for date ${record.date}`);
         }
       }
     }
@@ -188,10 +246,14 @@ export async function POST(request: NextRequest) {
     const isWfhActive = isPermanentRemote || isTemporaryWfhActive;
 
     // Check for approved shift swap for this user on todayDate
+    const userShiftType = user.shift?.type === 'Flexible' || String(user.shift?.name || '').toLowerCase().includes('flexible') ? 'Flexible' : 'Fixed';
     let activeShift = {
-      name: user.shift?.name || 'Standard Shift',
-      startTime: normalizeTimeToHHMM(user.shift?.startTime, '09:00'),
-      endTime: normalizeTimeToHHMM(user.shift?.endTime, '18:00')
+      name: user.shift?.name || (userShiftType === 'Flexible' ? 'Flexible Shift' : 'Standard Shift'),
+      type: userShiftType,
+      startTime: userShiftType === 'Flexible' ? '' : normalizeTimeToHHMM(user.shift?.startTime, '09:00'),
+      endTime: userShiftType === 'Flexible' ? '' : normalizeTimeToHHMM(user.shift?.endTime, '18:00'),
+      minDailyMinutes: typeof user.shift?.minDailyMinutes === 'number' ? user.shift.minDailyMinutes : 480,
+      halfDayMinutes: typeof user.shift?.halfDayMinutes === 'number' ? user.shift.halfDayMinutes : 240
     };
 
     const swapRequest = await ShiftSwapRequest.findOne({
@@ -204,19 +266,15 @@ export async function POST(request: NextRequest) {
       const requester = swapRequest.requesterId as any;
       const target = swapRequest.targetUserId as any;
       if (requester && target) {
-        if (requester._id.toString() === user._id.toString()) {
-          activeShift = {
-            name: `${target.shift?.name || 'Shift'} (Swapped)`,
-            startTime: normalizeTimeToHHMM(target.shift?.startTime, '09:00'),
-            endTime: normalizeTimeToHHMM(target.shift?.endTime, '18:00')
-          };
-        } else {
-          activeShift = {
-            name: `${requester.shift?.name || 'Shift'} (Swapped)`,
-            startTime: normalizeTimeToHHMM(requester.shift?.startTime, '09:00'),
-            endTime: normalizeTimeToHHMM(requester.shift?.endTime, '18:00')
-          };
-        }
+        const partner = requester._id.toString() === user._id.toString() ? target : requester;
+        activeShift = {
+          name: `${partner.shift?.name || 'Shift'} (Swapped)`,
+          type: partner.shift?.type || 'Fixed',
+          startTime: normalizeTimeToHHMM(partner.shift?.startTime, '09:00'),
+          endTime: normalizeTimeToHHMM(partner.shift?.endTime, '18:00'),
+          minDailyMinutes: typeof partner.shift?.minDailyMinutes === 'number' ? partner.shift.minDailyMinutes : 480,
+          halfDayMinutes: typeof partner.shift?.halfDayMinutes === 'number' ? partner.shift.halfDayMinutes : 240
+        };
       }
     }
 
@@ -303,18 +361,20 @@ export async function POST(request: NextRequest) {
           notes
         });
 
-        // Determine if they are late in local IST time (offset +5.5 hours)
-        const utcOffset = 5.5;
-        const localTime = new Date(now.getTime() + utcOffset * 3600000);
-        const checkInHour = localTime.getUTCHours();
-        const checkInMin = localTime.getUTCMinutes();
-        const checkInTotalMinutes = checkInHour * 60 + checkInMin;
+        // Determine if they are late in local IST time (offset +5.5 hours) - ONLY for Fixed shifts
+        if (activeShift.type !== 'Flexible') {
+          const utcOffset = 5.5;
+          const localTime = new Date(now.getTime() + utcOffset * 3600000);
+          const checkInHour = localTime.getUTCHours();
+          const checkInMin = localTime.getUTCMinutes();
+          const checkInTotalMinutes = checkInHour * 60 + checkInMin;
 
-        const { hour: shiftHour, minute: shiftMin } = parseTimeTo24Hours(activeShift.startTime);
-        const shiftStartTotalMinutes = shiftHour * 60 + shiftMin + 15; // 15 min grace period
+          const { hour: shiftHour, minute: shiftMin } = parseTimeTo24Hours(activeShift.startTime);
+          const shiftStartTotalMinutes = shiftHour * 60 + shiftMin + 15; // 15 min grace period
 
-        if (checkInTotalMinutes > shiftStartTotalMinutes) {
-          record.attendanceStatus = 'Late';
+          if (checkInTotalMinutes > shiftStartTotalMinutes) {
+            record.attendanceStatus = 'Late';
+          }
         }
       } else {
         // Record exists, verify there isn't an active check-in session already open
@@ -374,6 +434,18 @@ export async function POST(request: NextRequest) {
       // Update total working minutes
       const sessionDurationMinutes = Math.round((now.getTime() - new Date(activeSession.checkIn).getTime()) / 60000);
       record.totalMinutesWorked = (record.totalMinutesWorked || 0) + Math.max(0, sessionDurationMinutes);
+
+      // If flexible shift, update status dynamically based on target minutes
+      const isFlexibleShift = record.shiftSnapshot?.type === 'Flexible' || activeShift.type === 'Flexible';
+      if (isFlexibleShift) {
+        const minReq = record.shiftSnapshot?.minDailyMinutes || activeShift.minDailyMinutes || 480;
+        const halfReq = record.shiftSnapshot?.halfDayMinutes || activeShift.halfDayMinutes || 240;
+        if (record.totalMinutesWorked >= minReq) {
+          record.attendanceStatus = 'Present';
+        } else if (record.totalMinutesWorked >= halfReq) {
+          record.attendanceStatus = 'Half-Day';
+        }
+      }
 
       // If this check-out is flagged, propagate it to the daily record
       if (isFlagged) {

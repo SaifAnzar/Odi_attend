@@ -109,10 +109,14 @@ export async function POST(request: NextRequest) {
     const salt = await bcrypt.genSalt(10);
     const passwordHash = await bcrypt.hash(password, salt);
 
+    const shiftType = shift?.type === 'Flexible' ? 'Flexible' : 'Fixed';
     const normalizedShift = {
-      name: shift?.name || 'Standard Shift',
-      startTime: normalizeTimeToHHMM(shift?.startTime, '09:00'),
-      endTime: normalizeTimeToHHMM(shift?.endTime, '18:00')
+      name: shift?.name || (shiftType === 'Flexible' ? 'Flexible Shift' : 'Standard Shift'),
+      type: shiftType,
+      startTime: shiftType === 'Flexible' ? 'Flexible' : normalizeTimeToHHMM(shift?.startTime, '09:00'),
+      endTime: shiftType === 'Flexible' ? 'Flexible' : normalizeTimeToHHMM(shift?.endTime, '18:00'),
+      minDailyMinutes: shiftType === 'Flexible' ? (typeof shift?.minDailyMinutes === 'number' ? shift.minDailyMinutes : 480) : 0,
+      halfDayMinutes: shiftType === 'Flexible' ? (typeof shift?.halfDayMinutes === 'number' ? shift.halfDayMinutes : 240) : 0
     };
 
     const newUser = new User({

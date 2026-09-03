@@ -17,8 +17,11 @@ export interface IAttendanceRecord extends Document {
     date: string;
     shiftSnapshot: {
         name: string;
-        startTime: string;
-        endTime: string;
+        type?: 'Fixed' | 'Flexible';
+        startTime?: string;
+        endTime?: string;
+        minDailyMinutes?: number;
+        halfDayMinutes?: number;
     };
     sessions: IPunchSession[];
     attendanceStatus: 'Present' | 'Absent' | 'Late' | 'Half-Day' | 'Off-Day';

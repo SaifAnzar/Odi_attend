@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import Link from 'next/link';
 import { 
   User as UserIcon, 
@@ -25,7 +25,7 @@ import Logo from '@/components/Logo';
 import ThemeToggle from '@/components/ThemeToggle';
 import { EmployeeQuickStats } from '@/components/ui/EmployeeQuickStats';
 import { showConfirm, showError, showSuccess } from '@/lib/swal';
-import { getLocalDateStringIST } from '@/lib/shiftUtils';
+import { getLocalDateStringIST, formatMinutesToDuration } from '@/lib/shiftUtils';
 
 interface PunchSession {
   checkIn: string;
@@ -173,11 +173,59 @@ export default function EmployeeDashboard() {
     }
   }, [user, fetchTodayAttendance, fetchEmployeeStats]);
 
-  if (!mounted) return null;
-
   // Active session check
   const activeSession = todayRecord?.sessions?.find((s) => !s.checkOut);
   const isCheckedIn = !!activeSession;
+
+  // Flexible Shift Target computations
+  const isFlexibleShift = 
+    user?.shift?.type === 'Flexible' || 
+    String(user?.shift?.name || '').toLowerCase().includes('flexible') ||
+    user?.shift?.startTime === 'Flexible';
+  const targetMinutes = user?.shift?.minDailyMinutes || 480;
+
+  let currentTotalMinutes = todayRecord?.totalMinutesWorked || 0;
+  if (activeSession) {
+    const activeMins = Math.floor(Math.max(0, currentTime.getTime() - new Date(activeSession.checkIn).getTime()) / 60000);
+    currentTotalMinutes += activeMins;
+  }
+  const progressPercent = Math.min(100, Math.round((currentTotalMinutes / targetMinutes) * 100));
+  const remainingMinutes = Math.max(0, targetMinutes - currentTotalMinutes);
+  const isTargetMet = currentTotalMinutes >= targetMinutes;
+
+  // Auto check-out when target is met in Web Terminal
+  const autoCheckoutTriggeredRef = useRef(false);
+
+  useEffect(() => {
+    if (!isCheckedIn) {
+      autoCheckoutTriggeredRef.current = false;
+      return;
+    }
+
+    if (isFlexibleShift && isTargetMet && !autoCheckoutTriggeredRef.current) {
+      autoCheckoutTriggeredRef.current = true;
+      fetch('/api/attendance/auto-checkout', { method: 'POST' })
+        .then(() => {
+          fetchTodayAttendance();
+          showSuccess(
+            'Daily Target Completed 🎉',
+            `Congratulations! You have completed your daily target duration (${formatMinutesToDuration(targetMinutes, '8h')}). Auto punch-out recorded.`
+          );
+        })
+        .catch(console.error);
+    }
+  }, [isCheckedIn, isFlexibleShift, isTargetMet, targetMinutes, fetchTodayAttendance]);
+
+  // Periodic status poll while clocked in (every 30 seconds)
+  useEffect(() => {
+    if (!isCheckedIn) return;
+    const interval = setInterval(() => {
+      fetchTodayAttendance();
+    }, 30000);
+    return () => clearInterval(interval);
+  }, [isCheckedIn, fetchTodayAttendance]);
+
+  if (!mounted) return null;
 
   // Calculate live elapsed time
   let activeElapsedStr = '';
@@ -315,8 +363,12 @@ export default function EmployeeDashboard() {
 
               <div className="flex flex-wrap items-center gap-4 text-xs text-zinc-400">
                 <div className="flex items-center gap-1.5">
-                  <Clock size={14} className="text-odizo-red" />
-                  <span>Shift: <strong>{user?.shift?.startTime || '09:00'} - {user?.shift?.endTime || '18:00'}</strong></span>
+                  <Clock size={14} className={isFlexibleShift ? "text-emerald-400" : "text-odizo-red"} />
+                  {isFlexibleShift ? (
+                    <span>Shift: <strong>{user?.shift?.name || 'Flexible'} ({formatMinutesToDuration(targetMinutes, '8h')} Daily Target)</strong></span>
+                  ) : (
+                    <span>Shift: <strong>{user?.shift?.startTime || '09:00'} - {user?.shift?.endTime || '18:00'}</strong></span>
+                  )}
                 </div>
                 <div className="flex items-center gap-1.5">
                   <Building2 size={14} className="text-purple-400" />
@@ -365,6 +417,50 @@ export default function EmployeeDashboard() {
               </button>
             </div>
           </div>
+
+          {/* Flexible Hours Target Progress Tracker Widget */}
+          {isFlexibleShift && (
+            <div className="mt-6 pt-5 border-t border-white/10">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2.5">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-bold uppercase tracking-wider text-emerald-400">
+                    🎯 Daily Work Target
+                  </span>
+                  <span className="text-xs text-zinc-400">
+                    • {formatMinutesToDuration(targetMinutes, '8h')} Minimum Required
+                  </span>
+                </div>
+                <div className="text-xs font-mono font-bold">
+                  {isTargetMet ? (
+                    <span className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
+                      Target Achieved Today 🎉
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                      ⏳ {formatMinutesToDuration(remainingMinutes, '0m')} remaining
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              {/* Progress Track */}
+              <div className="w-full h-3 bg-white/10 rounded-full overflow-hidden p-0.5">
+                <div 
+                  className={`h-full rounded-full transition-all duration-500 ${
+                    isTargetMet 
+                      ? 'bg-gradient-to-r from-emerald-500 to-teal-400 shadow-[0_0_12px_rgba(52,211,153,0.5)]' 
+                      : 'bg-gradient-to-r from-amber-500 via-emerald-500 to-emerald-400'
+                  }`}
+                  style={{ width: `${progressPercent}%` }}
+                />
+              </div>
+
+              <div className="flex items-center justify-between text-[11px] text-zinc-400 mt-2 font-mono">
+                <span>Logged: <strong className="text-white">{Math.floor(currentTotalMinutes / 60)}h {currentTotalMinutes % 60}m</strong></span>
+                <span>{progressPercent}% completed</span>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* 2. Real Approved Balances Component */}

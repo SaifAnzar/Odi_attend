@@ -1,8 +1,11 @@
 import mongoose, { Document } from 'mongoose';
 export interface IShift {
     name: string;
-    startTime: string;
-    endTime: string;
+    type?: 'Fixed' | 'Flexible';
+    startTime?: string;
+    endTime?: string;
+    minDailyMinutes?: number;
+    halfDayMinutes?: number;
 }
 export type UserRole = 'ADMIN' | 'EMPLOYEE' | 'INTERN' | 'Admin' | 'Employee' | 'Intern';
 export type WorkMode = 'On-Site' | 'Remote' | 'Hybrid';

@@ -69,3 +69,16 @@ export function calculateShiftEndTimeUTC(
   // Subtract 5.5 hours to get true UTC timestamp
   return new Date(localShiftEndTime.getTime() - 5.5 * 3600000);
 }
+
+// Format minutes into clean human-readable duration (e.g. 510 -> "8h 30m", 3 -> "3m", 480 -> "8h")
+export function formatMinutesToDuration(totalMins?: number | null, fallback = "8h"): string {
+  if (totalMins === undefined || totalMins === null || isNaN(totalMins) || totalMins <= 0) {
+    return fallback;
+  }
+  const h = Math.floor(totalMins / 60);
+  const m = totalMins % 60;
+  if (h > 0 && m > 0) return `${h}h ${m}m`;
+  if (h > 0) return `${h}h`;
+  return `${m}m`;
+}
+

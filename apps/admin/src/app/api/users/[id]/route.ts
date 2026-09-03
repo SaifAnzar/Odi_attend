@@ -51,19 +51,31 @@ export async function PUT(
       user.status = status;
     }
     if (shift) {
+      const shiftType = shift.type === 'Flexible' ? 'Flexible' : 'Fixed';
       const normalizedShift = {
-        name: shift.name || user.shift?.name || 'Standard Shift',
-        startTime: normalizeTimeToHHMM(shift.startTime || user.shift?.startTime, '09:00'),
-        endTime: normalizeTimeToHHMM(shift.endTime || user.shift?.endTime, '18:00')
+        name: shift.name || user.shift?.name || (shiftType === 'Flexible' ? 'Flexible Shift' : 'Standard Shift'),
+        type: shiftType,
+        startTime: shiftType === 'Flexible' ? 'Flexible' : normalizeTimeToHHMM(shift.startTime || user.shift?.startTime, '09:00'),
+        endTime: shiftType === 'Flexible' ? 'Flexible' : normalizeTimeToHHMM(shift.endTime || user.shift?.endTime, '18:00'),
+        minDailyMinutes: shiftType === 'Flexible' ? (typeof shift.minDailyMinutes === 'number' ? shift.minDailyMinutes : (user.shift?.minDailyMinutes || 480)) : 0,
+        halfDayMinutes: shiftType === 'Flexible' ? (typeof shift.halfDayMinutes === 'number' ? shift.halfDayMinutes : (user.shift?.halfDayMinutes || 240)) : 0
       };
       user.shift = normalizedShift;
 
       // Update today's attendance record shiftSnapshot if exists
-      const todayStr = getLocalDateStringIST();
-      const todayRecord = await AttendanceRecord.findOne({ userId: user._id, date: todayStr });
-      if (todayRecord) {
-        todayRecord.shiftSnapshot = normalizedShift;
-        await todayRecord.save();
+      try {
+        const todayStr = getLocalDateStringIST();
+        const todayRecord = await AttendanceRecord.findOne({ userId: user._id, date: todayStr });
+        if (todayRecord) {
+          todayRecord.shiftSnapshot = normalizedShift;
+          // If employee is switched to Flexible shift, they should not be flagged Late for today
+          if (shiftType === 'Flexible' && todayRecord.attendanceStatus === 'Late') {
+            todayRecord.attendanceStatus = 'Present';
+          }
+          await todayRecord.save();
+        }
+      } catch (recErr) {
+        console.warn('Could not sync today attendance record snapshot:', recErr);
       }
     }
 
@@ -94,7 +106,7 @@ export async function PUT(
     return NextResponse.json({ success: true, user: userResponse });
   } catch (error: any) {
     console.error('Update user error:', error);
-    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+    return NextResponse.json({ error: error?.message || 'Internal Server Error' }, { status: 500 });
   }
 }
 

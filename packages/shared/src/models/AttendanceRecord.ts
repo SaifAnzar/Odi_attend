@@ -20,8 +20,11 @@ export interface IAttendanceRecord extends Document {
   date: string; // Format YYYY-MM-DD to avoid timezone and local time errors
   shiftSnapshot: {
     name: string;
-    startTime: string;
-    endTime: string;
+    type?: 'Fixed' | 'Flexible';
+    startTime?: string;
+    endTime?: string;
+    minDailyMinutes?: number;
+    halfDayMinutes?: number;
   };
   sessions: IPunchSession[];
   attendanceStatus: 'Present' | 'Absent' | 'Late' | 'Half-Day' | 'Off-Day';
@@ -56,8 +59,11 @@ const AttendanceRecordSchema = new Schema<IAttendanceRecord>({
   date: { type: String, required: true, index: true }, // e.g. "2026-07-12"
   shiftSnapshot: {
     name: { type: String, required: true },
-    startTime: { type: String, required: true },
-    endTime: { type: String, required: true }
+    type: { type: String, enum: ['Fixed', 'Flexible'], default: 'Fixed' },
+    startTime: { type: String, default: '' },
+    endTime: { type: String, default: '' },
+    minDailyMinutes: { type: Number, default: 480 },
+    halfDayMinutes: { type: Number, default: 240 }
   },
   sessions: [PunchSessionSchema],
   attendanceStatus: { 
@@ -84,6 +90,10 @@ const AttendanceRecordSchema = new Schema<IAttendanceRecord>({
 
 // Ensure only one attendance log exists per user per calendar day
 AttendanceRecordSchema.index({ userId: 1, date: 1 }, { unique: true });
+
+if (mongoose.models.AttendanceRecord) {
+  delete (mongoose.models as any).AttendanceRecord;
+}
 
 export const AttendanceRecord = mongoose.models.AttendanceRecord || mongoose.model<IAttendanceRecord>('AttendanceRecord', AttendanceRecordSchema);
 export default AttendanceRecord;

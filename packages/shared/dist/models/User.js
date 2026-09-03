@@ -37,8 +37,11 @@ exports.User = void 0;
 const mongoose_1 = __importStar(require("mongoose"));
 const ShiftSchema = new mongoose_1.Schema({
     name: { type: String, required: true, default: 'Standard Shift' },
-    startTime: { type: String, required: true, default: '09:00' },
-    endTime: { type: String, required: true, default: '18:00' }
+    type: { type: String, enum: ['Fixed', 'Flexible'], default: 'Fixed' },
+    startTime: { type: String, default: '' },
+    endTime: { type: String, default: '' },
+    minDailyMinutes: { type: Number, default: 480 },
+    halfDayMinutes: { type: Number, default: 240 }
 }, { _id: false });
 const UserSchema = new mongoose_1.Schema({
     name: { type: String, required: true },
@@ -47,13 +50,24 @@ const UserSchema = new mongoose_1.Schema({
     role: { type: String, required: true, enum: ['Admin', 'Employee', 'Intern', 'ADMIN', 'EMPLOYEE', 'INTERN'], default: 'EMPLOYEE' },
     workMode: { type: String, required: true, enum: ['On-Site', 'Remote', 'Hybrid'], default: 'On-Site' },
     status: { type: String, required: true, enum: ['Active', 'Inactive'], default: 'Active' },
-    shift: { type: ShiftSchema, required: true, default: () => ({ name: 'Standard Shift', startTime: '09:00', endTime: '18:00' }) },
+    shift: {
+        type: ShiftSchema,
+        required: true,
+        default: () => ({
+            name: 'Standard Shift',
+            type: 'Fixed',
+            startTime: '09:00',
+            endTime: '18:00',
+            minDailyMinutes: 480,
+            halfDayMinutes: 240
+        })
+    },
     baseSalary: { type: Number, default: 65000 },
     expoPushToken: { type: String, default: null }
 }, {
     timestamps: true
 });
-if (mongoose_1.default.models.User && !mongoose_1.default.models.User.schema.path('workMode')) {
+if (mongoose_1.default.models.User) {
     delete mongoose_1.default.models.User;
 }
 exports.User = mongoose_1.default.models.User || mongoose_1.default.model('User', UserSchema);

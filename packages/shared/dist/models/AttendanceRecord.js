@@ -53,8 +53,11 @@ const AttendanceRecordSchema = new mongoose_1.Schema({
     date: { type: String, required: true, index: true }, // e.g. "2026-07-12"
     shiftSnapshot: {
         name: { type: String, required: true },
-        startTime: { type: String, required: true },
-        endTime: { type: String, required: true }
+        type: { type: String, enum: ['Fixed', 'Flexible'], default: 'Fixed' },
+        startTime: { type: String, default: '' },
+        endTime: { type: String, default: '' },
+        minDailyMinutes: { type: Number, default: 480 },
+        halfDayMinutes: { type: Number, default: 240 }
     },
     sessions: [PunchSessionSchema],
     attendanceStatus: {
@@ -80,5 +83,8 @@ const AttendanceRecordSchema = new mongoose_1.Schema({
 });
 // Ensure only one attendance log exists per user per calendar day
 AttendanceRecordSchema.index({ userId: 1, date: 1 }, { unique: true });
+if (mongoose_1.default.models.AttendanceRecord) {
+    delete mongoose_1.default.models.AttendanceRecord;
+}
 exports.AttendanceRecord = mongoose_1.default.models.AttendanceRecord || mongoose_1.default.model('AttendanceRecord', AttendanceRecordSchema);
 exports.default = exports.AttendanceRecord;

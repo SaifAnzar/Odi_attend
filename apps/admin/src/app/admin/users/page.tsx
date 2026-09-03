@@ -15,7 +15,7 @@ import {
 } from 'lucide-react';
 import { showConfirm, showError, showSuccess } from '@/lib/swal';
 import { EmployeeQuickStats } from '@/components/ui/EmployeeQuickStats';
-import { normalizeTimeToHHMM } from '@/lib/shiftUtils';
+import { normalizeTimeToHHMM, formatMinutesToDuration } from '@/lib/shiftUtils';
 
 interface User {
   _id: string;
@@ -25,15 +25,18 @@ interface User {
   workMode?: 'On-Site' | 'Remote' | 'Hybrid';
   status: 'Active' | 'Inactive';
   baseSalary?: number;
+  shift: {
+    name: string;
+    type?: 'Fixed' | 'Flexible';
+    startTime: string;
+    endTime: string;
+    minDailyMinutes?: number;
+    halfDayMinutes?: number;
+  };
   stats?: {
     approvedLeaves: number;
     approvedWfh: number;
     approvedSwaps: number;
-  };
-  shift: {
-    name: string;
-    startTime: string;
-    endTime: string;
   };
   createdAt: string;
 }
@@ -58,9 +61,14 @@ export default function UserManagement() {
   const [workMode, setWorkMode] = useState<'On-Site' | 'Remote' | 'Hybrid'>('On-Site');
   const [baseSalary, setBaseSalary] = useState<number>(65000);
   const [status, setStatus] = useState<'Active' | 'Inactive'>('Active');
+  const [shiftType, setShiftType] = useState<'Fixed' | 'Flexible'>('Fixed');
   const [shiftName, setShiftName] = useState('Standard Shift');
   const [shiftStart, setShiftStart] = useState('09:00');
   const [shiftEnd, setShiftEnd] = useState('18:00');
+  const [targetHours, setTargetHours] = useState<number>(8);
+  const [targetMinutes, setTargetMinutes] = useState<number>(0);
+  const [halfDayHours, setHalfDayHours] = useState<number>(4);
+  const [halfDayMinutes, setHalfDayMinutes] = useState<number>(0);
 
   // Role change with auto-fill suggested base salary
   const handleRoleChange = (newRole: 'Admin' | 'Employee' | 'Intern') => {
@@ -100,9 +108,14 @@ export default function UserManagement() {
     setWorkMode('On-Site');
     setBaseSalary(65000);
     setStatus('Active');
+    setShiftType('Fixed');
     setShiftName('Standard Shift');
     setShiftStart('09:00');
     setShiftEnd('18:00');
+    setTargetHours(8);
+    setTargetMinutes(0);
+    setHalfDayHours(4);
+    setHalfDayMinutes(0);
     setShowModal(true);
   };
 
@@ -118,9 +131,19 @@ export default function UserManagement() {
     setWorkMode(user.workMode || 'On-Site');
     setBaseSalary(user.baseSalary || (user.role === 'Intern' ? 25000 : user.role === 'Admin' ? 90000 : 65000));
     setStatus(user.status);
-    setShiftName(user.shift?.name || 'Standard Shift');
+    const sType = user.shift?.type === 'Flexible' ? 'Flexible' : 'Fixed';
+    setShiftType(sType);
+    setShiftName(user.shift?.name || (sType === 'Flexible' ? 'Flexible Shift' : 'Standard Shift'));
     setShiftStart(user.shift?.startTime || '09:00');
     setShiftEnd(user.shift?.endTime || '18:00');
+    
+    const minMins = typeof user.shift?.minDailyMinutes === 'number' ? user.shift.minDailyMinutes : 480;
+    setTargetHours(Math.floor(minMins / 60));
+    setTargetMinutes(minMins % 60);
+
+    const halfMins = typeof user.shift?.halfDayMinutes === 'number' ? user.shift.halfDayMinutes : 240;
+    setHalfDayHours(Math.floor(halfMins / 60));
+    setHalfDayMinutes(halfMins % 60);
     setShowModal(true);
   };
 
@@ -157,6 +180,9 @@ export default function UserManagement() {
     }
 
     try {
+      const computedTargetMins = (Number(targetHours) || 0) * 60 + (Number(targetMinutes) || 0);
+      const computedHalfMins = (Number(halfDayHours) || 0) * 60 + (Number(halfDayMinutes) || 0);
+
       const payload: any = {
         name,
         email,
@@ -165,9 +191,12 @@ export default function UserManagement() {
         baseSalary: Number(baseSalary),
         status,
         shift: {
-          name: shiftName.trim() || 'Standard Shift',
-          startTime: normalizeTimeToHHMM(shiftStart, '09:00'),
-          endTime: normalizeTimeToHHMM(shiftEnd, '18:00')
+          name: shiftName.trim() || (shiftType === 'Flexible' ? 'Flexible Shift' : 'Standard Shift'),
+          type: shiftType,
+          startTime: shiftType === 'Flexible' ? 'Flexible' : normalizeTimeToHHMM(shiftStart, '09:00'),
+          endTime: shiftType === 'Flexible' ? 'Flexible' : normalizeTimeToHHMM(shiftEnd, '18:00'),
+          minDailyMinutes: shiftType === 'Flexible' ? (computedTargetMins > 0 ? computedTargetMins : 480) : 0,
+          halfDayMinutes: shiftType === 'Flexible' ? (computedHalfMins > 0 ? computedHalfMins : 240) : 0
         }
       };
 
@@ -322,7 +351,13 @@ export default function UserManagement() {
                         <Clock size={12} className="text-odizo-red" />
                         <div className="flex flex-col">
                           <span className="font-semibold text-slate-900 dark:text-white">{user.shift?.name || 'Standard Shift'}</span>
-                          <span>{user.shift?.startTime} - {user.shift?.endTime}</span>
+                          {user.shift?.type === 'Flexible' ? (
+                            <span className="text-emerald-400 font-medium">
+                              Flexible ({formatMinutesToDuration(user.shift.minDailyMinutes, '8h')} / day)
+                            </span>
+                          ) : (
+                            <span>{user.shift?.startTime} - {user.shift?.endTime}</span>
+                          )}
                         </div>
                       </div>
                     </td>
@@ -561,46 +596,198 @@ export default function UserManagement() {
                 </div>
 
                 {/* 3. Shift Settings Card */}
-                <div className="p-4 rounded-2xl bg-slate-50 dark:bg-white/[0.03] border border-slate-200 dark:border-white/5 space-y-3">
+                <div className="p-4 rounded-2xl bg-slate-50 dark:bg-white/[0.03] border border-slate-200 dark:border-white/5 space-y-4">
                   <div className="flex items-center gap-2">
                     <Clock size={15} className="text-odizo-red" />
                     <h3 className="text-xs font-bold uppercase tracking-wider text-slate-800 dark:text-slate-200">
-                      Assigned Shift & Schedule
+                      Assigned Shift & Timing System
                     </h3>
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                    <div>
-                      <label className="block text-[11px] font-semibold text-odizo-grey mb-1">Shift Name</label>
-                      <input
-                        type="text"
-                        value={shiftName}
-                        onChange={(e) => setShiftName(e.target.value)}
-                        placeholder="e.g. Standard Shift"
-                        className="w-full bg-white dark:bg-black/30 border border-slate-200 dark:border-white/10 rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-white focus:border-odizo-red focus:outline-none"
-                      />
+                  {/* Common: Shift Name */}
+                  <div>
+                    <label className="block text-[11px] font-semibold text-odizo-grey mb-1">Shift Name / Label</label>
+                    <input
+                      type="text"
+                      value={shiftName}
+                      onChange={(e) => setShiftName(e.target.value)}
+                      placeholder={shiftType === 'Flexible' ? "e.g. Flexible Full-Time" : "e.g. Standard Shift"}
+                      className="w-full bg-white dark:bg-black/30 border border-slate-200 dark:border-white/10 rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-white focus:border-odizo-red focus:outline-none"
+                    />
+                  </div>
+
+                  {/* Radio Group Container */}
+                  <div className="space-y-3 pt-1">
+                    <div className="text-[11px] font-bold uppercase tracking-wider text-odizo-grey">
+                      Select Timing Mode (Only 1 Active At A Time):
                     </div>
 
-                    <div>
-                      <label className="block text-[11px] font-semibold text-odizo-grey mb-1">Start Time (24h)</label>
-                      <input
-                        type="text"
-                        value={shiftStart}
-                        onChange={(e) => setShiftStart(e.target.value)}
-                        placeholder="09:00"
-                        className="w-full bg-white dark:bg-black/30 border border-slate-200 dark:border-white/10 rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-white focus:border-odizo-red focus:outline-none font-mono"
-                      />
+                    {/* Option 1: Fixed Timing Radio */}
+                    <div 
+                      onClick={() => setShiftType('Fixed')}
+                      className={`p-3.5 rounded-2xl border transition-all cursor-pointer ${
+                        shiftType === 'Fixed'
+                          ? 'bg-blue-500/5 border-blue-500/40 shadow-sm'
+                          : 'bg-black/[0.02] dark:bg-white/[0.02] border-slate-200 dark:border-white/5 opacity-60 hover:opacity-80'
+                      }`}
+                    >
+                      <label className="flex items-center gap-2.5 cursor-pointer">
+                        <input
+                          type="radio"
+                          name="shiftTimingMode"
+                          checked={shiftType === 'Fixed'}
+                          onChange={() => setShiftType('Fixed')}
+                          className="h-4 w-4 text-blue-600 focus:ring-blue-500 accent-blue-600 cursor-pointer"
+                        />
+                        <span className="text-xs font-bold text-slate-900 dark:text-white">
+                          Normal Shift (Fixed Start & End Time)
+                        </span>
+                        {shiftType !== 'Fixed' && (
+                          <span className="text-[10px] text-zinc-500 italic ml-auto">
+                            (Disabled)
+                          </span>
+                        )}
+                      </label>
+
+                      <div className={`grid grid-cols-1 sm:grid-cols-2 gap-3 mt-3 pt-2 border-t border-black/5 dark:border-white/5 ${
+                        shiftType !== 'Fixed' ? 'opacity-40 pointer-events-none' : ''
+                      }`}>
+                        <div>
+                          <label className="block text-[11px] font-semibold text-odizo-grey mb-1">Start Time (24h)</label>
+                          <input
+                            type="text"
+                            disabled={shiftType !== 'Fixed'}
+                            value={shiftStart}
+                            onChange={(e) => setShiftStart(e.target.value)}
+                            placeholder="09:00"
+                            className="w-full bg-white dark:bg-black/30 border border-slate-200 dark:border-white/10 rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-white focus:border-odizo-red focus:outline-none font-mono disabled:cursor-not-allowed"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-[11px] font-semibold text-odizo-grey mb-1">End Time (24h)</label>
+                          <input
+                            type="text"
+                            disabled={shiftType !== 'Fixed'}
+                            value={shiftEnd}
+                            onChange={(e) => setShiftEnd(e.target.value)}
+                            placeholder="18:00"
+                            className="w-full bg-white dark:bg-black/30 border border-slate-200 dark:border-white/10 rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-white focus:border-odizo-red focus:outline-none font-mono disabled:cursor-not-allowed"
+                          />
+                        </div>
+                      </div>
                     </div>
 
-                    <div>
-                      <label className="block text-[11px] font-semibold text-odizo-grey mb-1">End Time (24h)</label>
-                      <input
-                        type="text"
-                        value={shiftEnd}
-                        onChange={(e) => setShiftEnd(e.target.value)}
-                        placeholder="18:00"
-                        className="w-full bg-white dark:bg-black/30 border border-slate-200 dark:border-white/10 rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-white focus:border-odizo-red focus:outline-none font-mono"
-                      />
+                    {/* Option 2: Flexible Timing Radio */}
+                    <div 
+                      onClick={() => setShiftType('Flexible')}
+                      className={`p-3.5 rounded-2xl border transition-all cursor-pointer ${
+                        shiftType === 'Flexible'
+                          ? 'bg-emerald-500/10 border-emerald-500/40 shadow-sm'
+                          : 'bg-black/[0.02] dark:bg-white/[0.02] border-slate-200 dark:border-white/5 opacity-60 hover:opacity-80'
+                      }`}
+                    >
+                      <label className="flex items-center gap-2.5 cursor-pointer">
+                        <input
+                          type="radio"
+                          name="shiftTimingMode"
+                          checked={shiftType === 'Flexible'}
+                          onChange={() => setShiftType('Flexible')}
+                          className="h-4 w-4 text-emerald-500 focus:ring-emerald-500 accent-emerald-500 cursor-pointer"
+                        />
+                        <span className="text-xs font-bold text-emerald-400">
+                          Flexible Timing (Minimum Daily Target Hours)
+                        </span>
+                        {shiftType !== 'Flexible' && (
+                          <span className="text-[10px] text-zinc-500 italic ml-auto">
+                            (Disabled)
+                          </span>
+                        )}
+                      </label>
+
+                      <div className={`grid grid-cols-1 sm:grid-cols-2 gap-4 mt-3 pt-2 border-t border-black/5 dark:border-white/5 ${
+                        shiftType !== 'Flexible' ? 'opacity-40 pointer-events-none' : ''
+                      }`}>
+                        {/* Daily Work Target (Hours & Minutes) */}
+                        <div>
+                          <label className="block text-[11px] font-semibold text-emerald-400 mb-1">
+                            Min Required Daily Target Duration
+                          </label>
+                          <div className="flex items-center gap-2">
+                            <div className="flex-1 flex items-center bg-white dark:bg-black/30 border border-emerald-500/30 rounded-xl px-2.5 py-1.5 focus-within:border-emerald-400">
+                              <input
+                                type="number"
+                                min="0"
+                                max="24"
+                                disabled={shiftType !== 'Flexible'}
+                                value={targetHours}
+                                onChange={(e) => setTargetHours(Math.max(0, parseInt(e.target.value) || 0))}
+                                placeholder="8"
+                                className="w-full bg-transparent text-xs text-slate-900 dark:text-white focus:outline-none font-mono disabled:cursor-not-allowed"
+                              />
+                              <span className="text-[11px] text-zinc-400 font-semibold ml-1">hrs</span>
+                            </div>
+                            <div className="flex-1 flex items-center bg-white dark:bg-black/30 border border-emerald-500/30 rounded-xl px-2.5 py-1.5 focus-within:border-emerald-400">
+                              <input
+                                type="number"
+                                min="0"
+                                max="59"
+                                disabled={shiftType !== 'Flexible'}
+                                value={targetMinutes}
+                                onChange={(e) => setTargetMinutes(Math.min(59, Math.max(0, parseInt(e.target.value) || 0)))}
+                                placeholder="0"
+                                className="w-full bg-transparent text-xs text-slate-900 dark:text-white focus:outline-none font-mono disabled:cursor-not-allowed"
+                              />
+                              <span className="text-[11px] text-zinc-400 font-semibold ml-1">mins</span>
+                            </div>
+                          </div>
+                          <p className="text-[10px] text-odizo-grey mt-1">
+                            Total required: <strong className="text-emerald-400">
+                              {targetHours > 0 || targetMinutes > 0 ? `${targetHours}h ${targetMinutes}m` : '8h 0m'}
+                            </strong> ({targetHours * 60 + targetMinutes} mins)
+                          </p>
+                        </div>
+
+                        {/* Half-Day Threshold (Hours & Minutes) */}
+                        <div>
+                          <label className="block text-[11px] font-semibold text-odizo-grey mb-1">
+                            Half-Day Threshold Duration
+                          </label>
+                          <div className="flex items-center gap-2">
+                            <div className="flex-1 flex items-center bg-white dark:bg-black/30 border border-slate-200 dark:border-white/10 rounded-xl px-2.5 py-1.5 focus-within:border-odizo-red">
+                              <input
+                                type="number"
+                                min="0"
+                                max="24"
+                                disabled={shiftType !== 'Flexible'}
+                                value={halfDayHours}
+                                onChange={(e) => setHalfDayHours(Math.max(0, parseInt(e.target.value) || 0))}
+                                placeholder="4"
+                                className="w-full bg-transparent text-xs text-slate-900 dark:text-white focus:outline-none font-mono disabled:cursor-not-allowed"
+                              />
+                              <span className="text-[11px] text-zinc-400 font-semibold ml-1">hrs</span>
+                            </div>
+                            <div className="flex-1 flex items-center bg-white dark:bg-black/30 border border-slate-200 dark:border-white/10 rounded-xl px-2.5 py-1.5 focus-within:border-odizo-red">
+                              <input
+                                type="number"
+                                min="0"
+                                max="59"
+                                disabled={shiftType !== 'Flexible'}
+                                value={halfDayMinutes}
+                                onChange={(e) => setHalfDayMinutes(Math.min(59, Math.max(0, parseInt(e.target.value) || 0)))}
+                                placeholder="0"
+                                className="w-full bg-transparent text-xs text-slate-900 dark:text-white focus:outline-none font-mono disabled:cursor-not-allowed"
+                              />
+                              <span className="text-[11px] text-zinc-400 font-semibold ml-1">mins</span>
+                            </div>
+                          </div>
+                          <p className="text-[10px] text-odizo-grey mt-1">
+                            Threshold: <strong className="text-slate-700 dark:text-slate-300">
+                              {halfDayHours > 0 || halfDayMinutes > 0 ? `${halfDayHours}h ${halfDayMinutes}m` : '4h 0m'}
+                            </strong> ({halfDayHours * 60 + halfDayMinutes} mins)
+                          </p>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </div>

@@ -74,8 +74,11 @@ interface User {
   status: 'Active' | 'Inactive';
   shift: {
     name: string;
+    type?: 'Fixed' | 'Flexible';
     startTime: string;
     endTime: string;
+    minDailyMinutes?: number;
+    halfDayMinutes?: number;
   };
 }
 
@@ -94,14 +97,19 @@ interface AttendanceRecord {
   date: string;
   shiftSnapshot: {
     name: string;
+    type?: 'Fixed' | 'Flexible';
     startTime: string;
     endTime: string;
+    minDailyMinutes?: number;
+    halfDayMinutes?: number;
   };
   sessions: PunchSession[];
   attendanceStatus: 'Present' | 'Absent' | 'Late' | 'Half-Day' | 'Off-Day';
   totalMinutesWorked: number;
   isFlagged?: boolean;
   flagReason?: string;
+  isWFH?: boolean;
+  notes?: string;
   status?: 'Approved' | 'Pending Approval' | 'Rejected';
 }
 
@@ -492,6 +500,7 @@ function AppContent() {
   const [punchLoading, setPunchLoading] = useState(false);
   const [punchNotes, setPunchNotes] = useState('');
   const [liveTimer, setLiveTimer] = useState('00:00:00');
+  const [activeDurationMinutes, setActiveDurationMinutes] = useState(0);
   const [gpsLocked, setGpsLocked] = useState(false);
   const [gpsCoords, setGpsCoords] = useState<{ lat: number; lng: number } | null>(null);
 
@@ -501,6 +510,17 @@ function AppContent() {
     const utcOffset = 5.5; // IST offset (+5:30)
     const localTime = new Date(date.getTime() + utcOffset * 3600000);
     return localTime.toISOString().split('T')[0];
+  };
+
+  const formatMinutesToDuration = (totalMins?: number | null, fallback = '8h'): string => {
+    if (totalMins === undefined || totalMins === null || isNaN(totalMins) || totalMins <= 0) {
+      return fallback;
+    }
+    const h = Math.floor(totalMins / 60);
+    const m = totalMins % 60;
+    if (h > 0 && m > 0) return `${h}h ${m}m`;
+    if (h > 0) return `${h}h`;
+    return `${m}m`;
   };
 
   const todayStr = getLocalDateStringIST();
@@ -532,6 +552,20 @@ function AppContent() {
           setToken(savedToken);
           setUser(JSON.parse(savedUser));
           setIsAuthenticated(true);
+
+          // Fetch fresh user profile from backend immediately on launch
+          try {
+            const res = await fetch(`${apiUrl}/api/users/me`, {
+              headers: { 'Authorization': `Bearer ${savedToken}` }
+            });
+            const data = await res.json();
+            if (res.ok && data.user) {
+              setUser(data.user);
+              await AsyncStorage.setItem('user', JSON.stringify(data.user));
+            }
+          } catch (profileErr) {
+            console.warn('Initial user profile sync failed:', profileErr);
+          }
         }
       } catch (e) {
         console.error('Failed to load session:', e);
@@ -786,20 +820,33 @@ function AppContent() {
     }
   };
 
-  // Fetch personal logs
+  // Fetch personal logs & live user profile
   const fetchLogs = async () => {
     if (!token) return;
     try {
       setLoading(true);
-      const res = await fetch(`${apiUrl}/api/attendance`, {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-      const data = await res.json();
-      if (res.ok && data.records) {
+      const [resAttendance, resUser] = await Promise.all([
+        fetch(`${apiUrl}/api/attendance`, {
+          method: 'GET',
+          headers: { 'Authorization': `Bearer ${token}` }
+        }),
+        fetch(`${apiUrl}/api/users/me`, {
+          method: 'GET',
+          headers: { 'Authorization': `Bearer ${token}` }
+        })
+      ]);
+
+      const data = await resAttendance.json();
+      if (resAttendance.ok && data.records) {
         setRecords(data.records);
+      }
+
+      if (resUser.ok) {
+        const userData = await resUser.json();
+        if (userData.user) {
+          setUser(userData.user);
+          AsyncStorage.setItem('user', JSON.stringify(userData.user)).catch(console.warn);
+        }
       }
     } catch (e) {
       console.error('Fetch logs failed:', e);
@@ -920,12 +967,14 @@ function AppContent() {
         setLiveTimer(
           `${hrs.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`
         );
+        setActiveDurationMinutes(Math.floor(diffSecs / 60));
       };
 
       updateTimer();
       timerIntervalRef.current = setInterval(updateTimer, 1000);
     } else {
       setLiveTimer('00:00:00');
+      setActiveDurationMinutes(0);
       if (timerIntervalRef.current) {
         clearInterval(timerIntervalRef.current);
         timerIntervalRef.current = null;
@@ -936,6 +985,59 @@ function AppContent() {
       if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
     };
   }, [isCheckedIn, activeSession]);
+
+  // Auto check-out trigger when flexible target is reached in Mobile App
+  const autoCheckoutTriggeredRef = useRef(false);
+
+  useEffect(() => {
+    if (!isCheckedIn) {
+      autoCheckoutTriggeredRef.current = false;
+      return;
+    }
+
+    const isFlexible = 
+      user?.shift?.type === 'Flexible' ||
+      String(user?.shift?.name || '').toLowerCase().includes('flexible') ||
+      user?.shift?.startTime === 'Flexible' ||
+      todayRecord?.shiftSnapshot?.type === 'Flexible' ||
+      String(todayRecord?.shiftSnapshot?.name || '').toLowerCase().includes('flexible') ||
+      todayRecord?.shiftSnapshot?.startTime === 'Flexible';
+
+    const targetMins = (user?.shift?.minDailyMinutes && user.shift.minDailyMinutes > 0)
+      ? user.shift.minDailyMinutes
+      : (todayRecord?.shiftSnapshot?.minDailyMinutes || 480);
+
+    const totalWorked = (todayRecord?.totalMinutesWorked || 0) + activeDurationMinutes;
+
+    if (isFlexible && totalWorked >= targetMins && !autoCheckoutTriggeredRef.current) {
+      autoCheckoutTriggeredRef.current = true;
+      fetch(`${apiUrl}/api/attendance/auto-checkout`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        }
+      })
+        .then(() => {
+          fetchLogs();
+          showAlert(
+            'Shift Complete! 🎉',
+            `Congratulations! You have completed your daily target duration (${formatMinutesToDuration(targetMins, '8h')}). Auto check-out has been recorded.`,
+            'success'
+          );
+        })
+        .catch(console.error);
+    }
+  }, [isCheckedIn, activeDurationMinutes, todayRecord?.totalMinutesWorked, user?.shift, token, apiUrl]);
+
+  // Periodic status poll while clocked in (every 30 seconds)
+  useEffect(() => {
+    if (!isCheckedIn || !isAuthenticated) return;
+    const interval = setInterval(() => {
+      fetchLogs();
+    }, 30000);
+    return () => clearInterval(interval);
+  }, [isCheckedIn, isAuthenticated]);
 
   // Handle Login Submit
   const handleLogin = async () => {
@@ -1289,38 +1391,233 @@ function AppContent() {
               <View style={styles.shiftCardHeader}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                   <Text style={styles.shiftTitle}>Daily Shift</Text>
-                  <View style={{ 
-                    backgroundColor: user?.workMode === 'Remote' ? 'rgba(74, 222, 128, 0.15)' : 'rgba(96, 165, 250, 0.15)',
-                    paddingHorizontal: 6,
-                    paddingVertical: 2,
-                    borderRadius: 8,
-                    borderWidth: 1,
-                    borderColor: user?.workMode === 'Remote' ? 'rgba(74, 222, 128, 0.3)' : 'rgba(96, 165, 250, 0.3)'
-                  }}>
-                    <Text style={{ 
-                      fontSize: 10, 
-                      fontWeight: 'bold', 
-                      color: user?.workMode === 'Remote' ? '#4ADE80' : '#60A5FA' 
-                    }}>
-                      {user?.workMode === 'Remote' ? '🏠 REMOTE' : '🏢 ON-SITE'}
-                    </Text>
-                  </View>
+                  {(() => {
+                    const mode = user?.workMode || 'On-Site';
+                    if (mode === 'Remote') {
+                      return (
+                        <View style={{ 
+                          backgroundColor: 'rgba(74, 222, 128, 0.15)',
+                          paddingHorizontal: 6,
+                          paddingVertical: 2,
+                          borderRadius: 8,
+                          borderWidth: 1,
+                          borderColor: 'rgba(74, 222, 128, 0.3)'
+                        }}>
+                          <Text style={{ fontSize: 10, fontWeight: 'bold', color: '#4ADE80' }}>
+                            🏠 REMOTE
+                          </Text>
+                        </View>
+                      );
+                    }
+                    if (mode === 'Hybrid') {
+                      const isWFH = todayRecord?.isWFH;
+                      return (
+                        <View style={{ 
+                          backgroundColor: 'rgba(251, 191, 36, 0.15)',
+                          paddingHorizontal: 6,
+                          paddingVertical: 2,
+                          borderRadius: 8,
+                          borderWidth: 1,
+                          borderColor: 'rgba(251, 191, 36, 0.3)'
+                        }}>
+                          <Text style={{ fontSize: 10, fontWeight: 'bold', color: '#FBBF24' }}>
+                            🔄 HYBRID {isWFH ? '(WFH)' : '(ON-SITE)'}
+                          </Text>
+                        </View>
+                      );
+                    }
+                    if (todayRecord?.isWFH) {
+                      return (
+                        <View style={{ 
+                          backgroundColor: 'rgba(56, 189, 248, 0.15)',
+                          paddingHorizontal: 6,
+                          paddingVertical: 2,
+                          borderRadius: 8,
+                          borderWidth: 1,
+                          borderColor: 'rgba(56, 189, 248, 0.3)'
+                        }}>
+                          <Text style={{ fontSize: 10, fontWeight: 'bold', color: '#38BDF8' }}>
+                            🏠 WFH APPROVED
+                          </Text>
+                        </View>
+                      );
+                    }
+                    return (
+                      <View style={{ 
+                        backgroundColor: 'rgba(96, 165, 250, 0.15)',
+                        paddingHorizontal: 6,
+                        paddingVertical: 2,
+                        borderRadius: 8,
+                        borderWidth: 1,
+                        borderColor: 'rgba(96, 165, 250, 0.3)'
+                      }}>
+                        <Text style={{ fontSize: 10, fontWeight: 'bold', color: '#60A5FA' }}>
+                          🏢 ON-SITE
+                        </Text>
+                      </View>
+                    );
+                  })()}
                 </View>
                 <Text style={styles.shiftStatusLabel}>
                   {isCheckedIn ? 'ON-SHIFT' : 'OFF-SHIFT'}
                 </Text>
               </View>
-              <Text 
-                style={styles.shiftValue}
-                adjustsFontSizeToFit={true}
-                numberOfLines={1}
-              >
-                {user?.shift.name}
-              </Text>
-              <Text style={styles.shiftTime}>
-                Hours: {user?.shift.startTime} - {user?.shift.endTime}
-              </Text>
+              {(() => {
+                const isFlexibleShift = 
+                  user?.shift?.type === 'Flexible' ||
+                  String(user?.shift?.name || '').toLowerCase().includes('flexible') ||
+                  user?.shift?.startTime === 'Flexible' ||
+                  todayRecord?.shiftSnapshot?.type === 'Flexible' ||
+                  String(todayRecord?.shiftSnapshot?.name || '').toLowerCase().includes('flexible') ||
+                  todayRecord?.shiftSnapshot?.startTime === 'Flexible';
+
+                const targetMins = (user?.shift?.minDailyMinutes && user.shift.minDailyMinutes > 0)
+                  ? user.shift.minDailyMinutes
+                  : (todayRecord?.shiftSnapshot?.minDailyMinutes || 480);
+
+                return (
+                  <>
+                    <Text 
+                      style={styles.shiftValue}
+                      adjustsFontSizeToFit={true}
+                      numberOfLines={1}
+                    >
+                      {user?.shift?.name || (isFlexibleShift ? 'Flexible Shift' : 'Standard Shift')}
+                    </Text>
+                    {isFlexibleShift ? (
+                      <Text style={[styles.shiftTime, { color: '#4ADE80', fontWeight: 'bold' }]}>
+                        Flexible Shift • Target: {formatMinutesToDuration(targetMins, '8h')} / Day
+                      </Text>
+                    ) : (
+                      <Text style={styles.shiftTime}>
+                        Hours: {user?.shift?.startTime || '09:00'} - {user?.shift?.endTime || '18:00'}
+                      </Text>
+                    )}
+                  </>
+                );
+              })()}
             </View>
+
+            {/* Prominent Daily Target & Time Remaining Card */}
+            {(() => {
+              const isFlexibleShift = 
+                user?.shift?.type === 'Flexible' ||
+                String(user?.shift?.name || '').toLowerCase().includes('flexible') ||
+                user?.shift?.startTime === 'Flexible' ||
+                todayRecord?.shiftSnapshot?.type === 'Flexible' ||
+                String(todayRecord?.shiftSnapshot?.name || '').toLowerCase().includes('flexible') ||
+                todayRecord?.shiftSnapshot?.startTime === 'Flexible';
+
+              const targetMins = (user?.shift?.minDailyMinutes && user.shift.minDailyMinutes > 0)
+                ? user.shift.minDailyMinutes
+                : (todayRecord?.shiftSnapshot?.minDailyMinutes || 480);
+
+              const currentTotalWorkedMinutes = (todayRecord?.totalMinutesWorked || 0) + activeDurationMinutes;
+              const flexibleRemainingMinutes = Math.max(0, targetMins - currentTotalWorkedMinutes);
+              const isFlexibleTargetMet = currentTotalWorkedMinutes >= targetMins;
+              const flexibleProgressPercent = Math.min(100, Math.round((currentTotalWorkedMinutes / targetMins) * 100));
+
+              // Fixed Shift end time calculation
+              const now = new Date();
+              const istNow = new Date(now.getTime() + 5.5 * 3600000);
+              const currentMinutesToday = istNow.getUTCHours() * 60 + istNow.getUTCMinutes();
+              const shiftEndTimeStr = user?.shift?.endTime && user.shift.endTime !== 'Flexible' 
+                ? user.shift.endTime 
+                : (todayRecord?.shiftSnapshot?.endTime || '18:00');
+              const [endH, endM] = shiftEndTimeStr.split(':').map(Number);
+              const shiftEndMinutes = (!isNaN(endH) && !isNaN(endM)) ? (endH * 60 + endM) : (18 * 60);
+              const fixedRemainingMinutes = Math.max(0, shiftEndMinutes - currentMinutesToday);
+              const isFixedShiftOver = currentMinutesToday >= shiftEndMinutes;
+
+              const accentColor = isFlexibleShift 
+                ? (isFlexibleTargetMet ? '#4ADE80' : '#FBBF24')
+                : (isFixedShiftOver ? '#4ADE80' : '#38BDF8');
+
+              const bgCardColor = isFlexibleShift
+                ? (isFlexibleTargetMet ? 'rgba(74, 222, 128, 0.08)' : 'rgba(251, 191, 36, 0.08)')
+                : 'rgba(56, 189, 248, 0.08)';
+
+              const borderCardColor = isFlexibleShift
+                ? (isFlexibleTargetMet ? 'rgba(74, 222, 128, 0.3)' : 'rgba(251, 191, 36, 0.3)')
+                : 'rgba(56, 189, 248, 0.25)';
+
+              return (
+                <View style={{
+                  backgroundColor: bgCardColor,
+                  borderColor: borderCardColor,
+                  borderWidth: 1.5,
+                  borderRadius: 18,
+                  padding: 16,
+                  marginTop: 14,
+                  width: '100%',
+                }}>
+                  {/* Card Header Row */}
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                      <Ionicons 
+                        name={isFlexibleShift ? "hourglass-outline" : "time-outline"} 
+                        size={16} 
+                        color={accentColor} 
+                      />
+                      <Text style={{ color: accentColor, fontSize: 11, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 0.8 }}>
+                        {isFlexibleShift ? "Daily Target & Remaining Time" : "Shift Schedule & Remaining Time"}
+                      </Text>
+                    </View>
+                    <View style={{
+                      backgroundColor: 'rgba(0,0,0,0.3)',
+                      paddingHorizontal: 8,
+                      paddingVertical: 3,
+                      borderRadius: 12,
+                      borderWidth: 1,
+                      borderColor: borderCardColor
+                    }}>
+                      <Text style={{ color: accentColor, fontSize: 11, fontWeight: 'bold' }}>
+                        {isFlexibleShift
+                          ? (isFlexibleTargetMet ? 'Target Met 🎉' : `${formatMinutesToDuration(flexibleRemainingMinutes, '0m')} Left`)
+                          : (isFixedShiftOver ? 'Shift Ended' : `${Math.floor(fixedRemainingMinutes / 60)}h ${fixedRemainingMinutes % 60}m Left`)}
+                      </Text>
+                    </View>
+                  </View>
+
+                  {/* Big Headline */}
+                  <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 6, marginVertical: 4 }}>
+                    <Text style={{ fontSize: 24, fontWeight: '900', color: accentColor, letterSpacing: -0.5 }}>
+                      {isFlexibleShift
+                        ? (isFlexibleTargetMet ? 'Target Done!' : `${formatMinutesToDuration(flexibleRemainingMinutes, '0m')} Remaining`)
+                        : (isFixedShiftOver ? 'Shift Completed' : `${Math.floor(fixedRemainingMinutes / 60)}h ${fixedRemainingMinutes % 60}m Remaining`)}
+                    </Text>
+                  </View>
+
+                  <Text style={{ color: '#A1A1AA', fontSize: 12, marginBottom: 8 }}>
+                    {isFlexibleShift
+                      ? `Must complete ${formatMinutesToDuration(targetMins, '8h')} today • Logged: ${formatMinutesToDuration(currentTotalWorkedMinutes, '0m')}`
+                      : `Shift ends at ${shiftEndTimeStr} • Logged: ${formatMinutesToDuration(currentTotalWorkedMinutes, '0m')}`}
+                  </Text>
+
+                  {/* Progress Bar (Always visible for flexible) */}
+                  {isFlexibleShift && (
+                    <View style={{ marginTop: 4 }}>
+                      <View style={{ height: 8, backgroundColor: 'rgba(255,255,255,0.08)', borderRadius: 6, overflow: 'hidden' }}>
+                        <View style={{
+                          height: '100%',
+                          width: `${flexibleProgressPercent}%`,
+                          backgroundColor: accentColor,
+                          borderRadius: 6
+                        }} />
+                      </View>
+                      <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 6 }}>
+                        <Text style={{ color: '#71717A', fontSize: 11 }}>
+                          Progress: <Text style={{ color: '#FFFFFF', fontWeight: 'bold' }}>{flexibleProgressPercent}%</Text>
+                        </Text>
+                        <Text style={{ color: accentColor, fontSize: 11, fontWeight: 'bold' }}>
+                          {isFlexibleTargetMet ? 'Goal Achieved 🏆' : `${formatMinutesToDuration(currentTotalWorkedMinutes, '0m')} / ${formatMinutesToDuration(targetMins, '8h')}`}
+                        </Text>
+                      </View>
+                    </View>
+                  )}
+                </View>
+              );
+            })()}
 
             {/* Live Ticking Timer display */}
             <View style={styles.timerWrapper}>
@@ -1404,27 +1701,89 @@ function AppContent() {
               </View>
             </View>
 
-            {/* Today's stats */}
-            <View style={styles.summaryStatsGrid}>
-              <View style={styles.statBox}>
-                <Text style={styles.statLabel}>Today's Duration</Text>
-                <Text style={styles.statValue}>
-                  {todayRecord 
-                    ? `${Math.floor(todayRecord.totalMinutesWorked / 60)}h ${todayRecord.totalMinutesWorked % 60}m`
-                    : '0h 0m'}
-                </Text>
-              </View>
-              
-              <View style={styles.statBox}>
-                <Text style={styles.statLabel}>Session status</Text>
-                <Text style={[
-                  styles.statValue, 
-                  { color: todayRecord?.attendanceStatus === 'Present' ? '#4ADE80' : '#FBBF24' }
-                ]}>
-                  {todayRecord ? todayRecord.attendanceStatus : 'None'}
-                </Text>
-              </View>
-            </View>
+            {/* Today's stats 3-box Grid */}
+            {(() => {
+              const isFlexibleShift = 
+                user?.shift?.type === 'Flexible' ||
+                String(user?.shift?.name || '').toLowerCase().includes('flexible') ||
+                user?.shift?.startTime === 'Flexible' ||
+                todayRecord?.shiftSnapshot?.type === 'Flexible' ||
+                String(todayRecord?.shiftSnapshot?.name || '').toLowerCase().includes('flexible') ||
+                todayRecord?.shiftSnapshot?.startTime === 'Flexible';
+
+              const targetMins = (user?.shift?.minDailyMinutes && user.shift.minDailyMinutes > 0)
+                ? user.shift.minDailyMinutes
+                : (todayRecord?.shiftSnapshot?.minDailyMinutes || 480);
+
+              const currentTotalWorkedMinutes = (todayRecord?.totalMinutesWorked || 0) + activeDurationMinutes;
+              const flexibleRemainingMinutes = Math.max(0, targetMins - currentTotalWorkedMinutes);
+              const isFlexibleTargetMet = currentTotalWorkedMinutes >= targetMins;
+
+              // Fixed Shift end time calculation
+              const now = new Date();
+              const istNow = new Date(now.getTime() + 5.5 * 3600000);
+              const currentMinutesToday = istNow.getUTCHours() * 60 + istNow.getUTCMinutes();
+              const shiftEndTimeStr = user?.shift?.endTime && user.shift.endTime !== 'Flexible' 
+                ? user.shift.endTime 
+                : (todayRecord?.shiftSnapshot?.endTime || '18:00');
+              const [endH, endM] = shiftEndTimeStr.split(':').map(Number);
+              const shiftEndMinutes = (!isNaN(endH) && !isNaN(endM)) ? (endH * 60 + endM) : (18 * 60);
+              const fixedRemainingMinutes = Math.max(0, shiftEndMinutes - currentMinutesToday);
+              const isFixedShiftOver = currentMinutesToday >= shiftEndMinutes;
+
+              const rawStatus = todayRecord ? todayRecord.attendanceStatus : 'None';
+              const displayStatus = (isFlexibleShift && rawStatus === 'Late') ? 'Present' : rawStatus;
+
+              return (
+                <View style={[styles.summaryStatsGrid, { gap: 10 }]}>
+                  {/* Box 1: Worked Today */}
+                  <View style={[styles.statBox, { flex: 1, padding: 12 }]}>
+                    <Text style={styles.statLabel}>Today's Worked</Text>
+                    <Text style={[styles.statValue, { color: '#FFFFFF', fontSize: 14 }]}>
+                      {formatMinutesToDuration(currentTotalWorkedMinutes, '0m')}
+                    </Text>
+                  </View>
+
+                  {/* Box 2: Time Remaining */}
+                  <View style={[styles.statBox, { 
+                    flex: 1, 
+                    padding: 12, 
+                    borderColor: isFlexibleShift 
+                      ? (isFlexibleTargetMet ? 'rgba(74, 222, 128, 0.3)' : 'rgba(251, 191, 36, 0.3)')
+                      : 'rgba(56, 189, 248, 0.3)'
+                  }]}>
+                    <Text style={styles.statLabel}>Remaining</Text>
+                    <Text style={[
+                      styles.statValue, 
+                      { 
+                        fontSize: 14, 
+                        color: isFlexibleShift 
+                          ? (isFlexibleTargetMet ? '#4ADE80' : '#FBBF24') 
+                          : '#38BDF8' 
+                      }
+                    ]}>
+                      {isFlexibleShift 
+                        ? (isFlexibleTargetMet ? 'Done 🎉' : formatMinutesToDuration(flexibleRemainingMinutes, '0m'))
+                        : (isFixedShiftOver ? 'Ended' : formatMinutesToDuration(fixedRemainingMinutes, '0m'))}
+                    </Text>
+                  </View>
+
+                  {/* Box 3: Status */}
+                  <View style={[styles.statBox, { flex: 1, padding: 12 }]}>
+                    <Text style={styles.statLabel}>Status</Text>
+                    <Text style={[
+                      styles.statValue, 
+                      { 
+                        fontSize: 14, 
+                        color: isCheckedIn ? '#4ADE80' : (displayStatus === 'Present' ? '#4ADE80' : '#FBBF24') 
+                      }
+                    ]}>
+                      {isCheckedIn ? 'On-Shift' : displayStatus}
+                    </Text>
+                  </View>
+                </View>
+              );
+            })()}
           </ScrollView>
         ) : currentTab === 'history' ? (
           /* ================= HISTORY TAB ================= */
@@ -1462,7 +1821,10 @@ function AppContent() {
                       </View>
                     </View>
 
-                    <Text style={styles.recordShiftName}>Shift: {r.shiftSnapshot.name}</Text>
+                    <Text style={styles.recordShiftName}>
+                      Shift: {r.shiftSnapshot?.name || 'Standard Shift'}
+                      {r.shiftSnapshot?.type === 'Flexible' ? ' (Flexible Target)' : ''}
+                    </Text>
 
                     {/* Render session list */}
                     <View style={styles.sessionList}>
